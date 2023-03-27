@@ -11,7 +11,7 @@
     "test:ci": "npm run test",
     "test:watch": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads ../../node_modules/jest/bin/jest.js ./src --watch"
   },
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
   "dependencies": {
     "ts-mixer": "^6.0.3"
   },
