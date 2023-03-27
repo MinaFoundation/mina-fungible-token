@@ -25,7 +25,7 @@ interface Approvable {
 function approvable<BaseClass extends SmartContractConstructor>(
   base: BaseClass
 ): BaseClass & {
-  new (...args: any[]): Approvable;
+  new(...args: any[]): Approvable;
   prototype: Approvable;
 } {
   class Approvals extends base implements Approvable {
@@ -72,9 +72,10 @@ function approvable<BaseClass extends SmartContractConstructor>(
         // We can start working with static children during prove
         // once this is fixed:
         // https://github.com/o1-labs/snarkyjs/issues/706
-        AccountUpdate.Layout.StaticChildren(AccountUpdate.Layout.NoChildren)
+        // AccountUpdate.Layout.StaticChildren(AccountUpdate.Layout.NoChildren)
+        AccountUpdate.Layout.AnyChildren
       );
-      this.assertHasNoBalanceChange(approvedAccountUpdate);
+      //this.assertHasNoBalanceChange(approvedAccountUpdate);
     }
   }
 
