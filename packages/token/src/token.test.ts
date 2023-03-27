@@ -245,12 +245,6 @@ describeContract<Token>('Token', Token, (context) => {
                       testAccounts: [alice],
                     } = thirdPartyContext();
 
-                    Circuit.log('keys', {
-                      alice: alice.publicKey,
-                      thirdParty: zkAppAddress,
-                      thirdPartyTokenHolder: zkAppAddress,
-                    });
-
                     const tx = await Mina.transaction(alice.publicKey, () => {
                       thirdParty.withdraw(UInt64.from(10));
                     });

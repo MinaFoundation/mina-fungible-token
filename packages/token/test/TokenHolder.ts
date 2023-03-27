@@ -30,12 +30,13 @@ class TokenHolder extends SmartContract {
 
   @method
   public withdraw(to: PublicKey, amount: UInt64) {
-    if (!TokenHolder.tokenSmartContractAddress) {
-      throw new Error('Token smart contract address unknown!');
-    }
+    // manual send
+    const toAccountUpdate = AccountUpdate.create(to, this.tokenId);
+    toAccountUpdate.balance.addInPlace(amount);
+    toAccountUpdate.body.mayUseToken =
+      AccountUpdate.MayUseToken.InheritFromParent;
 
-    const token = new TokenSmartContract(TokenHolder.tokenSmartContractAddress);
-    token.transfer(this.address, to, amount);
+    this.balance.subInPlace(amount);
 
     this.self.body.mayUseToken = AccountUpdate.MayUseToken.ParentsOwnToken;
   }

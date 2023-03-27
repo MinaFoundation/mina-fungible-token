@@ -1,7 +1,9 @@
+/* eslint-disable new-cap */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import {
   AccountUpdate,
   Bool,
+  Circuit,
   Experimental,
   Int64,
   method,
@@ -27,8 +29,23 @@ function approvable<BaseClass extends SmartContractConstructor>(
   prototype: Approvable;
 } {
   class Approvals extends base implements Approvable {
-    public hasNoBalanceChange({ body }: AccountUpdate): Bool {
-      const { balanceChange } = body;
+    public hasNoBalanceChange(accountUpdate: AccountUpdate): Bool {
+      // all balance changes of children
+      const balanceChanges = accountUpdate.children.accountUpdates.map(
+        ({ body: { balanceChange } }) => balanceChange
+      );
+
+      // add the self balance change
+      balanceChanges.push(accountUpdate.body.balanceChange);
+
+      const balanceChange = balanceChanges.reduce(
+        (accumulatedBalanceChange, currentBalanceChange) =>
+          Int64.fromObject(accumulatedBalanceChange).add(
+            Int64.fromObject(currentBalanceChange)
+          ),
+        Int64.zero
+      );
+
       return Int64.fromObject(balanceChange).equals(UInt64.zero);
     }
 
@@ -51,7 +68,11 @@ function approvable<BaseClass extends SmartContractConstructor>(
     public approveAccountUpdate(accountUpdate: AccountUpdate) {
       const approvedAccountUpdate = this.approve(
         accountUpdate,
-        AccountUpdate.Layout.AnyChildren
+
+        // We can start working with static children during prove
+        // once this is fixed:
+        // https://github.com/o1-labs/snarkyjs/issues/706
+        AccountUpdate.Layout.StaticChildren(AccountUpdate.Layout.NoChildren)
       );
       this.assertHasNoBalanceChange(approvedAccountUpdate);
     }
