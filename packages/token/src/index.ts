@@ -1,1 +1,1 @@
-export { default as Token } from './token.js';
+export { default as Token } from './Token.js';

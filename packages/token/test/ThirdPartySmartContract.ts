@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import {
   PublicKey,
   SmartContract,
@@ -10,7 +11,7 @@ import {
   isReady,
   Circuit,
 } from 'snarkyjs';
-import TokenSmartContract from '../src/token.js';
+import TokenSmartContract from '../src/Token.js';
 import TokenHolder from './TokenHolder.js';
 
 await isReady;
@@ -29,9 +30,6 @@ class ThirdPartySmartContract extends SmartContract {
   }
 
   public get tokenContract() {
-    if (!ThirdPartySmartContract.tokenSmartContractAddress) {
-      throw new Error('Token smart contract address unknown!');
-    }
     return new TokenSmartContract(
       ThirdPartySmartContract.tokenSmartContractAddress
     );
@@ -58,9 +56,9 @@ class ThirdPartySmartContract extends SmartContract {
 
   @method
   public withdraw(amount: UInt64) {
-    const tokenHolder = this.tokenHolder;
-    tokenHolder.withdraw(this.sender, amount);
-    this.tokenContract.approveAccountUpdate(tokenHolder.self);
+    const { tokenHolder, tokenContract, sender } = this;
+    tokenHolder.withdraw(sender, amount);
+    tokenContract.approveAccountUpdate(tokenHolder.self);
   }
 }
 

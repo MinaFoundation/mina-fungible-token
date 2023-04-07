@@ -1,7 +1,8 @@
+/* eslint-disable new-cap */
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 /* eslint-disable max-classes-per-file */
-import { DeployArgs, Permissions, SmartContract } from 'snarkyjs';
+import { DeployArgs, Permissions, SmartContract, State, state } from 'snarkyjs';
 import { mintable, burnable } from './mixins/adminable.js';
 import approvable from './mixins/approvable.js';
 import transferable from './mixins/transferable.js';

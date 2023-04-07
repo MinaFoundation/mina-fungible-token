@@ -1,12 +1,10 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 /* eslint-disable new-cap */
 import { Account, type PublicKey, SmartContract, type UInt64 } from 'snarkyjs';
-import { shareSnarkyMetadata } from '../utils.js';
-
-type SmartContractConstructor = new (...args: any[]) => SmartContract;
+import { SmartContractConstructor, shareSnarkyMetadata } from '../utils.js';
 
 interface Viewable {
-  balanceOf: (account: PublicKey) => UInt64;
+  balanceOf: (address: PublicKey) => UInt64;
 }
 
 function viewable<BaseClass extends SmartContractConstructor>(
@@ -16,8 +14,15 @@ function viewable<BaseClass extends SmartContractConstructor>(
   prototype: Viewable;
 } {
   class Views extends base implements Viewable {
-    public balanceOf(account: PublicKey) {
-      return Account(account, this.token.id).balance.get();
+    public balanceOf(address: PublicKey): UInt64 {
+      const account = Account(address, this.token.id);
+      const balance = account.balance.get();
+
+      // create a precondition, to cover a case where the
+      // return balance is consumed in another contract
+      account.balance.assertEquals(balance);
+
+      return balance;
     }
   }
 

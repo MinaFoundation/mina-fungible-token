@@ -13,9 +13,7 @@ import {
   UInt64,
   VerificationKey,
 } from 'snarkyjs';
-import { shareSnarkyMetadata } from '../utils.js';
-
-type SmartContractConstructor = new (...args: any[]) => SmartContract;
+import { shareSnarkyMetadata, SmartContractConstructor } from '../utils.js';
 
 interface Approvable {
   approveCallback: (callback: Experimental.Callback<unknown>) => void;
@@ -25,7 +23,7 @@ interface Approvable {
 function approvable<BaseClass extends SmartContractConstructor>(
   base: BaseClass
 ): BaseClass & {
-  new(...args: any[]): Approvable;
+  new (...args: any[]): Approvable;
   prototype: Approvable;
 } {
   class Approvals extends base implements Approvable {

@@ -1,16 +1,25 @@
+/* eslint-disable new-cap */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable putout/putout */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { PublicKey, SmartContract, UInt64, method } from 'snarkyjs';
-import { shareSnarkyMetadata } from '../utils.js';
-
-// TODO: find out why can't we re-use and export this type?
-type SmartContractConstructor = new (...args: any[]) => SmartContract;
+import {
+  Field,
+  PublicKey,
+  SmartContract,
+  Struct,
+  UInt64,
+  method,
+} from 'snarkyjs';
+import { SmartContractConstructor, shareSnarkyMetadata } from '../utils.js';
 
 interface Mintable {
   mint: (to: PublicKey, amount: UInt64) => void;
 }
+
+class AdminState extends Struct({
+  admin: Field,
+}) {}
 
 function mintable<BaseClass extends SmartContractConstructor>(
   base: BaseClass
@@ -24,6 +33,8 @@ function mintable<BaseClass extends SmartContractConstructor>(
       this.token.mint({ address: to, amount });
     }
   }
+
+  Mint.state = AdminState;
 
   return shareSnarkyMetadata(Mint, base);
 }

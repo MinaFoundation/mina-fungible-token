@@ -12,13 +12,17 @@ import {
   isReady,
 } from 'snarkyjs';
 import { Transferable } from '../src/mixins/transferable.js';
-import TokenSmartContract from '../src/token.js';
+import TokenSmartContract from '../src/Token.js';
 
 await isReady;
 
 class TokenHolder extends SmartContract {
   public static tokenSmartContractAddress: PublicKey =
     PrivateKey.random().toPublicKey();
+
+  public get tokenContract() {
+    return new TokenSmartContract(TokenHolder.tokenSmartContractAddress);
+  }
 
   public deploy(args?: DeployArgs) {
     super.deploy(args);
@@ -30,15 +34,7 @@ class TokenHolder extends SmartContract {
 
   @method
   public withdraw(to: PublicKey, amount: UInt64) {
-    // manual send
-    const toAccountUpdate = AccountUpdate.create(to, this.tokenId);
-    toAccountUpdate.balance.addInPlace(amount);
-    toAccountUpdate.body.mayUseToken =
-      AccountUpdate.MayUseToken.InheritFromParent;
-
-    this.balance.subInPlace(amount);
-
-    this.self.body.mayUseToken = AccountUpdate.MayUseToken.ParentsOwnToken;
+    this.tokenContract.transfer(this, to, amount);
   }
 }
 

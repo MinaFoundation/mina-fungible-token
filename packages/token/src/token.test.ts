@@ -15,7 +15,7 @@ import describeContract from '../test/describeContract.js';
 import ThirdPartySmartContract from '../test/ThirdPartySmartContract.js';
 import TokenHolder from '../test/TokenHolder.js';
 
-import Token from './token.js';
+import Token from './Token.js';
 
 await isReady;
 
@@ -129,6 +129,7 @@ describeContract<Token>('Token', Token, (context) => {
       (thirdPartyContext) => {
         // eslint-disable-next-line @typescript-eslint/init-declarations
         let thirdParty: ThirdPartySmartContract;
+        // eslint-disable-next-line @typescript-eslint/init-declarations
         let thirdPartyTokenHolder: TokenHolder;
 
         ThirdPartySmartContract.tokenSmartContractAddress =
@@ -149,10 +150,7 @@ describeContract<Token>('Token', Token, (context) => {
           const tx = await Mina.transaction(deployerAccount, () => {
             // pay for deployment of 'thirdParty'
             // token account by deployerAccount
-            AccountUpdate.createSigned(deployerAccount).balance.subInPlace(
-              Mina.accountCreationFee()
-            );
-
+            AccountUpdate.fundNewAccount(deployerAccount);
             thirdParty.deploy();
           });
 
@@ -176,9 +174,7 @@ describeContract<Token>('Token', Token, (context) => {
           const tx = await Mina.transaction(deployerAccount, () => {
             // pay for deployment of 'thirdPartyTokenHolder'
             // token account by deployerAccount
-            AccountUpdate.createSigned(deployerAccount).balance.subInPlace(
-              Mina.accountCreationFee()
-            );
+            AccountUpdate.fundNewAccount(deployerAccount);
 
             thirdPartyTokenHolder.deploy();
             token.approveAccountUpdate(thirdPartyTokenHolder.self);
@@ -226,6 +222,7 @@ describeContract<Token>('Token', Token, (context) => {
                       thirdParty.deposit(UInt64.from(10));
                     });
 
+                    Circuit.log('deposit tx', tx.toPretty());
                     tx.sign([alice.privateKey]);
 
                     await tx.prove();
@@ -248,6 +245,8 @@ describeContract<Token>('Token', Token, (context) => {
                     const tx = await Mina.transaction(alice.publicKey, () => {
                       thirdParty.withdraw(UInt64.from(10));
                     });
+
+                    Circuit.log('withdraw tx', tx.toPretty());
 
                     tx.sign([alice.privateKey]);
 
