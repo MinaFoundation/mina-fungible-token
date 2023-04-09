@@ -1,14 +1,16 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-/* eslint-disable max-classes-per-file */
 import {
-  SmartContract,
+  type SmartContract,
   method,
   PublicKey,
   UInt64,
-  Circuit,
   AccountUpdate,
 } from 'snarkyjs';
-import { SmartContractConstructor, shareSnarkyMetadata } from '../utils.js';
+
+import {
+  type SmartContractConstructor,
+  shareSnarkyMetadata,
+} from '../utils.js';
 
 interface Transferable {
   transfer: (
@@ -34,6 +36,7 @@ interface TransferFromChildToSiblingOptions {
 function transferable<BaseClass extends SmartContractConstructor>(
   base: BaseClass
 ): BaseClass & {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new (...args: any[]): Transferable;
   prototype: Transferable;
 } {

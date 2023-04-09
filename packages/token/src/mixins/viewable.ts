@@ -1,7 +1,11 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 /* eslint-disable new-cap */
-import { Account, type PublicKey, SmartContract, type UInt64 } from 'snarkyjs';
-import { SmartContractConstructor, shareSnarkyMetadata } from '../utils.js';
+import { Account, type PublicKey, type UInt64 } from 'snarkyjs';
+
+import {
+  type SmartContractConstructor,
+  shareSnarkyMetadata,
+} from '../utils.js';
 
 interface Viewable {
   balanceOf: (address: PublicKey) => UInt64;
@@ -10,6 +14,7 @@ interface Viewable {
 function viewable<BaseClass extends SmartContractConstructor>(
   base: BaseClass
 ): BaseClass & {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   new (...args: any[]): Viewable;
   prototype: Viewable;
 } {

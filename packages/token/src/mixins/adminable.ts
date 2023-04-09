@@ -3,15 +3,12 @@
 /* eslint-disable putout/putout */
 /* eslint-disable max-classes-per-file */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
+import { Field, PublicKey, Struct, UInt64, method } from 'snarkyjs';
+
 import {
-  Field,
-  PublicKey,
-  SmartContract,
-  Struct,
-  UInt64,
-  method,
-} from 'snarkyjs';
-import { SmartContractConstructor, shareSnarkyMetadata } from '../utils.js';
+  type SmartContractConstructor,
+  shareSnarkyMetadata,
+} from '../utils.js';
 
 interface Mintable {
   mint: (to: PublicKey, amount: UInt64) => void;
