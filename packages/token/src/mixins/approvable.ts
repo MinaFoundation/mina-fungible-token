@@ -2,20 +2,17 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import {
   AccountUpdate,
-  Bool,
-  Circuit,
+  type Bool,
   Experimental,
   Int64,
   method,
-  Permissions,
-  PublicKey,
-  SmartContract,
   UInt64,
-  VerificationKey,
 } from 'snarkyjs';
-import { shareSnarkyMetadata } from '../utils.js';
 
-type SmartContractConstructor = new (...args: any[]) => SmartContract;
+import {
+  shareSnarkyMetadata,
+  type SmartContractConstructor,
+} from '../utils.js';
 
 interface Approvable {
   approveCallback: (callback: Experimental.Callback<unknown>) => void;
@@ -25,7 +22,8 @@ interface Approvable {
 function approvable<BaseClass extends SmartContractConstructor>(
   base: BaseClass
 ): BaseClass & {
-  new(...args: any[]): Approvable;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  new (...args: any[]): Approvable;
   prototype: Approvable;
 } {
   class Approvals extends base implements Approvable {

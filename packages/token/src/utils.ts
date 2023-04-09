@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { SmartContract } from 'snarkyjs';
+import { SmartContract, type Struct } from 'snarkyjs';
+
+interface SmartContractConstructor {
+  new (...args: any[]): SmartContract;
+  state?: InstanceType<Struct<unknown>>;
+}
 
 let provers: any[] = [];
 function shareSnarkyMetadata<Current>(current: Current, base: any): Current {
@@ -29,4 +34,4 @@ function shareSnarkyMetadata<Current>(current: Current, base: any): Current {
   return current;
 }
 
-export { shareSnarkyMetadata };
+export { shareSnarkyMetadata, SmartContractConstructor };
