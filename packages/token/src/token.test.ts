@@ -1,269 +1,284 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-/* eslint-disable jest/require-hook */
+/* eslint-disable new-cap */
 import {
   AccountUpdate,
   Circuit,
-  Experimental,
-  Field,
-  isReady,
   Mina,
-  shutdown,
+  PrivateKey,
+  PublicKey,
   UInt64,
-  VerificationKey,
+  isReady,
+  shutdown,
 } from 'snarkyjs';
-import describeContract from '../test/describeContract.js';
-import ThirdPartySmartContract from '../test/ThirdPartySmartContract.js';
-import TokenHolder from '../test/TokenHolder.js';
-
 import Token from './Token.js';
+import { after, min } from 'lodash';
+import ThirdParty from '../test/ThirdParty.js';
+import TokenAccount from './TokenAccount.js';
+import Admin from './Admin.js';
 
 await isReady;
 
-describeContract<Token>('Token', Token, (context) => {
+const proofsEnabled = false;
+
+interface Context {
+  deployerKey: PrivateKey;
+  deployerAccount: PublicKey;
+
+  senderKey: PrivateKey;
+  senderAccount: PublicKey;
+
+  adminKey: PrivateKey;
+  adminAccount: PublicKey;
+  admin: Admin;
+
+  tokenAKey: PrivateKey;
+  tokenAAccount: PublicKey;
+  tokenA: Token;
+
+  // tokenBKey: PrivateKey;
+  // tokenBAccount: PublicKey;
+  // tokenB: Token;
+
+  thirdPartyKey: PrivateKey;
+  thirdPartyAccount: PublicKey;
+  thirdParty: ThirdParty;
+
+  tokenAccountA: TokenAccount;
+  // tokenAccountB: TokenAccount;
+}
+
+describe('token integration', () => {
   // eslint-disable-next-line @typescript-eslint/init-declarations
-  let token: Token;
+  let context: Context;
 
-  async function deployToken() {
-    const { zkAppWithTokenId, deployerAccount, deployerKey, zkAppPrivateKey } =
-      context();
-    token = zkAppWithTokenId();
+  // eslint-disable-next-line max-statements
+  beforeAll(() => {
+    const Local = Mina.LocalBlockchain({ proofsEnabled });
+    Mina.setActiveInstance(Local);
+    const deployerKey = Local.testAccounts[0].privateKey;
+    const deployerAccount = deployerKey.toPublicKey();
 
-    const tx = await Mina.transaction(deployerAccount, () => {
-      AccountUpdate.fundNewAccount(deployerAccount);
-      token.deploy();
+    const senderKey = Local.testAccounts[1].privateKey;
+    const senderAccount = senderKey.toPublicKey();
+
+    const adminKey = PrivateKey.random();
+    const adminAccount = adminKey.toPublicKey();
+    const admin = new Admin(adminAccount);
+
+    const tokenAKey = PrivateKey.random();
+    const tokenAAccount = tokenAKey.toPublicKey();
+    const tokenA = new Token(tokenAKey.toPublicKey());
+
+    // const tokenBKey = PrivateKey.random();
+    // const tokenBAccount = tokenBKey.toPublicKey();
+    // const tokenB = new Token(tokenBAccount);
+
+    const thirdPartyKey = PrivateKey.random();
+    const thirdPartyAccount = thirdPartyKey.toPublicKey();
+    const thirdParty = new ThirdParty(thirdPartyAccount);
+    thirdParty.tokenAddress = tokenAAccount;
+
+    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
+    // const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
+
+    context = {
+      deployerKey,
+      deployerAccount,
+
+      senderKey,
+      senderAccount,
+
+      adminKey,
+      adminAccount,
+      admin,
+
+      tokenAKey,
+      tokenAAccount,
+      tokenA,
+
+      // tokenBKey,
+      // tokenBAccount,
+      // tokenB,
+
+      thirdPartyKey,
+      thirdPartyAccount,
+      thirdParty,
+
+      tokenAccountA,
+      // tokenAccountB,
+    };
+
+    Circuit.log('accounts', {
+      deployerAccount,
+      senderAccount,
+      adminAccount,
+      tokenAAccount,
+      // tokenBAccount,
+      thirdPartyAccount,
     });
 
-    tx.sign([deployerKey, zkAppPrivateKey]);
-    await tx.prove();
-    await tx.send();
-
-    return tx;
-  }
-
-  describe('life cycle', () => {
-    beforeAll(async () => {
-      await deployToken();
+    Circuit.log('Token ids', {
+      tokenAId: tokenA.token.id,
+      // tokenBId: tokenB.token.id,
     });
+  });
 
-    it('should mint for alice', async () => {
-      expect.assertions(1);
+  const totalSupply = UInt64.from(10_000_000_000_000);
 
-      const {
-        senderAccount,
-        senderKey,
-        zkAppPrivateKey,
-        testAccounts: [alice],
-      } = context();
+  describe('deploy', () => {
+    it('should deploy token admin', async () => {
+      expect.assertions(0);
 
-      const tx = await Mina.transaction(senderAccount, () => {
-        const amount = UInt64.from(1_000_000);
-
-        // `sender` pays for `alice` token account creation
-        AccountUpdate.createSigned(senderAccount).balance.subInPlace(
-          Mina.accountCreationFee()
-        );
-
-        token.mint(alice.publicKey, amount);
+      const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+        context.admin.deploy();
       });
 
-      tx.sign([senderKey, zkAppPrivateKey]);
+      tx.sign([context.deployerKey, context.adminKey]);
+
+      await tx.prove();
+      await tx.send();
+    });
+
+    it('should deploy token contract A', async () => {
+      expect.assertions(1);
+
+      const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+        context.tokenA.deploy();
+        context.tokenA.initialize(context.adminAccount, totalSupply);
+      });
+
+      tx.sign([context.deployerKey, context.tokenAKey]);
+
       await tx.prove();
       await tx.send();
 
-      Circuit.log('Minting for alice successful', {
-        alice: {
-          mina: Mina.getBalance(alice.publicKey),
-
-          customToken: Mina.getBalance(alice.publicKey, token.token.id),
-        },
-      });
-
-      expect(Mina.getBalance(alice.publicKey, token.token.id).toString()).toBe(
-        1_000_000n.toString()
+      expect(context.tokenA.admin.get().toBase58()).toBe(
+        context.adminAccount.toBase58()
       );
     });
 
-    it('should transfer from Alice to Bob', async () => {
+    // it('should deploy token contract B', async () => {
+    //   expect.assertions(1);
+
+    //   const tx = await Mina.transaction(context.deployerAccount, () => {
+    //     AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+    //     context.tokenB.deploy();
+    //     context.tokenB.initialize(context.adminAccount, totalSupply);
+    //   });
+
+    //   tx.sign([context.deployerKey, context.tokenBKey]);
+
+    //   await tx.prove();
+    //   await tx.send();
+
+    //   expect(context.tokenB.admin.get().toBase58()).toBe(
+    //     context.adminAccount.toBase58()
+    //   );
+    // });
+
+    it('should deploy a third party contract', async () => {
       expect.assertions(0);
 
-      const {
-        zkAppPrivateKey,
-        senderAccount,
-        senderKey,
-        testAccounts: [alice, bob],
-      } = context();
-
-      Circuit.log('Sending from alice to bob');
-      const tx = await Mina.transaction(alice.publicKey, () => {
-        const amount = UInt64.from(1000);
-
-        // pay for `bob` account creation by `alice`
-        AccountUpdate.createSigned(alice.publicKey).balance.subInPlace(
-          Mina.accountCreationFee()
-        );
-
-        token.transfer(alice.publicKey, bob.publicKey, amount);
+      const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+        context.thirdParty.deploy();
       });
 
-      tx.sign([alice.privateKey]);
+      tx.sign([context.deployerKey, context.thirdPartyKey]);
+
+      await tx.prove();
+      await tx.send();
+    });
+
+    it('should deploy a third party token account for token A', async () => {
+      expect.assertions(0);
+
+      const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+        context.tokenAccountA.deploy();
+        Circuit.log('tokenAccountA.self', context.tokenAccountA.self.toJSON());
+        context.tokenA.approveDeploy(context.tokenAccountA.self);
+      });
+
+      tx.sign([context.deployerKey, context.thirdPartyKey]);
+
+      await tx.prove();
+      await tx.send();
+    });
+
+    // it('should deploy a third party token account for token B', async () => {
+    //   expect.assertions(0);
+
+    //   const tx = await Mina.transaction(context.deployerAccount, () => {
+    //     AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+    //     context.tokenAccountB.deploy();
+    //     context.tokenB.approveDeploy(context.tokenAccountB.self);
+    //   });
+
+    //   tx.sign([context.deployerKey, context.thirdPartyKey]);
+
+    //   await tx.prove();
+    //   await tx.send();
+    // });
+  });
+
+  describe('mint', () => {
+    const mintAmount = UInt64.from(1000);
+
+    it('should mint for the sender account', async () => {
+      expect.assertions(1);
+
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.mint(context.senderAccount, mintAmount);
+      });
+
+      tx.sign([context.senderKey]);
+
       await tx.prove();
       await tx.send();
 
-      const aliceBalanceToken = Mina.getBalance(
-        alice.publicKey,
-        token.token.id
-      ).toBigInt();
-
-      const bobBalanceToken = Mina.getBalance(
-        bob.publicKey,
-        token.token.id
-      ).toBigInt();
-
-      Circuit.log('aliceBalanceToken', aliceBalanceToken);
-      Circuit.log('bobBalanceToken', bobBalanceToken);
+      expect(
+        context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
+      ).toBe(mintAmount.toBigInt());
     });
+  });
 
-    describeContract<ThirdPartySmartContract>(
-      'third party contract',
-      ThirdPartySmartContract,
-      (thirdPartyContext) => {
-        // eslint-disable-next-line @typescript-eslint/init-declarations
-        let thirdParty: ThirdPartySmartContract;
-        // eslint-disable-next-line @typescript-eslint/init-declarations
-        let thirdPartyTokenHolder: TokenHolder;
+  describe('third party', () => {
+    describe('deposit', () => {
+      const depositAmount = UInt64.from(500);
 
-        ThirdPartySmartContract.tokenSmartContractAddress =
-          context().zkAppAddress;
+      it('should deposit from the user to the token account of the third party', async () => {
+        expect.assertions(1);
 
-        TokenHolder.tokenSmartContractAddress = context().zkAppAddress;
+        const tx = await Mina.transaction(context.senderAccount, () => {
+          const [fromAccountUpdate] = context.tokenA.transferFrom(
+            context.senderAccount,
+            depositAmount,
+            AccountUpdate.MayUseToken.ParentsOwnToken
+          );
 
-        async function deployThirdParty() {
-          const {
-            zkAppWithTokenId,
-            deployerAccount,
-            deployerKey,
-            zkAppPrivateKey,
-          } = thirdPartyContext();
+          fromAccountUpdate.requireSignature();
 
-          thirdParty = zkAppWithTokenId();
+          Circuit.log(
+            'fromAccountUpdate',
+            fromAccountUpdate.body.balanceChange
+          );
 
-          const tx = await Mina.transaction(deployerAccount, () => {
-            // pay for deployment of 'thirdParty'
-            // token account by deployerAccount
-            AccountUpdate.fundNewAccount(deployerAccount);
-            thirdParty.deploy();
-          });
+          context.thirdParty.deposit(fromAccountUpdate, depositAmount);
+        });
 
-          tx.sign([deployerKey, zkAppPrivateKey]);
-          await tx.prove();
-          await tx.send();
+        tx.sign([context.senderKey]);
 
-          return tx;
-        }
+        await tx.prove();
+        await tx.send();
 
-        async function deployThirdPartyTokenHolder() {
-          const {
-            zkAppAddress,
-            zkAppPrivateKey,
-            deployerAccount,
-            deployerKey,
-          } = thirdPartyContext();
-
-          thirdPartyTokenHolder = new TokenHolder(zkAppAddress, token.token.id);
-
-          const tx = await Mina.transaction(deployerAccount, () => {
-            // pay for deployment of 'thirdPartyTokenHolder'
-            // token account by deployerAccount
-            AccountUpdate.fundNewAccount(deployerAccount);
-
-            thirdPartyTokenHolder.deploy();
-            token.approveAccountUpdate(thirdPartyTokenHolder.self);
-          });
-
-          tx.sign([deployerKey, zkAppPrivateKey]);
-          await tx.prove();
-          await tx.send();
-
-          return tx;
-        }
-
-        describeContract<TokenHolder>(
-          'third party token holder contract',
-          TokenHolder,
-          (tokenHolderContext) => {
-            describe('token holder', () => {
-              beforeAll(async () => {
-                await deployThirdParty();
-                await deployThirdPartyTokenHolder();
-              });
-
-              it('should have no balance, but should exist', () => {
-                expect.assertions(0);
-
-                const { zkAppAddress } = tokenHolderContext();
-                const balance = token.balanceOf(zkAppAddress);
-
-                Circuit.log('balance after deploy', balance);
-              });
-
-              describe('life cycle', () => {
-                describe('deposit', () => {
-                  it('should allow deposits of the custom token contract', async () => {
-                    expect.assertions(0);
-
-                    const {
-                      zkAppAddress,
-                      testAccounts: [alice],
-                    } = thirdPartyContext();
-
-                    Error.stackTraceLimit = 1_000_000_000;
-
-                    const tx = await Mina.transaction(alice.publicKey, () => {
-                      thirdParty.deposit(UInt64.from(10));
-                    });
-
-                    Circuit.log('deposit tx', tx.toPretty());
-                    tx.sign([alice.privateKey]);
-
-                    await tx.prove();
-                    await tx.send();
-
-                    const balance = token.balanceOf(zkAppAddress);
-                    Circuit.log('balance after deposit', balance);
-                  });
-                });
-
-                describe('withdraw', () => {
-                  it('should allow withdraw of the custom token contract', async () => {
-                    expect.assertions(0);
-
-                    const {
-                      zkAppAddress,
-                      testAccounts: [alice],
-                    } = thirdPartyContext();
-
-                    const tx = await Mina.transaction(alice.publicKey, () => {
-                      thirdParty.withdraw(UInt64.from(10));
-                    });
-
-                    Circuit.log('withdraw tx', tx.toPretty());
-
-                    tx.sign([alice.privateKey]);
-
-                    await tx.prove();
-                    await tx.send();
-
-                    const balance = token.balanceOf(zkAppAddress);
-                    Circuit.log('balance after withdraw', balance);
-                  });
-                });
-              });
-            });
-          },
-          { createLocalBlockchain: false }
-        );
-      },
-      { createLocalBlockchain: false }
-    );
+        expect(
+          context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
+        ).toBe(depositAmount.toBigInt());
+      });
+    });
   });
 });
