@@ -30,6 +30,16 @@ type TransferReturn =
 interface Transferable {
   transferFromTo: (options: TransferFromToOptions) => FromToTransferReturn;
   transfer: (options: TransferOptions) => TransferReturn;
+  transferFrom: (
+    from: PublicKey,
+    amount: UInt64,
+    mayUseToken: MayUseToken
+  ) => FromTransferReturn;
+  transferTo: (
+    to: PublicKey,
+    amount: UInt64,
+    mayUseToken: MayUseToken
+  ) => ToTransferReturn;
 }
 
 export default Transferable;

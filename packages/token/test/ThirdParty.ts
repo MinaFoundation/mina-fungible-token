@@ -7,6 +7,7 @@ import {
   PrivateKey,
   method,
   Circuit,
+  UInt32,
 } from 'snarkyjs';
 
 import Token from '../src/Token.js';

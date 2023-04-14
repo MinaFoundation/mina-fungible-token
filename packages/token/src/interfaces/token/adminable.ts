@@ -9,6 +9,7 @@ import {
   Field,
   isReady,
   Bool,
+  VerificationKey,
 } from 'snarkyjs';
 
 await isReady;
@@ -21,6 +22,7 @@ class AdminAction extends Struct({
     burn: 1,
     setTotalSupply: 2,
     setPaused: 3,
+    setVerificationKey: 4,
   };
 
   public static fromType(type: number): AdminAction {
@@ -39,15 +41,14 @@ interface Burnable {
   burn: (from: PublicKey, amount: UInt64) => AccountUpdate;
 }
 
-interface Adminable {
-  admin: State<PublicKey>;
-}
-
 interface Pausable {
   paused: State<Bool>;
   setPaused: (paused: Bool) => void;
 }
 
-export default Adminable;
-export type { Mintable, Burnable, Pausable };
+interface Upgradable {
+  setVerificationKey: (verificationKey: VerificationKey) => void;
+}
+
+export type { Mintable, Burnable, Pausable, Upgradable };
 export { AdminAction };

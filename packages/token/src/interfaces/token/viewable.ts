@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import type { PublicKey, Account, UInt64, Bool } from 'snarkyjs';
+import { PublicKey, Account, UInt64, Bool } from 'snarkyjs';
 
 interface ViewableOptions {
   preconditions: {
@@ -14,9 +14,9 @@ interface Viewable {
   getBalanceOf: (address: PublicKey, options: ViewableOptions) => UInt64;
   getTotalSupply: (options: ViewableOptions) => UInt64;
   getCirculatingSupply: (options: ViewableOptions) => UInt64;
-  getAdmin: (options: ViewableOptions) => PublicKey;
   getDecimals: () => UInt64;
   getPaused: (options: ViewableOptions) => Bool;
+  getHooks: (options: ViewableOptions) => PublicKey;
 }
 
 export default Viewable;

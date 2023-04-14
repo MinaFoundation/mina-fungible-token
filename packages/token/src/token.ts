@@ -6,7 +6,6 @@
 import {
   AccountUpdate,
   Bool,
-  Int64,
   SmartContract,
   method,
   PublicKey,
@@ -14,8 +13,7 @@ import {
   Account,
   state,
   State,
-  Permissions,
-  Circuit,
+  VerificationKey,
 } from 'snarkyjs';
 
 import type Approvable from './interfaces/token/approvable.js';
@@ -33,33 +31,31 @@ import {
   TransferReturn,
 } from './interfaces/token/transferable.js';
 import errors from './errors.js';
-// eslint-disable-next-line putout/putout
 import {
   AdminAction,
   type Pausable,
   type Burnable,
   type Mintable,
+  type Upgradable,
 } from './interfaces/token/adminable.js';
-import Admin from './Admin.js';
 // eslint-disable-next-line putout/putout
 import type Viewable from './interfaces/token/viewable.js';
-// eslint-disable-next-line max-len
-// eslint-disable-next-line no-duplicate-imports, @typescript-eslint/consistent-type-imports
+// eslint-disable-next-line no-duplicate-imports
 import type { ViewableOptions } from './interfaces/token/viewable.js';
-// eslint-disable-next-line max-len
-// eslint-disable-next-line no-duplicate-imports, @typescript-eslint/consistent-type-imports
-import Adminable from './interfaces/token/adminable.js';
+import Hooks from './Hooks.js';
+import type Hookable from './interfaces/token/hookable.js';
 
 class Token
   extends SmartContract
   implements
-    Adminable,
+    Hookable,
     Mintable,
     Burnable,
     Approvable,
     Transferable,
     Viewable,
-    Pausable
+    Pausable,
+    Upgradable
 {
   public static defaultViewableOptions: ViewableOptions = {
     preconditions: { shouldAssertEquals: true },
@@ -69,7 +65,7 @@ class Token
   // TODO: check how many decimals mina has by default
   public static defaultDecimals = 9;
 
-  @state(PublicKey) public admin = State<PublicKey>();
+  @state(PublicKey) public hooks = State<PublicKey>();
 
   @state(UInt64) public totalSupply = State<UInt64>();
 
@@ -79,16 +75,16 @@ class Token
 
   public decimals: UInt64 = UInt64.from(Token.defaultDecimals);
 
-  public getAdminContract(): Admin {
-    const admin = this.getAdmin();
-    return new Admin(admin);
+  public getHooksContract(): Hooks {
+    const admin = this.getHooks();
+    return new Hooks(admin);
   }
 
   @method
-  public initialize(admin: PublicKey, totalSupply: UInt64) {
+  public initialize(hooks: PublicKey, totalSupply: UInt64) {
     this.account.provedState.assertEquals(Bool(false));
 
-    this.admin.set(admin);
+    this.hooks.set(hooks);
     this.totalSupply.set(totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
     this.paused.set(Bool(false));
@@ -100,8 +96,8 @@ class Token
 
   @method
   public mint(to: PublicKey, amount: UInt64): AccountUpdate {
-    const adminContract = this.getAdminContract();
-    adminContract.canAdmin(AdminAction.fromType(AdminAction.types.mint));
+    const hooksContract = this.getHooksContract();
+    hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.mint));
 
     const totalSupply = this.getTotalSupply();
     const circulatingSupply = this.getCirculatingSupply();
@@ -120,8 +116,8 @@ class Token
 
   @method
   public setTotalSupply(amount: UInt64) {
-    const adminContract = this.getAdminContract();
-    adminContract.canAdmin(
+    const hooksContract = this.getHooksContract();
+    hooksContract.canAdmin(
       AdminAction.fromType(AdminAction.types.setTotalSupply)
     );
 
@@ -134,11 +130,25 @@ class Token
 
   @method
   public burn(from: PublicKey, amount: UInt64): AccountUpdate {
-    const adminContract = this.getAdminContract();
-    adminContract.canAdmin(AdminAction.fromType(AdminAction.types.burn));
+    const hooksContract = this.getHooksContract();
+    hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.burn));
 
     // eslint-disable-next-line putout/putout
     return this.token.mint({ address: from, amount });
+  }
+
+  /**
+   * Upgradable
+   */
+
+  @method
+  public setVerificationKey(verificationKey: VerificationKey) {
+    const hooksContract = this.getHooksContract();
+    hooksContract.canAdmin(
+      AdminAction.fromType(AdminAction.types.setVerificationKey)
+    );
+
+    this.account.verificationKey.set(verificationKey);
   }
 
   /**
@@ -147,8 +157,8 @@ class Token
 
   @method
   public setPaused(paused: Bool) {
-    const adminContract = this.getAdminContract();
-    adminContract.canAdmin(AdminAction.fromType(AdminAction.types.setPaused));
+    const hooksContract = this.getHooksContract();
+    hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.setPaused));
 
     this.paused.set(paused);
   }
@@ -225,7 +235,6 @@ class Token
     amount: UInt64,
     mayUseToken: MayUseToken
   ): ToTransferReturn {
-    Circuit.log('Token.transferTo', this.token.id);
     const toAccountUpdate = AccountUpdate.create(to, this.token.id);
 
     toAccountUpdate.body.mayUseToken = mayUseToken;
@@ -313,16 +322,16 @@ class Token
     return circulatingSupply;
   }
 
-  public getAdmin(
+  public getHooks(
     { preconditions }: ViewableOptions = Token.defaultViewableOptions
   ): PublicKey {
-    const admin = this.admin.get();
+    const hooks = this.hooks.get();
 
     if (preconditions.shouldAssertEquals) {
-      this.admin.assertEquals(admin);
+      this.hooks.assertEquals(hooks);
     }
 
-    return admin;
+    return hooks;
   }
 
   public getPaused(

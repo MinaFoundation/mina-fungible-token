@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { AccountUpdate, Experimental } from 'snarkyjs';
+import { AccountUpdate } from 'snarkyjs';
 
 interface Approvable {
   approveTransfer: (from: AccountUpdate, to: AccountUpdate) => void;

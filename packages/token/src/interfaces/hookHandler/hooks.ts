@@ -2,9 +2,11 @@
 import type { Bool } from 'snarkyjs';
 
 import type { AdminAction } from '../token/adminable.js';
+import type { TransferFromToOptions } from '../token/transferable.js';
 
-interface Admin {
+interface Hooks {
   canAdmin: (action: AdminAction) => Bool;
+  canTransfer: ({ from, to, amount }: TransferFromToOptions) => Bool;
 }
 
-export default Admin;
+export default Hooks;
