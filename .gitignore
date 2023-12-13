@@ -12,7 +12,7 @@ lerna-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_on
 
 # Runtime data
 
@@ -107,12 +107,12 @@ web_modules/
 .cache
 .parcel-cache
 
-# Next.js build output
+# Next build output
 
 .next
 out
 
-# Nuxt.js build / generate output
+# Nuxt build / generate output
 
 .nuxt
 dist
@@ -121,7 +121,7 @@ dist
 
 .cache/
 
-# Comment in the public line in if your project uses Gatsby and not Next.js
+# Comment in the public line in if your project uses Gatsby and not Next
 
 # https://nextjs.org/blog/next-9-1#public-directory-support
 

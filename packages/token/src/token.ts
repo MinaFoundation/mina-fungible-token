@@ -16,9 +16,9 @@ import {
   VerificationKey,
 } from 'o1js';
 
-import type Approvable from './interfaces/token/approvable.js';
+import type Approvable from './interfaces/token/approvable';
 // eslint-disable-next-line putout/putout
-import type Transferable from './interfaces/token/transferable.js';
+import type Transferable from './interfaces/token/transferable';
 // eslint-disable-next-line max-len
 // eslint-disable-next-line no-duplicate-imports, @typescript-eslint/consistent-type-imports
 import {
@@ -29,21 +29,21 @@ import {
   TransferFromToOptions,
   TransferOptions,
   TransferReturn,
-} from './interfaces/token/transferable.js';
-import errors from './errors.js';
+} from './interfaces/token/transferable';
+import errors from './errors';
 import {
   AdminAction,
   type Pausable,
   type Burnable,
   type Mintable,
   type Upgradable,
-} from './interfaces/token/adminable.js';
+} from './interfaces/token/adminable';
 // eslint-disable-next-line putout/putout
-import type Viewable from './interfaces/token/viewable.js';
+import type Viewable from './interfaces/token/viewable';
 // eslint-disable-next-line no-duplicate-imports
-import type { ViewableOptions } from './interfaces/token/viewable.js';
-import Hooks from './Hooks.js';
-import type Hookable from './interfaces/token/hookable.js';
+import type { ViewableOptions } from './interfaces/token/viewable';
+import Hooks from './Hooks';
+import type Hookable from './interfaces/token/hookable';
 
 class Token
   extends SmartContract
@@ -82,6 +82,7 @@ class Token
 
   @method
   public initialize(hooks: PublicKey, totalSupply: UInt64) {
+    super.init();
     this.account.provedState.assertEquals(Bool(false));
 
     this.hooks.set(hooks);

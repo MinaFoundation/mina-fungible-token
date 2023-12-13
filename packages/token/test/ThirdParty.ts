@@ -10,8 +10,8 @@ import {
   UInt32,
 } from 'o1js';
 
-import Token from '../src/Token.js';
-import TokenAccount from '../src/TokenAccount.js';
+import Token from '../src/token';
+import TokenAccount from '../src/TokenAccount';
 
 class ThirdParty extends SmartContract {
   // eslint-disable-next-line no-warning-comments

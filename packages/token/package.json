@@ -8,11 +8,11 @@
       "dev": "bun run --watch src/index.ts"
     },
     "dependencies": {
-      "o1js": "^0.13.0",
+      "o1js": "^0.14.0",
       "typescript": "^5.0.0"
     },
     "devDependencies": {
       "bun-types": "latest"
     },
-    "module": "src/index.js"
-  }
+    "module": "src/index"
+}

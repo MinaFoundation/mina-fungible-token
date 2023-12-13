@@ -10,10 +10,10 @@ import {
   AccountUpdate,
 } from 'o1js';
 
-import type _Hooks from './interfaces/hookHandler/hooks.js';
-import { AdminAction } from './interfaces/token/adminable.js';
-import type { ViewableOptions } from './interfaces/token/viewable.js';
-import { TransferFromToOptions } from './interfaces/token/transferable.js';
+import type _Hooks from './interfaces/hookHandler/hooks';
+import { AdminAction } from './interfaces/token/adminable';
+import type { ViewableOptions } from './interfaces/token/viewable';
+import { TransferFromToOptions } from './interfaces/token/transferable';
 
 class Hooks extends SmartContract implements _Hooks {
   public static defaultViewableOptions: ViewableOptions = {
@@ -22,10 +22,9 @@ class Hooks extends SmartContract implements _Hooks {
 
   @state(PublicKey) public admin = State<PublicKey>();
 
-  @method
-  public initialize(admin: PublicKey) {
-    const provedState = this.account.provedState.get();
-    this.account.provedState.assertEquals(provedState);
+  @method public initialize(admin: PublicKey) {
+    super.init();
+    this.admin.getAndAssertEquals();
     this.admin.set(admin);
   }
 

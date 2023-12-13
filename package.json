@@ -12,6 +12,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "o1js": "^0.13.0"
+    "core-js": "^3.34.0",
+    "o1js": "^0.14.0",
+    "reflect-metadata": "^0.1.14"
   }
 }
