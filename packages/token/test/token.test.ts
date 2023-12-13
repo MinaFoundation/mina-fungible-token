@@ -12,9 +12,9 @@ import {
 
 import ThirdParty from '../test/ThirdParty.js';
 
-import Token from './Token.js';
-import TokenAccount from './TokenAccount.js';
-import Hooks from './Hooks.js';
+import Token from '../src/Token.js';
+import TokenAccount from '../src/TokenAccount.js';
+import Hooks from '../src/Hooks.js';
 
 await isReady;
 
