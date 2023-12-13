@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import type { Bool } from 'snarkyjs';
+import type { Bool } from 'o1js';
 
 import type { AdminAction } from '../token/adminable.js';
 

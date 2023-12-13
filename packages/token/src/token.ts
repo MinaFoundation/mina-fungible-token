@@ -14,7 +14,7 @@ import {
   state,
   State,
   VerificationKey,
-} from 'snarkyjs';
+} from 'o1js';
 
 import type Approvable from './interfaces/token/approvable.js';
 // eslint-disable-next-line putout/putout

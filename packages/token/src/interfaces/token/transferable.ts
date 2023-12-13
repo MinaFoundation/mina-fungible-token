@@ -1,6 +1,6 @@
 /* eslint-disable new-cap */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { PublicKey, UInt64, AccountUpdate, Struct } from 'snarkyjs';
+import { PublicKey, UInt64, AccountUpdate, Struct } from 'o1js';
 
 type MayUseToken =
   | typeof AccountUpdate.MayUseToken.InheritFromParent

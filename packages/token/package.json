@@ -17,6 +17,6 @@
   },
   "devDependencies": {
     "eslint": "^8.33.0",
-    "snarkyjs": "^0.9.4"
+    "o1js": "^0.14.1"
   }
 }

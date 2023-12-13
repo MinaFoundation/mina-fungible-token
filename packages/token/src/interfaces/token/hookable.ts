@@ -1,4 +1,4 @@
-import type { PublicKey, State } from 'snarkyjs';
+import type { PublicKey, State } from 'o1js';
 
 interface Hookable {
   hooks: State<PublicKey>;

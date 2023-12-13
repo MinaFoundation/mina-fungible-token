@@ -29,8 +29,8 @@
     "lerna": "^6.4.1",
     "lint-staged": "^13.1.0",
     "nx": "15.6.2",
+    "o1js": "^0.14.2",
     "prettier": "^2.6.2",
-    "snarkyjs": "^0.9.4",
     "ts-jest": "^29.0.5",
     "typescript": "^4.9.4"
   },

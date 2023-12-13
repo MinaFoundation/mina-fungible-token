@@ -8,7 +8,7 @@ import {
   method,
   PrivateKey,
   Circuit,
-} from 'snarkyjs';
+} from 'o1js';
 
 import type Withdrawable from './interfaces/tokenAccount/withdrawable.js';
 import Token from './Token.js';

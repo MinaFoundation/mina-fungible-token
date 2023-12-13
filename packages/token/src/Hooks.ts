@@ -8,7 +8,7 @@ import {
   SmartContract,
   method,
   AccountUpdate,
-} from 'snarkyjs';
+} from 'o1js';
 
 import type _Hooks from './interfaces/hookHandler/hooks.js';
 import { AdminAction } from './interfaces/token/adminable.js';

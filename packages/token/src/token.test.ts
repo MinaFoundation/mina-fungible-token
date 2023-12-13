@@ -8,7 +8,7 @@ import {
   type PublicKey,
   UInt64,
   isReady,
-} from 'snarkyjs';
+} from 'o1js';
 
 import ThirdParty from '../test/ThirdParty.js';
 

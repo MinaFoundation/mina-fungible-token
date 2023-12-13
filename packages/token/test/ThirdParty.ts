@@ -8,7 +8,7 @@ import {
   method,
   Circuit,
   UInt32,
-} from 'snarkyjs';
+} from 'o1js';
 
 import Token from '../src/Token.js';
 import TokenAccount from '../src/TokenAccount.js';
