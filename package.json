@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "core-js": "^3.34.0",
-    "o1js": "^0.14.0",
+    "o1js": "^0.13.0",
     "reflect-metadata": "^0.1.14"
   }
 }

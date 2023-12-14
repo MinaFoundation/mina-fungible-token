@@ -22,6 +22,7 @@ import Hooks from '../src/Hooks';
 const proofsEnabled = true;
 
 interface Context {
+
   deployerKey: PrivateKey;
   deployerAccount: PublicKey;
 
@@ -64,30 +65,31 @@ describe('token integration', () => {
     const senderKey = Local.testAccounts[1].privateKey;
     const senderAccount = senderKey.toPublicKey();
 
+
     const hooksKey = PrivateKey.random();
     const hooksAccount = hooksKey.toPublicKey();
-    //const hooks = new Hooks(hooksAccount);
+    const hooks = new Hooks(hooksAccount);
 
     const directAdminKey = PrivateKey.random();
     const directAdminAccount = directAdminKey.toPublicKey();
 
     const tokenAKey = PrivateKey.random();
     const tokenAAccount = tokenAKey.toPublicKey();
-    //const tokenA = new Token(tokenAAccount);
+    const tokenA = new Token(tokenAAccount);
 
     const tokenBKey = PrivateKey.random();
     const tokenBAccount = tokenBKey.toPublicKey();
-    //const tokenB = new Token(tokenBAccount);
+    const tokenB = new Token(tokenBAccount);
 
     const thirdPartyKey = PrivateKey.random();
     const thirdPartyAccount = thirdPartyKey.toPublicKey();
-    //const thirdParty = new ThirdParty(thirdPartyAccount);
-    //thirdParty.tokenAddress = tokenAAccount;
+    const thirdParty = new ThirdParty(thirdPartyAccount);
+    thirdParty.tokenAddress = tokenAAccount;
 
-    //const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
-    //const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
+    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
+    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
 
-    /*context = {
+    context = {
       deployerKey,
       deployerAccount,
 
@@ -115,14 +117,14 @@ describe('token integration', () => {
 
       tokenAccountA,
       tokenAccountB,
-    };*/
+    };
   });
 
   const totalSupply = UInt64.from(10_000_000_000_000);
 
   describe('deploy', () => {
     it('should deploy token hooks', async () => {
-      /*const tx = await Mina.transaction(context.deployerAccount, () => {
+      const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.hooks.deploy();
         context.hooks.initialize(context.directAdminAccount);
@@ -131,8 +133,7 @@ describe('token integration', () => {
       tx.sign([context.deployerKey, context.hooksKey]);
 
       await tx.prove();
-      await tx.send();*/
-      expect(true).toBe(true);
+      await tx.send();
     });
     /*it('should deploy token contract A', async () => {
 
