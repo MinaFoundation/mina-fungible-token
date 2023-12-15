@@ -22,7 +22,7 @@ import type Transferable from './interfaces/token/transferable';
 // eslint-disable-next-line max-len
 // eslint-disable-next-line no-duplicate-imports, @typescript-eslint/consistent-type-imports
 import {
-  FromToTransferReturn,
+  type FromToTransferReturn,
   FromTransferReturn,
   MayUseToken,
   ToTransferReturn,
