@@ -138,7 +138,8 @@ describe('token integration', () => {
       await tx.prove();
       await tx.send();
     });
-    /*it('should deploy token contract A', async () => {
+ 
+    it('should deploy token contract A', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
@@ -213,9 +214,9 @@ describe('token integration', () => {
 
       await tx.prove();
       await tx.send();
-    });*/
+    });
   });
-/*
+
   const mintAmount = UInt64.from(1000);
 
   describe('mint', () => {
@@ -272,5 +273,5 @@ describe('token integration', () => {
         ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
       });
     });
-  });*/
+  });
 });
