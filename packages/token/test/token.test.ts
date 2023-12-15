@@ -19,7 +19,9 @@ import Token from '../src/token';
 import TokenAccount from '../src/TokenAccount';
 import Hooks from '../src/Hooks';
 
-const proofsEnabled = true;
+const accountCreationFee = 0;
+const proofsEnabled = false;
+const enforceTransactionLimits = false;
 
 interface Context {
 
@@ -57,7 +59,7 @@ describe('token integration', () => {
   let context: Context;
 
   beforeAll(async () => {
-    const Local = Mina.LocalBlockchain({ proofsEnabled });
+    const Local = Mina.LocalBlockchain({ accountCreationFee, proofsEnabled, enforceTransactionLimits });
     Mina.setActiveInstance(Local);
     const deployerKey = Local.testAccounts[0].privateKey;
     const deployerAccount = deployerKey.toPublicKey();
