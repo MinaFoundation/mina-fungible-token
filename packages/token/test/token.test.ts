@@ -89,6 +89,9 @@ describe('token integration', () => {
     const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
     const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
 
+    await Hooks.compile();
+    await Token.compile();
+
     context = {
       deployerKey,
       deployerAccount,
