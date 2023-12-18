@@ -61,13 +61,16 @@ describe('token integration', () => {
   beforeAll(async () => {
     const Local = Mina.LocalBlockchain({ accountCreationFee, proofsEnabled, enforceTransactionLimits });
     Mina.setActiveInstance(Local);
+
+    // We need Mina accounts, for paying fees. 
+    // We use the predefined test accounts for those
     const deployerKey = Local.testAccounts[0].privateKey;
     const deployerAccount = deployerKey.toPublicKey();
 
     const senderKey = Local.testAccounts[1].privateKey;
     const senderAccount = senderKey.toPublicKey();
 
-
+    // Key pairs for non-Mina accounts
     const hooksKey = PrivateKey.random();
     const hooksAccount = hooksKey.toPublicKey();
     const hooks = new Hooks(hooksAccount);
@@ -148,7 +151,6 @@ describe('token integration', () => {
     it('should deploy token contract A', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenA.deploy();
         context.tokenA.initialize(context.hooksAccount, totalSupply);
       });
@@ -166,7 +168,6 @@ describe('token integration', () => {
     it('should deploy token contract B', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenB.deploy();
         context.tokenB.initialize(context.hooksAccount, totalSupply);
       });
@@ -184,7 +185,6 @@ describe('token integration', () => {
     it('should deploy a third party contract', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.thirdParty.deploy();
       });
 
@@ -197,7 +197,6 @@ describe('token integration', () => {
     it('should deploy a third party token account for token A', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenAccountA.deploy();
         context.tokenA.approveDeploy(context.tokenAccountA.self);
       });
@@ -211,7 +210,6 @@ describe('token integration', () => {
     it('should deploy a third party token account for token B', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenAccountB.deploy();
         context.tokenB.approveDeploy(context.tokenAccountB.self);
       });
@@ -232,7 +230,6 @@ describe('token integration', () => {
         // eslint-disable-next-line no-warning-comments
         // TODO: it looks like the 'directAdmin' account
         // is also created and needs to be paid for
-        AccountUpdate.fundNewAccount(context.senderAccount, 2);
         context.tokenA.mint(context.senderAccount, mintAmount);
       });
 
