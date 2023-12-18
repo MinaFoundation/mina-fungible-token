@@ -130,15 +130,19 @@ describe('token integration', () => {
   describe('deploy', () => {
     it('should deploy token hooks', async () => {
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.hooks.deploy();
-        context.hooks.initialize(context.directAdminAccount);
       });
-
       tx.sign([context.deployerKey, context.hooksKey]);
-
       await tx.prove();
       await tx.send();
+
+      const tx2 = await Mina.transaction(context.deployerAccount, () => {
+        context.hooks.initialize(context.directAdminAccount);
+      });
+      tx2.sign([context.deployerKey, context.directAdminKey]);
+      await tx2.prove();
+      await tx2.send();
+
     });
  
     it('should deploy token contract A', async () => {
