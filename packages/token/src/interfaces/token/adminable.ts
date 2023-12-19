@@ -10,7 +10,7 @@ import {
   isReady,
   Bool,
   VerificationKey,
-} from 'snarkyjs';
+} from 'o1js';
 
 await isReady;
 

@@ -1,14 +1,24 @@
 {
-  "extends": "./../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist"
-  },
-  "include": [
-    "./src/index.ts",
-    "./src/**/*.test.ts",
-    "./test/**/*.ts",
-    "./test/*.ts",
-    "./src/**/*.ts"
-  ],
-  "exclude": ["./dist/**/*.ts"]
+    "lib": ["ESNext"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "composite": true,
+    "strict": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "allowJs": true,
+    "types": [
+      "bun-types" // add Bun global
+    ]
+  }
 }

@@ -1,18 +1,24 @@
 {
   "compilerOptions": {
-    "strictNullChecks": true,
-    "lib": ["es2020"],
-    "target": "ES2020",
-    "module": "ES2022",
-    "declaration": true,
+    "lib": ["ESNext"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "composite": true,
+    "strict": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "jsx": "preserve",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "moduleResolution": "nodenext",
-    "noImplicitAny": true,
     "allowJs": true,
-    "esModuleInterop": true,
-    "strict": true,
-    "alwaysStrict": true,
-    "declarationMap": true
+    "types": [
+      "bun-types" // add Bun global
+    ]
   }
 }

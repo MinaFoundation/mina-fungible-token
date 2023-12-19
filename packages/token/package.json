@@ -1,22 +1,18 @@
 {
-  "name": "@stove-labs/mip-unknown",
-  "version": "0.0.1",
-  "license": "MIT",
-  "public": false,
-  "type": "module",
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "lint": "eslint ./test",
-    "test": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads ../../node_modules/jest/bin/jest.js ./src",
-    "test:ci": "npm run test",
-    "test:watch": "node --experimental-vm-modules --experimental-wasm-modules --experimental-wasm-threads ../../node_modules/jest/bin/jest.js ./src --watch"
-  },
-  "main": "dist/src/index.js",
-  "dependencies": {
-    "ts-mixer": "^6.0.3"
-  },
-  "devDependencies": {
-    "eslint": "^8.33.0",
-    "snarkyjs": "^0.9.4"
-  }
+    "name": "@mina-token/token",
+    "version": "1.0.0",
+    "license": "Apache-2.0",
+    "main": "src/index.ts",
+    "scripts": {
+      "test": "bun test test/token.test.ts",
+      "dev": "bun run --watch src/index.ts"
+    },
+    "dependencies": {
+      "o1js": "^0.13.0",
+      "typescript": "^5.0.0"
+    },
+    "devDependencies": {
+      "bun-types": "latest"
+    },
+    "module": "src/index"
 }

@@ -8,11 +8,11 @@ import {
   method,
   PrivateKey,
   Circuit,
-} from 'snarkyjs';
+} from 'o1js';
 
-import type Withdrawable from './interfaces/tokenAccount/withdrawable.js';
-import Token from './Token.js';
-import Depositable from './interfaces/tokenAccount/depositable.js';
+import type Withdrawable from './interfaces/tokenAccount/withdrawable';
+import Token from './token';
+import Depositable from './interfaces/tokenAccount/depositable';
 
 class TokenAccount extends SmartContract implements Withdrawable, Depositable {
   // eslint-disable-next-line no-warning-comments
