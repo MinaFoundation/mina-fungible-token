@@ -16,6 +16,7 @@ import { describe, it, beforeAll, expect } from "bun:test";
 import ThirdParty from '../test/ThirdParty';
 
 import Token from '../src/token';
+import errors from '../src/errors';
 import TokenAccount from '../src/TokenAccount';
 import Hooks from '../src/Hooks';
 
@@ -274,6 +275,19 @@ describe('token integration', () => {
         expect(
           context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
         ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+      });
+
+      it('should reject an unbalanced transaction', async () => {
+        const insufficientDeposit = UInt64.from(0);
+        expect(async () => (await Mina.transaction(context.senderAccount, () => {
+          const [fromAccountUpdate] = context.tokenA.transferFrom(
+            context.senderAccount,
+            insufficientDeposit,
+            AccountUpdate.MayUseToken.ParentsOwnToken
+          );
+          fromAccountUpdate.requireSignature();
+          context.thirdParty.deposit(fromAccountUpdate, depositAmount)
+        }))).toThrow(errors.nonZeroBalanceChange);
       });
     });
   });
