@@ -23,7 +23,6 @@ class ThirdParty extends SmartContract {
   public deposit(fromAccountUpdate: AccountUpdate, amount: UInt64) {
     const token = new Token(this.tokenAddress);
     const tokenAccount = new TokenAccount(this.address, token.token.id);
-    tokenAccount.tokenAddress = this.tokenAddress;
     tokenAccount.deposit(amount);
     token.approveTransfer(fromAccountUpdate, tokenAccount.self);
   }

@@ -199,6 +199,7 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         context.tokenAccountA.deploy();
+        context.tokenAccountA.ownerAddress.set(context.tokenAAccount);
         context.tokenA.approveDeploy(context.tokenAccountA.self);
       });
 
@@ -212,6 +213,7 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         context.tokenAccountB.deploy();
+        context.tokenAccountB.ownerAddress.set(context.tokenBAccount);
         context.tokenB.approveDeploy(context.tokenAccountB.self);
       });
 

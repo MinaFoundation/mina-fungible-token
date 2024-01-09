@@ -2,12 +2,14 @@
 import {
   AccountUpdate,
   Permissions,
-  type PublicKey,
+  PublicKey,
   SmartContract,
   UInt64,
   method,
   PrivateKey,
   Circuit,
+  state,
+  State,
 } from 'o1js';
 
 import type Withdrawable from './interfaces/tokenAccount/withdrawable';
@@ -15,15 +17,27 @@ import Token from './token';
 import Depositable from './interfaces/tokenAccount/depositable';
 
 class TokenAccount extends SmartContract implements Withdrawable, Depositable {
-  // eslint-disable-next-line no-warning-comments
-  // TODO: replace with a getter/setter or some other way
-  // of keeping it consistent across the smart contract lifecycle
-  public tokenAddress: PublicKey = PrivateKey.random().toPublicKey();
+  @state(PublicKey) ownerAddress = State<PublicKey>();
+
+  public set tokenOwnerAddress(address: PublicKey) {
+    this.ownerAddress.assertEquals(this.ownerAddress.get());
+    if(this.ownerAddress.get()) {
+      throw new Error('Token owner address has already been set')
+    }
+    this.ownerAddress.set(address);
+  }
+
+  public get tokenOwner() {
+    this.ownerAddress.assertEquals(this.ownerAddress.get());
+    if(!this.ownerAddress.get()) {
+      throw new Error('Token owner address has not been set')
+    }
+    return new Token(this.ownerAddress.get())
+  }
 
   @method
   public withdraw(amount: UInt64): AccountUpdate {
-    const token = new Token(this.tokenAddress);
-    const [fromAccountUpdate] = token.transferFrom(
+    const [fromAccountUpdate] = this.tokenOwner.transferFrom(
       this.address,
       amount,
       AccountUpdate.MayUseToken.InheritFromParent
@@ -33,8 +47,7 @@ class TokenAccount extends SmartContract implements Withdrawable, Depositable {
 
   @method
   public deposit(amount: UInt64): AccountUpdate {
-    const token = new Token(this.tokenAddress);
-    const [, toAccountUpdate] = token.transferTo(
+    const [, toAccountUpdate] = this.tokenOwner.transferTo(
       this.address,
       amount,
       AccountUpdate.MayUseToken.InheritFromParent
