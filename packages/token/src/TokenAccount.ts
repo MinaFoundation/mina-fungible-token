@@ -10,6 +10,7 @@ import {
   Circuit,
   state,
   State,
+  DeployArgs,
 } from 'o1js';
 
 import type Withdrawable from './interfaces/tokenAccount/withdrawable';
@@ -19,20 +20,17 @@ import Depositable from './interfaces/tokenAccount/depositable';
 class TokenAccount extends SmartContract implements Withdrawable, Depositable {
   @state(PublicKey) ownerAddress = State<PublicKey>();
 
-  public set tokenOwnerAddress(address: PublicKey) {
-    this.ownerAddress.assertEquals(this.ownerAddress.get());
-    if(this.ownerAddress.get()) {
-      throw new Error('Token owner address has already been set')
-    }
-    this.ownerAddress.set(address);
-  }
-
   public get tokenOwner() {
     this.ownerAddress.assertEquals(this.ownerAddress.get());
     if(!this.ownerAddress.get()) {
       throw new Error('Token owner address has not been set')
     }
     return new Token(this.ownerAddress.get())
+  }
+
+  deploy(args: DeployArgs & {ownerAddress: PublicKey}) {
+    super.deploy(args);
+    this.ownerAddress.set(args.ownerAddress);
   }
 
   @method

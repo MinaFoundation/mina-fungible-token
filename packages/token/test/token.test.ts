@@ -90,7 +90,6 @@ describe('token integration', () => {
     const thirdPartyKey = PrivateKey.random();
     const thirdPartyAccount = thirdPartyKey.toPublicKey();
     const thirdParty = new ThirdParty(thirdPartyAccount);
-    thirdParty.tokenAddress = tokenAAccount;
 
     const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
     const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
@@ -186,7 +185,7 @@ describe('token integration', () => {
     it('should deploy a third party contract', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.thirdParty.deploy();
+        context.thirdParty.deploy({ ownerAddress: context.tokenAAccount });
       });
 
       tx.sign([context.deployerKey, context.thirdPartyKey]);
@@ -198,8 +197,7 @@ describe('token integration', () => {
     it('should deploy a third party token account for token A', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.tokenAccountA.deploy();
-        context.tokenAccountA.ownerAddress.set(context.tokenAAccount);
+        context.tokenAccountA.deploy({ ownerAddress: context.tokenAAccount });
         context.tokenA.approveDeploy(context.tokenAccountA.self);
       });
 
@@ -212,8 +210,7 @@ describe('token integration', () => {
     it('should deploy a third party token account for token B', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.tokenAccountB.deploy();
-        context.tokenAccountB.ownerAddress.set(context.tokenBAccount);
+        context.tokenAccountB.deploy({ ownerAddress: context.tokenAAccount });
         context.tokenB.approveDeploy(context.tokenAccountB.self);
       });
 
