@@ -15,6 +15,7 @@ import {
   State,
   VerificationKey,
   Int64,
+  Provable,
 } from 'o1js';
 
 import type Approvable from './interfaces/token/approvable';
@@ -173,20 +174,18 @@ class Token
   public hasNoBalanceChange(accountUpdates: AccountUpdate[]): Bool {
     const tokenId = this.token.id;
 
-    let tokenChange = function(update: AccountUpdate): Int64 {
-      if(update.body.tokenId.equals(tokenId)) {
-        return(new Int64(update.body.balanceChange.magnitude,
-          update.body.balanceChange.sgn))
-      } else {
-        return(Int64.from(0));
-      }
+    const tokenChange = (update: AccountUpdate): Int64 => {
+      return(Provable.if(update.body.tokenId.equals(tokenId),
+        new Int64(update.body.balanceChange.magnitude,update.body.balanceChange.sgn),
+        Int64.from(0)
+      ));
     }
 
     let transitiveTokenChange = function(update: AccountUpdate): Int64 {
         return(update.children.accountUpdates
           .map(transitiveTokenChange)
-          .reduce(function(a, b, i) {
-            return(a.add(b))
+          .reduce((a, b, i) => {
+            return(a.add(b));
           }, tokenChange(update)))
     }
 
