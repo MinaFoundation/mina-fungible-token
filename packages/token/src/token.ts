@@ -137,7 +137,7 @@ class Token
     hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.burn));
 
     // eslint-disable-next-line putout/putout
-    return this.token.mint({ address: from, amount });
+    return this.token.burn({ address: from, amount });
   }
 
   /**
