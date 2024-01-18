@@ -10,6 +10,8 @@ const errors = {
 
   mintAmountExceedsTotalSupply:
     'Minting the provided amount would overflow the total supply',
+
+  tokenPaused: 'Token is paused',
 };
 
 export default errors;

@@ -9,6 +9,7 @@ import {
   type PublicKey,
   UInt64,
   Field,
+  Bool,
 } from 'o1js';
 
 import { describe, it, beforeAll, expect } from "bun:test";
@@ -289,5 +290,60 @@ describe('token integration', () => {
         }))).toThrow(errors.nonZeroBalanceChange);
       });
     });
+  });
+
+  describe('paused', () => {
+
+    const sendAmount = UInt64.from(10);
+
+    it('should be paused by the admin', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.setPaused(Bool(true));
+      });
+      tx.sign([context.senderKey, context.directAdminKey]);
+      await tx.prove();
+      await tx.send();
+    });
+
+    it('should block minting and burning while paused', async () => {
+      expect( async () => await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.mint(context.thirdPartyAccount, sendAmount)
+      })).toThrow(errors.tokenPaused);
+
+      expect( async () => await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.burn(context.thirdPartyAccount, sendAmount)
+      })).toThrow(errors.tokenPaused);
+    })
+
+    it('should block token transfers while paused', async () => {
+      expect(async () => await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.transferFromTo({
+          from: context.thirdPartyAccount,
+          to: context.thirdPartyAccount,
+          amount: sendAmount})
+      })).toThrow(errors.tokenPaused);
+      expect(async () => await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.transferFrom(
+          context.thirdPartyAccount,
+          sendAmount,
+          AccountUpdate.MayUseToken.ParentsOwnToken) }
+      )).toThrow(errors.tokenPaused);
+      expect(async () => await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.transferTo(
+          context.thirdPartyAccount,
+          sendAmount,
+          AccountUpdate.MayUseToken.ParentsOwnToken) }
+      )).toThrow(errors.tokenPaused);
+    })
+
+    it('should be unpaused by the admin', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.setPaused(Bool(false));
+      });
+      tx.sign([context.senderKey, context.directAdminKey]);
+      await tx.prove();
+      await tx.send();
+    });
+
   });
 });
