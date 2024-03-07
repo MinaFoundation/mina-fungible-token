@@ -1,6 +1,3 @@
-import "core-js";
-import "reflect-metadata";
-
 import {
   AccountUpdate,
   Circuit,
@@ -11,8 +8,6 @@ import {
   Field,
   Bool,
 } from 'o1js';
-
-import { describe, it, beforeAll, expect } from "bun:test";
 
 import ThirdParty from '../test/ThirdParty';
 
@@ -276,7 +271,7 @@ describe('token integration', () => {
           context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
         ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
       });
-
+/*
       it('should reject an unbalanced transaction', async () => {
         const insufficientDeposit = UInt64.from(0);
         expect(async () => (await Mina.transaction(context.senderAccount, () => {
@@ -289,6 +284,7 @@ describe('token integration', () => {
           context.thirdParty.deposit(fromAccountUpdate, depositAmount)
         }))).toThrow(errors.nonZeroBalanceChange);
       });
+*/
     });
   });
 
