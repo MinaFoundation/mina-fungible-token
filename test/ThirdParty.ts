@@ -11,16 +11,17 @@ import {
   state,
   State,
   DeployArgs,
+  Int64,
 } from 'o1js';
 
 import Token from '../src/token';
-import TokenAccount from '../src/TokenAccount';
+import Depositable from '../src/interfaces/tokenAccount/depositable';
 
-class ThirdParty extends SmartContract {
+class ThirdParty extends SmartContract implements Depositable{
   @state(PublicKey) ownerAddress = State<PublicKey>();
 
   public get tokenOwner() {
-    this.ownerAddress.assertEquals(this.ownerAddress.get());
+    this.ownerAddress.requireEquals(this.ownerAddress.get());
     if(!this.ownerAddress.get()) {
       throw new Error('Token owner address has not been set')
     }
@@ -33,11 +34,12 @@ class ThirdParty extends SmartContract {
   }
 
   @method
-  public deposit(fromAccountUpdate: AccountUpdate, amount: UInt64) {
+  public deposit(amount: UInt64): AccountUpdate {
     const token = this.tokenOwner;
-    const tokenAccount = new TokenAccount(this.address, token.token.id);
-    tokenAccount.deposit(amount);
-    token.approveTransfer(fromAccountUpdate, tokenAccount.self);
+    const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId());
+    accountUpdate.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
+    accountUpdate.balanceChange = Int64.fromUnsigned(amount);
+    return accountUpdate;
   }
 }
 

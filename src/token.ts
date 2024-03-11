@@ -6,7 +6,6 @@
 import {
   AccountUpdate,
   Bool,
-  SmartContract,
   method,
   PublicKey,
   UInt64,
@@ -16,6 +15,8 @@ import {
   VerificationKey,
   Int64,
   Provable,
+  TokenContract,
+  AccountUpdateForest,
 } from 'o1js';
 
 import type Approvable from './interfaces/token/approvable';
@@ -48,13 +49,12 @@ import Hooks from './Hooks';
 import type Hookable from './interfaces/token/hookable';
 
 class Token
-  extends SmartContract
+  extends TokenContract
   implements
     Hookable,
     Mintable,
     Burnable,
-    Approvable,
-    Transferable,
+//    Transferable,
     Viewable,
     Pausable,
     Upgradable
@@ -103,9 +103,7 @@ class Token
    */
 
   @method
-  public mint(to: PublicKey, amount: UInt64): AccountUpdate {
-    this.assertNotPaused();
-
+  public mint(address: PublicKey, amount: UInt64): AccountUpdate {
     const hooksContract = this.getHooksContract();
     hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.mint));
 
@@ -121,7 +119,7 @@ class Token
     // eslint-disable-next-line no-warning-comments
     // TODO: find out why amount can't be Int64, also for burn
     // eslint-disable-next-line putout/putout
-    return this.token.mint({ address: to, amount });
+    return this.internal.mint({ address, amount });
   }
 
   @method
@@ -175,58 +173,9 @@ class Token
     this.paused.set(paused);
   }
 
-  /**
-   * Approvable
-   */
-
-  // TODO
-  public hasNoBalanceChange(accountUpdates: AccountUpdate[]): Bool {
-    const tokenId = this.token.id;
-
-    const tokenChange = (update: AccountUpdate): Int64 => {
-      return(Provable.if(update.body.tokenId.equals(tokenId),
-        new Int64(update.body.balanceChange.magnitude,update.body.balanceChange.sgn),
-        Int64.from(0)
-      ));
-    }
-
-    let transitiveTokenChange = function(update: AccountUpdate): Int64 {
-        return(update.children.accountUpdates
-          .map(transitiveTokenChange)
-          .reduce((a, b, i) => {
-            return(a.add(b));
-          }, tokenChange(update)))
-    }
-
-    let totalTokenChange =
-      accountUpdates
-      .map(transitiveTokenChange)
-      .reduce((a, b, i) => {return(a.add(b))}, Int64.from(0))
-
-    return(totalTokenChange.equals(Int64.from(0)));
-  }
-
-  public assertHasNoBalanceChange(accountUpdates: AccountUpdate[]) {
-    this.hasNoBalanceChange(accountUpdates).assertTrue(
-      errors.nonZeroBalanceChange
-    );
-  }
-
   @method
-  public approveTransfer(from: AccountUpdate, to: AccountUpdate): void {
-    this.assertNotPaused();
-
-    this.assertHasNoBalanceChange([from, to]);
-    this.approve(from, AccountUpdate.Layout.NoChildren);
-    this.approve(to, AccountUpdate.Layout.NoChildren);
-  }
-
-  @method
-  public approveDeploy(deploy: AccountUpdate): void {
-    this.assertNotPaused();
-
-    this.assertHasNoBalanceChange([deploy]);
-    this.approve(deploy, AccountUpdate.Layout.NoChildren);
+  approveBase(updates: AccountUpdateForest) {
+    this.checkZeroBalanceChange(updates);
   }
 
   /**
@@ -286,7 +235,7 @@ class Token
     toAccountUpdate.balance.addInPlace(amount);
     return [undefined, toAccountUpdate];
   }
-
+/*
   public transfer({
     from,
     to,
@@ -321,7 +270,7 @@ class Token
 
     return this.transferTo(to, amount, mayUseToken);
   }
-
+*/
   /**
    * Viewable
    */

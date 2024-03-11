@@ -21,7 +21,7 @@ class TokenAccount extends SmartContract implements Withdrawable, Depositable {
   @state(PublicKey) ownerAddress = State<PublicKey>();
 
   public get tokenOwner() {
-    this.ownerAddress.assertEquals(this.ownerAddress.get());
+    this.ownerAddress.requireEquals(this.ownerAddress.get());
     if(!this.ownerAddress.get()) {
       throw new Error('Token owner address has not been set')
     }
