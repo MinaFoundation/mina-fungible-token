@@ -45,6 +45,10 @@ interface Context {
   thirdPartyAccount: PublicKey;
   thirdParty: ThirdParty;
 
+  thirdParty2Key: PrivateKey;
+  thirdParty2Account: PublicKey;
+  thirdParty2: ThirdParty;
+
   tokenAccountA: TokenAccount;
   tokenAccountB: TokenAccount;
 
@@ -84,6 +88,10 @@ describe('token integration', () => {
     const thirdPartyAccount = thirdPartyKey.toPublicKey();
     const thirdParty = new ThirdParty(thirdPartyAccount);
 
+    const {privateKey: thirdParty2Key, publicKey: thirdParty2Account} =
+      PrivateKey.randomKeypair();
+    const thirdParty2 = new ThirdParty(thirdParty2Account);
+
     const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
     const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
 
@@ -115,6 +123,10 @@ describe('token integration', () => {
       thirdPartyKey,
       thirdPartyAccount,
       thirdParty,
+
+      thirdParty2Key,
+      thirdParty2Account,
+      thirdParty2,
 
       tokenAccountA,
       tokenAccountB,
@@ -182,11 +194,12 @@ describe('token integration', () => {
     it('should deploy a third party contract', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
+        AccountUpdate.fundNewAccount(context.deployerAccount, 2);
         context.thirdParty.deploy({ ownerAddress: context.tokenAAccount });
+        context.thirdParty2.deploy({ ownerAddress: context.tokenAAccount });
       });
 
-      tx.sign([context.deployerKey, context.thirdPartyKey]);
+      tx.sign([context.deployerKey, context.thirdPartyKey, context.thirdParty2Key]);
 
       await tx.prove();
       await tx.send();
@@ -246,39 +259,59 @@ describe('token integration', () => {
   describe('third party', () => {
     const depositAmount = UInt64.from(1);
 
-    describe('deposit', () => {
-      it('should deposit from the user to the token account of the third party', async () => {
+    it('should deposit from the user to the token account of the third party', async () => {
 
-        const tokenId = context.tokenA.deriveTokenId();
+      const tokenId = context.tokenA.deriveTokenId();
 
-        const updateWithdraw = AccountUpdate.createSigned(context.senderAccount, tokenId)
-        updateWithdraw.balanceChange = Int64.fromUnsigned(depositAmount).neg();
+      const updateWithdraw = AccountUpdate.createSigned(context.senderAccount, tokenId)
+      updateWithdraw.balanceChange = Int64.fromUnsigned(depositAmount).neg();
 
-        const updateDeposit = context.thirdParty.deposit(depositAmount);
+      const updateDeposit = context.thirdParty.deposit(depositAmount);
+      updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
 
-        const tx = await Mina.transaction(context.senderAccount, () => {
-          AccountUpdate.fundNewAccount(context.senderAccount, 1)
-          context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
-            updateWithdraw,
-            updateDeposit
-          ]));
-
-        });
-        Provable.log(tx)
-
-        tx.sign([context.senderKey]);
-
-        await tx.prove();
-        await tx.send();
-
-        expect(
-          context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
-        ).toBe(depositAmount.toBigInt());
-
-        expect(
-          context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-        ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1)
+        context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
+          updateWithdraw,
+          updateDeposit
+        ]));
       });
+
+      tx.sign([context.senderKey]);
+
+      await tx.prove();
+      await tx.send();
+
+      expect(
+        context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
+      ).toBe(depositAmount.toBigInt());
+
+      expect(
+        context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
+      ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+    });
+
+    it('should send tokens from one contract to another', async () => {
+      const transferAmount = UInt64.from(0);
+      const updateWithdraw = context.thirdParty.withdraw(transferAmount);
+      const updateDeposit = context.thirdParty2.deposit(transferAmount);
+      updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
+          updateWithdraw, updateDeposit
+        ]))});
+      Provable.log(tx);
+      await tx.sign([context.senderKey]).prove()
+      await tx.send();
+
+      expect(
+        context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
+      ).toBe(depositAmount.toBigInt() - transferAmount.toBigInt());
+      expect(
+        context.tokenA.getBalanceOf(context.thirdParty2Account).toBigInt()
+      ).toBe(transferAmount.toBigInt());
+    })
 /*
       it('should reject an unbalanced transaction', async () => {
         const insufficientDeposit = UInt64.from(0);
@@ -293,7 +326,6 @@ describe('token integration', () => {
         }))).toThrow(errors.nonZeroBalanceChange);
       });
 */
-    });
   });
 
   describe('paused', () => {

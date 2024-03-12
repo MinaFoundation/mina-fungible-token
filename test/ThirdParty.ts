@@ -4,10 +4,7 @@ import {
   SmartContract,
   UInt64,
   PublicKey,
-  PrivateKey,
   method,
-  Circuit,
-  UInt32,
   state,
   State,
   DeployArgs,
@@ -16,8 +13,9 @@ import {
 
 import Token from '../src/token';
 import Depositable from '../src/interfaces/tokenAccount/depositable';
+import Withdrawable from '../src/interfaces/tokenAccount/withdrawable';
 
-class ThirdParty extends SmartContract implements Depositable{
+class ThirdParty extends SmartContract implements Depositable, Withdrawable {
   @state(PublicKey) ownerAddress = State<PublicKey>();
 
   public get tokenOwner() {
@@ -35,10 +33,15 @@ class ThirdParty extends SmartContract implements Depositable{
 
   @method
   public deposit(amount: UInt64): AccountUpdate {
+    const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId());
+    accountUpdate.balanceChange = Int64.fromUnsigned(amount);
+    return accountUpdate;
+  }
+
+  @method public withdraw(amount: UInt64): AccountUpdate {
     const token = this.tokenOwner;
     const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId());
-    accountUpdate.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
-    accountUpdate.balanceChange = Int64.fromUnsigned(amount);
+    accountUpdate.balanceChange = Int64.fromUnsigned(amount).neg();
     return accountUpdate;
   }
 }
