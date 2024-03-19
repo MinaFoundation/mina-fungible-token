@@ -44,7 +44,6 @@ import {
 // eslint-disable-next-line putout/putout
 import type Viewable from './interfaces/token/viewable';
 // eslint-disable-next-line no-duplicate-imports
-import type { ViewableOptions } from './interfaces/token/viewable';
 import Hooks from './Hooks';
 import type Hookable from './interfaces/token/hookable';
 
@@ -59,9 +58,6 @@ class Token
     Pausable,
     Upgradable
 {
-  public static defaultViewableOptions: ViewableOptions = {
-    preconditions: { shouldAssertEquals: true },
-  };
 
   // eslint-disable-next-line no-warning-comments
   // TODO: check how many decimals mina has by default
@@ -279,64 +275,38 @@ class Token
     return Account(address, this.token.id);
   }
 
-  public getBalanceOf(
-    address: PublicKey,
-    { preconditions }: ViewableOptions = Token.defaultViewableOptions
-  ): UInt64 {
+  public getBalanceOf(address: PublicKey): UInt64 {
     const account = this.getAccountOf(address);
     const balance = account.balance.get();
-
-    if (preconditions.shouldAssertEquals) {
-      account.balance.assertEquals(balance);
-    }
+    account.balance.requireEquals(balance);
 
     return balance;
   }
 
-  public getTotalSupply(
-    { preconditions }: ViewableOptions = Token.defaultViewableOptions
-  ): UInt64 {
+  public getTotalSupply(): UInt64 {
     const totalSupply = this.totalSupply.get();
-
-    if (preconditions.shouldAssertEquals) {
-      this.totalSupply.assertEquals(totalSupply);
-    }
+    this.totalSupply.requireEquals(totalSupply);
 
     return totalSupply;
   }
 
-  public getCirculatingSupply(
-    { preconditions }: ViewableOptions = Token.defaultViewableOptions
-  ): UInt64 {
+  public getCirculatingSupply(): UInt64 {
     const circulatingSupply = this.circulatingSupply.get();
-
-    if (preconditions.shouldAssertEquals) {
-      this.circulatingSupply.assertEquals(circulatingSupply);
-    }
+    this.circulatingSupply.requireEquals(circulatingSupply);
 
     return circulatingSupply;
   }
 
-  public getHooks(
-    { preconditions }: ViewableOptions = Token.defaultViewableOptions
-  ): PublicKey {
+  public getHooks(): PublicKey {
     const hooks = this.hooks.get();
-
-    if (preconditions.shouldAssertEquals) {
-      this.hooks.assertEquals(hooks);
-    }
+    this.hooks.requireEquals(hooks);
 
     return hooks;
   }
 
-  public getPaused(
-    { preconditions }: ViewableOptions = Token.defaultViewableOptions
-  ): Bool {
+  public getPaused(): Bool {
     const paused = this.paused.get();
-
-    if (preconditions.shouldAssertEquals) {
-      this.paused.assertEquals(paused);
-    }
+    this.paused.requireEquals(paused);
 
     return paused;
   }

@@ -12,13 +12,9 @@ import {
 
 import type _Hooks from './interfaces/hookHandler/hooks';
 import { AdminAction } from './interfaces/token/adminable';
-import type { ViewableOptions } from './interfaces/token/viewable';
 import { TransferFromToOptions } from './interfaces/token/transferable';
 
 class Hooks extends SmartContract implements _Hooks {
-  public static defaultViewableOptions: ViewableOptions = {
-    preconditions: { shouldAssertEquals: true },
-  };
 
   @state(PublicKey) public admin = State<PublicKey>();
 
@@ -28,14 +24,9 @@ class Hooks extends SmartContract implements _Hooks {
     this.admin.set(admin);
   }
 
-  public getAdmin(
-    { preconditions }: ViewableOptions = Hooks.defaultViewableOptions
-  ): PublicKey {
+  public getAdmin(): PublicKey {
     const admin = this.admin.get();
-
-    if (preconditions.shouldAssertEquals) {
-      this.admin.assertEquals(admin);
-    }
+    this.admin.requireEquals(admin);
 
     return admin;
   }
