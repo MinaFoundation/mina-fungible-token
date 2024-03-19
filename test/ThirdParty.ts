@@ -42,6 +42,7 @@ class ThirdParty extends SmartContract implements Depositable, Withdrawable {
     const token = this.tokenOwner;
     const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId());
     accountUpdate.balanceChange = Int64.fromUnsigned(amount).neg();
+    accountUpdate.requireSignature();
     return accountUpdate;
   }
 }

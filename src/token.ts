@@ -19,20 +19,8 @@ import {
   AccountUpdateForest,
 } from 'o1js';
 
-import type Approvable from './interfaces/token/approvable';
-// eslint-disable-next-line putout/putout
-import type Transferable from './interfaces/token/transferable';
-// eslint-disable-next-line max-len
-// eslint-disable-next-line no-duplicate-imports, @typescript-eslint/consistent-type-imports
-import {
-  type FromToTransferReturn,
-  FromTransferReturn,
-  MayUseToken,
-  ToTransferReturn,
-  TransferFromToOptions,
-  TransferOptions,
-  TransferReturn,
-} from './interfaces/token/transferable';
+
+
 import errors from './errors';
 import {
   AdminAction,
@@ -44,6 +32,7 @@ import {
 // eslint-disable-next-line putout/putout
 import type Viewable from './interfaces/token/viewable';
 // eslint-disable-next-line no-duplicate-imports
+import type { Transferable } from './interfaces';
 import Hooks from './Hooks';
 import type Hookable from './interfaces/token/hookable';
 
@@ -53,9 +42,9 @@ class Token
     Hookable,
     Mintable,
     Burnable,
-//    Transferable,
     Viewable,
     Pausable,
+    Transferable,
     Upgradable
 {
 
@@ -174,99 +163,6 @@ class Token
     this.checkZeroBalanceChange(updates);
   }
 
-  /**
-   * Transferable
-   */
-
-  @method
-  public transferFromTo({
-    from,
-    to,
-    amount,
-  }: TransferFromToOptions): FromToTransferReturn {
-    this.assertNotPaused();
-
-    const [fromAccountUpdate] = this.transferFrom(
-      from,
-      amount,
-      AccountUpdate.MayUseToken.ParentsOwnToken
-    );
-    const [, toAccountUpdate] = this.transferTo(
-      to,
-      amount,
-      AccountUpdate.MayUseToken.ParentsOwnToken
-    );
-
-    fromAccountUpdate.requireSignature();
-
-    return [fromAccountUpdate, toAccountUpdate];
-  }
-
-  public transferFrom(
-    from: PublicKey,
-    amount: UInt64,
-    mayUseToken: MayUseToken
-  ): FromTransferReturn {
-    this.assertNotPaused();
-
-    const fromAccountUpdate = AccountUpdate.create(from, this.token.id);
-    fromAccountUpdate.balance.subInPlace(amount);
-
-    fromAccountUpdate.body.mayUseToken = mayUseToken;
-
-    return [fromAccountUpdate, undefined];
-  }
-
-  public transferTo(
-    to: PublicKey,
-    amount: UInt64,
-    mayUseToken: MayUseToken
-  ): ToTransferReturn {
-    this.assertNotPaused();
-
-    const toAccountUpdate = AccountUpdate.create(to, this.token.id);
-
-    toAccountUpdate.body.mayUseToken = mayUseToken;
-
-    toAccountUpdate.balance.addInPlace(amount);
-    return [undefined, toAccountUpdate];
-  }
-/*
-  public transfer({
-    from,
-    to,
-    amount,
-    mayUseToken,
-  }: TransferOptions): TransferReturn {
-    this.assertNotPaused();
-
-    if (!from && !to) {
-      throw new Error(errors.fromOrToNotProvided);
-    }
-
-    if (from && to) {
-      return this.transferFromTo({
-        from,
-        to,
-        amount,
-      });
-    }
-
-    if (!mayUseToken) {
-      throw new Error(errors.mayUseTokenNotProvided);
-    }
-
-    if (from && !to) {
-      return this.transferFrom(from, amount, mayUseToken);
-    }
-
-    if (!to) {
-      throw new Error(errors.fromOrToNotProvided);
-    }
-
-    return this.transferTo(to, amount, mayUseToken);
-  }
-*/
   /**
    * Viewable
    */

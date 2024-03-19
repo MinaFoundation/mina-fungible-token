@@ -11,6 +11,7 @@ import {
   state,
   State,
   DeployArgs,
+  Int64,
 } from 'o1js';
 
 import type Withdrawable from './interfaces/tokenAccount/withdrawable';
@@ -35,22 +36,17 @@ class TokenAccount extends SmartContract implements Withdrawable, Depositable {
 
   @method
   public withdraw(amount: UInt64): AccountUpdate {
-    const [fromAccountUpdate] = this.tokenOwner.transferFrom(
-      this.address,
-      amount,
-      AccountUpdate.MayUseToken.InheritFromParent
-    );
-    return fromAccountUpdate;
+    const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId());
+    accountUpdate.balanceChange = Int64.fromUnsigned(amount);
+    accountUpdate.requireSignature();
+    return accountUpdate;
   }
 
   @method
   public deposit(amount: UInt64): AccountUpdate {
-    const [, toAccountUpdate] = this.tokenOwner.transferTo(
-      this.address,
-      amount,
-      AccountUpdate.MayUseToken.InheritFromParent
-    );
-    return toAccountUpdate;
+    const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId());
+    accountUpdate.balanceChange = Int64.fromUnsigned(amount).neg();
+    return accountUpdate;
   }
 }
 

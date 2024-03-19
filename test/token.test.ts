@@ -302,7 +302,7 @@ describe('token integration', () => {
           updateWithdraw, updateDeposit
         ]))});
       Provable.log(tx);
-      await tx.sign([context.senderKey]).prove()
+      await tx.sign([context.senderKey, context.thirdPartyKey]).prove()
       await tx.send();
 
       expect(

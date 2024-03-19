@@ -12,7 +12,6 @@ import {
 
 import type _Hooks from './interfaces/hookHandler/hooks';
 import { AdminAction } from './interfaces/token/adminable';
-import { TransferFromToOptions } from './interfaces/token/transferable';
 
 class Hooks extends SmartContract implements _Hooks {
 
