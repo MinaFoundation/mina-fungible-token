@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { AccountUpdate } from 'o1js';
+import { AccountUpdate, AccountUpdateForest, AccountUpdateTree } from 'o1js';
 
 interface Approvable {
-  approveTransfer: (from: AccountUpdate, to: AccountUpdate) => void;
-  approveDeploy: (deploy: AccountUpdate) => void;
+  approveBase(forest: AccountUpdateForest): void;
+  approveAccountUpdate(accountUpdate: AccountUpdate | AccountUpdateTree): void;
+  approveAccountUpdates(accountUpdates: (AccountUpdate | AccountUpdateTree)[]): void;
 }
 
 export default Approvable;

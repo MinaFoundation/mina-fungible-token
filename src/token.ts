@@ -35,10 +35,12 @@ import type Viewable from './interfaces/token/viewable';
 import type { Transferable } from './interfaces';
 import Hooks from './Hooks';
 import type Hookable from './interfaces/token/hookable';
+import Approvable from './interfaces/token/approvable';
 
 class Token
   extends TokenContract
   implements
+    Approvable,
     Hookable,
     Mintable,
     Burnable,
