@@ -69,31 +69,31 @@ describe('token integration', () => {
     ] = Local.testAccounts;
 
     // Key pairs for non-Mina accounts
-    const hooksKey = PrivateKey.random();
-    const hooksAccount = hooksKey.toPublicKey();
+    const {privateKey: hooksKey, publicKey: hooksAccount} =
+      PrivateKey.randomKeypair();
     const hooks = new Hooks(hooksAccount);
 
-    const directAdminKey = PrivateKey.random();
-    const directAdminAccount = directAdminKey.toPublicKey();
+    const {privateKey: directAdminKey, publicKey: directAdminAccount} =
+      PrivateKey.randomKeypair();
 
-    const tokenAKey = PrivateKey.random();
-    const tokenAAccount = tokenAKey.toPublicKey();
+    const {privateKey: tokenAKey, publicKey: tokenAAccount} =
+      PrivateKey.randomKeypair();
     const tokenA = new Token(tokenAAccount);
 
-    const tokenBKey = PrivateKey.random();
-    const tokenBAccount = tokenBKey.toPublicKey();
+    const {privateKey: tokenBKey, publicKey: tokenBAccount} =
+      PrivateKey.randomKeypair();
     const tokenB = new Token(tokenBAccount);
 
-    const thirdPartyKey = PrivateKey.random();
-    const thirdPartyAccount = thirdPartyKey.toPublicKey();
+    const {privateKey: thirdPartyKey, publicKey: thirdPartyAccount} =
+      PrivateKey.randomKeypair();
     const thirdParty = new ThirdParty(thirdPartyAccount);
 
     const {privateKey: thirdParty2Key, publicKey: thirdParty2Account} =
       PrivateKey.randomKeypair();
     const thirdParty2 = new ThirdParty(thirdParty2Account);
 
-    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
-    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
+    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.deriveTokenId());
+    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.deriveTokenId());
 
     await Hooks.compile();
     await Token.compile();

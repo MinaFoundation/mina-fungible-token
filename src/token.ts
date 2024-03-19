@@ -19,8 +19,6 @@ import {
   AccountUpdateForest,
 } from 'o1js';
 
-
-
 import errors from './errors';
 import {
   AdminAction,

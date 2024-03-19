@@ -19,7 +19,7 @@ class Hooks extends SmartContract implements _Hooks {
 
   @method public initialize(admin: PublicKey) {
     super.init();
-    this.admin.getAndAssertEquals();
+    this.admin.getAndRequireEquals();
     this.admin.set(admin);
   }
 
@@ -33,7 +33,7 @@ class Hooks extends SmartContract implements _Hooks {
   @method
   public canAdmin(action: AdminAction): Bool {
     const admin = this.admin.get();
-    this.admin.assertEquals(admin);
+    this.admin.requireEquals(admin);
 
     //  If you want to disallow some AdminActions, you can do
     //  that via an assert statement like this:
