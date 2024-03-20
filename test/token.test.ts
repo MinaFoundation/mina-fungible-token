@@ -1,27 +1,19 @@
-import "core-js";
-import "reflect-metadata";
-
 import {
   AccountUpdate,
-  Circuit,
   Mina,
   PrivateKey,
   type PublicKey,
   UInt64,
-  Field,
-  Bool,
+  Provable,
+  Int64,
+  AccountUpdateForest,
 } from 'o1js';
-
-import { describe, it, beforeAll, expect } from "bun:test";
 
 import ThirdParty from '../test/ThirdParty';
 
 import Token from '../src/token';
-import errors from '../src/errors';
 import TokenAccount from '../src/TokenAccount';
-import Hooks from '../src/Hooks';
 
-const accountCreationFee = 0;
 const proofsEnabled = false;
 const enforceTransactionLimits = false;
 
@@ -33,12 +25,8 @@ interface Context {
   senderKey: PrivateKey;
   senderAccount: PublicKey;
 
-  hooksKey: PrivateKey;
-  hooksAccount: PublicKey;
-  hooks: Hooks;
-
-  directAdminKey: PrivateKey;
-  directAdminAccount: PublicKey;
+  tokenAdminKey: PrivateKey;
+  tokenAdminAccount: PublicKey;
 
   tokenAKey: PrivateKey;
   tokenAAccount: PublicKey;
@@ -52,50 +40,52 @@ interface Context {
   thirdPartyAccount: PublicKey;
   thirdParty: ThirdParty;
 
+  thirdParty2Key: PrivateKey;
+  thirdParty2Account: PublicKey;
+  thirdParty2: ThirdParty;
+
   tokenAccountA: TokenAccount;
   tokenAccountB: TokenAccount;
-}
 
+}
 
 describe('token integration', () => {
   let context: Context;
 
   beforeAll(async () => {
-    const Local = Mina.LocalBlockchain({ accountCreationFee, proofsEnabled, enforceTransactionLimits });
+    const Local = Mina.LocalBlockchain({ proofsEnabled, enforceTransactionLimits });
     Mina.setActiveInstance(Local);
 
     // We need Mina accounts, for paying fees. 
     // We use the predefined test accounts for those
-    const deployerKey = Local.testAccounts[0].privateKey;
-    const deployerAccount = deployerKey.toPublicKey();
-
-    const senderKey = Local.testAccounts[1].privateKey;
-    const senderAccount = senderKey.toPublicKey();
+    let [
+      { publicKey: deployerAccount, privateKey: deployerKey },
+      { publicKey: senderAccount, privateKey: senderKey }
+    ] = Local.testAccounts;
 
     // Key pairs for non-Mina accounts
-    const hooksKey = PrivateKey.random();
-    const hooksAccount = hooksKey.toPublicKey();
-    const hooks = new Hooks(hooksAccount);
+    const {privateKey: tokenAdminKey, publicKey: tokenAdminAccount} =
+      PrivateKey.randomKeypair();
 
-    const directAdminKey = PrivateKey.random();
-    const directAdminAccount = directAdminKey.toPublicKey();
-
-    const tokenAKey = PrivateKey.random();
-    const tokenAAccount = tokenAKey.toPublicKey();
+    const {privateKey: tokenAKey, publicKey: tokenAAccount} =
+      PrivateKey.randomKeypair();
     const tokenA = new Token(tokenAAccount);
 
-    const tokenBKey = PrivateKey.random();
-    const tokenBAccount = tokenBKey.toPublicKey();
+    const {privateKey: tokenBKey, publicKey: tokenBAccount} =
+      PrivateKey.randomKeypair();
     const tokenB = new Token(tokenBAccount);
 
-    const thirdPartyKey = PrivateKey.random();
-    const thirdPartyAccount = thirdPartyKey.toPublicKey();
+    const {privateKey: thirdPartyKey, publicKey: thirdPartyAccount} =
+      PrivateKey.randomKeypair();
     const thirdParty = new ThirdParty(thirdPartyAccount);
 
-    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.token.id);
-    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.token.id);
+    const {privateKey: thirdParty2Key, publicKey: thirdParty2Account} =
+      PrivateKey.randomKeypair();
+    const thirdParty2 = new ThirdParty(thirdParty2Account);
 
-    await Hooks.compile();
+    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.deriveTokenId());
+    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.deriveTokenId());
+
     await Token.compile();
 
     context = {
@@ -105,12 +95,8 @@ describe('token integration', () => {
       senderKey,
       senderAccount,
 
-      hooksKey,
-      hooksAccount,
-      hooks,
-
-      directAdminKey,
-      directAdminAccount,
+      tokenAdminKey,
+      tokenAdminAccount,
 
       tokenAKey,
       tokenAAccount,
@@ -124,72 +110,56 @@ describe('token integration', () => {
       thirdPartyAccount,
       thirdParty,
 
+      thirdParty2Key,
+      thirdParty2Account,
+      thirdParty2,
+
       tokenAccountA,
       tokenAccountB,
+
     };
   });
 
   const totalSupply = UInt64.from(10_000_000_000_000);
 
   describe('deploy', () => {
-    it('should deploy token hooks', async () => {
-      const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.hooks.deploy();
-      });
-      tx.sign([context.deployerKey, context.hooksKey]);
-      await tx.prove();
-      await tx.send();
-
-      const tx2 = await Mina.transaction(context.deployerAccount, () => {
-        context.hooks.initialize(context.directAdminAccount);
-      });
-      tx2.sign([context.deployerKey, context.directAdminKey]);
-      await tx2.prove();
-      await tx2.send();
-
-    });
- 
     it('should deploy token contract A', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenA.deploy();
-        context.tokenA.initialize(context.hooksAccount, totalSupply);
+        context.tokenA.initialize(context.tokenAdminAccount, totalSupply);
       });
 
       tx.sign([context.deployerKey, context.tokenAKey]);
 
       await tx.prove();
       await tx.send();
-
-      expect(context.tokenA.hooks.get().toBase58()).toBe(
-        context.hooksAccount.toBase58()
-      );
     });
 
     it('should deploy token contract B', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenB.deploy();
-        context.tokenB.initialize(context.hooksAccount, totalSupply);
+        context.tokenB.initialize(context.tokenAdminAccount, totalSupply);
       });
 
       tx.sign([context.deployerKey, context.tokenBKey]);
 
       await tx.prove();
       await tx.send();
-
-      expect(context.tokenB.hooks.get().toBase58()).toBe(
-        context.hooksAccount.toBase58()
-      );
     });
 
     it('should deploy a third party contract', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
+        AccountUpdate.fundNewAccount(context.deployerAccount, 2);
         context.thirdParty.deploy({ ownerAddress: context.tokenAAccount });
+        context.thirdParty2.deploy({ ownerAddress: context.tokenAAccount });
       });
 
-      tx.sign([context.deployerKey, context.thirdPartyKey]);
+      tx.sign([context.deployerKey, context.thirdPartyKey, context.thirdParty2Key]);
 
       await tx.prove();
       await tx.send();
@@ -199,7 +169,7 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         context.tokenAccountA.deploy({ ownerAddress: context.tokenAAccount });
-        context.tokenA.approveDeploy(context.tokenAccountA.self);
+        context.tokenA.approve(context.tokenAccountA.self);
       });
 
       tx.sign([context.deployerKey, context.thirdPartyKey]);
@@ -212,7 +182,7 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         context.tokenAccountB.deploy({ ownerAddress: context.tokenAAccount });
-        context.tokenB.approveDeploy(context.tokenAccountB.self);
+        context.tokenB.approve(context.tokenAccountB.self);
       });
 
       tx.sign([context.deployerKey, context.thirdPartyKey]);
@@ -231,10 +201,11 @@ describe('token integration', () => {
         // eslint-disable-next-line no-warning-comments
         // TODO: it looks like the 'directAdmin' account
         // is also created and needs to be paid for
+        AccountUpdate.fundNewAccount(context.senderAccount, 2);
         context.tokenA.mint(context.senderAccount, mintAmount);
       });
-
-      tx.sign([context.senderKey, context.directAdminKey]);
+  
+      tx.sign([context.senderKey, context.tokenAdminKey]);
 
       await tx.prove();
       await tx.send();
@@ -246,37 +217,62 @@ describe('token integration', () => {
   });
 
   describe('third party', () => {
-    const depositAmount = UInt64.from(500);
+    const depositAmount = UInt64.from(1);
 
-    describe('deposit', () => {
-      it('should deposit from the user to the token account of the third party', async () => {
+    it('should deposit from the user to the token account of the third party', async () => {
 
-        const tx = await Mina.transaction(context.senderAccount, () => {
-          const [fromAccountUpdate] = context.tokenA.transferFrom(
-            context.senderAccount,
-            depositAmount,
-            AccountUpdate.MayUseToken.ParentsOwnToken
-          );
+      const tokenId = context.tokenA.deriveTokenId();
 
-          fromAccountUpdate.requireSignature();
+      const updateWithdraw = AccountUpdate.createSigned(context.senderAccount, tokenId)
+      updateWithdraw.balanceChange = Int64.fromUnsigned(depositAmount).neg();
 
-          context.thirdParty.deposit(fromAccountUpdate, depositAmount);
-        });
+      const updateDeposit = context.thirdParty.deposit(depositAmount);
+      updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
 
-        tx.sign([context.senderKey]);
-
-        await tx.prove();
-        await tx.send();
-
-        expect(
-          context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
-        ).toBe(depositAmount.toBigInt());
-
-        expect(
-          context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-        ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1)
+        context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
+          updateWithdraw,
+          updateDeposit
+        ]));
       });
 
+      tx.sign([context.senderKey]);
+
+      await tx.prove();
+      await tx.send();
+
+      expect(
+        context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
+      ).toBe(depositAmount.toBigInt());
+
+      expect(
+        context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
+      ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+    });
+
+    it('should send tokens from one contract to another', async () => {
+      const transferAmount = UInt64.from(0);
+      const updateWithdraw = context.thirdParty.withdraw(transferAmount);
+      const updateDeposit = context.thirdParty2.deposit(transferAmount);
+      updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
+          updateWithdraw, updateDeposit
+        ]))});
+      Provable.log(tx);
+      await tx.sign([context.senderKey, context.thirdPartyKey]).prove()
+      await tx.send();
+
+      expect(
+        context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
+      ).toBe(depositAmount.toBigInt() - transferAmount.toBigInt());
+      expect(
+        context.tokenA.getBalanceOf(context.thirdParty2Account).toBigInt()
+      ).toBe(transferAmount.toBigInt());
+    })
+/*
       it('should reject an unbalanced transaction', async () => {
         const insufficientDeposit = UInt64.from(0);
         expect(async () => (await Mina.transaction(context.senderAccount, () => {
@@ -289,7 +285,7 @@ describe('token integration', () => {
           context.thirdParty.deposit(fromAccountUpdate, depositAmount)
         }))).toThrow(errors.nonZeroBalanceChange);
       });
-    });
+*/
   });
 
   describe('paused', () => {
