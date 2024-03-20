@@ -35,23 +35,10 @@ class Hooks extends SmartContract implements _Hooks {
     const admin = this.admin.get();
     this.admin.requireEquals(admin);
 
-    //  If you want to disallow some AdminActions, you can do
-    //  that via an assert statement like this:
-    //const actionPossible = action.type
-    //  .equals(AdminAction.types.setPaused)
-    //  .equals(Bool(false));
-    //actionPossible.assertTrue();
-    //  This would check that the action is not setPaused,
-    //  and thus disallow pausing/unpausing token transfers.
-
-    // If you want to allow any AdminAction, unconditioanlly return true.
-    const actionPossible = Bool(true);
-
-    // Require a signature from the admin
     const adminAccountUpdate = AccountUpdate.create(admin);
     adminAccountUpdate.requireSignature();
 
-    return actionPossible;
+    return Bool(true);
   }
 }
 

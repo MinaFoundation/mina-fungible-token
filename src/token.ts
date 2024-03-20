@@ -22,7 +22,6 @@ import {
 import errors from './errors';
 import {
   AdminAction,
-  type Pausable,
   type Burnable,
   type Mintable,
   type Upgradable,
@@ -43,7 +42,6 @@ class Token
     Mintable,
     Burnable,
     Viewable,
-    Pausable,
     Transferable,
     Upgradable
 {
@@ -57,8 +55,6 @@ class Token
   @state(UInt64) public totalSupply = State<UInt64>();
 
   @state(UInt64) public circulatingSupply = State<UInt64>();
-
-  @state(Bool) public paused = State<Bool>();
 
   public decimals: UInt64 = UInt64.from(Token.defaultDecimals);
 
@@ -80,7 +76,6 @@ class Token
     this.hooks.set(hooks);
     this.totalSupply.set(totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
-    this.paused.set(Bool(false));
   }
 
   /**
@@ -147,19 +142,11 @@ class Token
   }
 
   /**
-   * Pausable
+   * Approvable
    */
 
   @method
-  public setPaused(paused: Bool) {
-    const hooksContract = this.getHooksContract();
-    hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.setPaused));
-
-    this.paused.set(paused);
-  }
-
-  @method
-  approveBase(updates: AccountUpdateForest) {
+  public approveBase(updates: AccountUpdateForest) {
     this.checkZeroBalanceChange(updates);
   }
 
@@ -198,13 +185,6 @@ class Token
     this.hooks.requireEquals(hooks);
 
     return hooks;
-  }
-
-  public getPaused(): Bool {
-    const paused = this.paused.get();
-    this.paused.requireEquals(paused);
-
-    return paused;
   }
 
   public getDecimals(): UInt64 {

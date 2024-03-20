@@ -9,7 +9,6 @@ interface Viewable {
   getTotalSupply: () => UInt64;
   getCirculatingSupply: () => UInt64;
   getDecimals: () => UInt64;
-  getPaused: () => Bool;
   getHooks: () => PublicKey;
 }
 

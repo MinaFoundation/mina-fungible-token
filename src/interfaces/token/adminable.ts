@@ -18,8 +18,7 @@ class AdminAction extends Struct({
     mint: 0,
     burn: 1,
     setTotalSupply: 2,
-    setPaused: 3,
-    setVerificationKey: 4,
+    setVerificationKey: 3,
   };
 
   public static fromType(type: number): AdminAction {
@@ -38,14 +37,9 @@ interface Burnable {
   burn: (from: PublicKey, amount: UInt64) => AccountUpdate;
 }
 
-interface Pausable {
-  paused: State<Bool>;
-  setPaused: (paused: Bool) => void;
-}
-
 interface Upgradable {
   setVerificationKey: (verificationKey: VerificationKey) => void;
 }
 
-export type { Mintable, Burnable, Pausable, Upgradable };
+export type { Mintable, Burnable, Upgradable };
 export { AdminAction };
