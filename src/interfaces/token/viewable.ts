@@ -9,7 +9,6 @@ interface Viewable {
   getTotalSupply: () => UInt64;
   getCirculatingSupply: () => UInt64;
   getDecimals: () => UInt64;
-  getHooks: () => PublicKey;
 }
 
 export default Viewable;

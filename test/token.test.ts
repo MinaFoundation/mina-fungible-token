@@ -13,7 +13,6 @@ import ThirdParty from '../test/ThirdParty';
 
 import Token from '../src/token';
 import TokenAccount from '../src/TokenAccount';
-import Hooks from '../src/Hooks';
 
 const proofsEnabled = false;
 const enforceTransactionLimits = false;
@@ -26,12 +25,8 @@ interface Context {
   senderKey: PrivateKey;
   senderAccount: PublicKey;
 
-  hooksKey: PrivateKey;
-  hooksAccount: PublicKey;
-  hooks: Hooks;
-
-  directAdminKey: PrivateKey;
-  directAdminAccount: PublicKey;
+  tokenAdminKey: PrivateKey;
+  tokenAdminAccount: PublicKey;
 
   tokenAKey: PrivateKey;
   tokenAAccount: PublicKey;
@@ -69,11 +64,7 @@ describe('token integration', () => {
     ] = Local.testAccounts;
 
     // Key pairs for non-Mina accounts
-    const {privateKey: hooksKey, publicKey: hooksAccount} =
-      PrivateKey.randomKeypair();
-    const hooks = new Hooks(hooksAccount);
-
-    const {privateKey: directAdminKey, publicKey: directAdminAccount} =
+    const {privateKey: tokenAdminKey, publicKey: tokenAdminAccount} =
       PrivateKey.randomKeypair();
 
     const {privateKey: tokenAKey, publicKey: tokenAAccount} =
@@ -95,7 +86,6 @@ describe('token integration', () => {
     const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.deriveTokenId());
     const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.deriveTokenId());
 
-    await Hooks.compile();
     await Token.compile();
 
     context = {
@@ -105,12 +95,8 @@ describe('token integration', () => {
       senderKey,
       senderAccount,
 
-      hooksKey,
-      hooksAccount,
-      hooks,
-
-      directAdminKey,
-      directAdminAccount,
+      tokenAdminKey,
+      tokenAdminAccount,
 
       tokenAKey,
       tokenAAccount,
@@ -137,40 +123,18 @@ describe('token integration', () => {
   const totalSupply = UInt64.from(10_000_000_000_000);
 
   describe('deploy', () => {
-    it('should deploy token hooks', async () => {
-      const tx = await Mina.transaction(context.deployerAccount, () => {
-        AccountUpdate.fundNewAccount(context.deployerAccount, 1);
-        context.hooks.deploy();
-      });
-      tx.sign([context.deployerKey, context.hooksKey]);
-      await tx.prove();
-      await tx.send();
-
-      const tx2 = await Mina.transaction(context.deployerAccount, () => {
-        context.hooks.initialize(context.directAdminAccount);
-      });
-      tx2.sign([context.deployerKey, context.directAdminKey]);
-      await tx2.prove();
-      await tx2.send();
-
-    });
- 
     it('should deploy token contract A', async () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenA.deploy();
-        context.tokenA.initialize(context.hooksAccount, totalSupply);
+        context.tokenA.initialize(context.tokenAdminAccount, totalSupply);
       });
 
       tx.sign([context.deployerKey, context.tokenAKey]);
 
       await tx.prove();
       await tx.send();
-
-      expect(context.tokenA.hooks.get().toBase58()).toBe(
-        context.hooksAccount.toBase58()
-      );
     });
 
     it('should deploy token contract B', async () => {
@@ -178,17 +142,13 @@ describe('token integration', () => {
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenB.deploy();
-        context.tokenB.initialize(context.hooksAccount, totalSupply);
+        context.tokenB.initialize(context.tokenAdminAccount, totalSupply);
       });
 
       tx.sign([context.deployerKey, context.tokenBKey]);
 
       await tx.prove();
       await tx.send();
-
-      expect(context.tokenB.hooks.get().toBase58()).toBe(
-        context.hooksAccount.toBase58()
-      );
     });
 
     it('should deploy a third party contract', async () => {
@@ -245,7 +205,7 @@ describe('token integration', () => {
         context.tokenA.mint(context.senderAccount, mintAmount);
       });
   
-      tx.sign([context.senderKey, context.directAdminKey]);
+      tx.sign([context.senderKey, context.tokenAdminKey]);
 
       await tx.prove();
       await tx.send();

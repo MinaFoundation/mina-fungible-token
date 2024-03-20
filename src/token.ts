@@ -13,55 +13,35 @@ import {
   state,
   State,
   VerificationKey,
-  Int64,
-  Provable,
   TokenContract,
   AccountUpdateForest,
 } from 'o1js';
 
 import errors from './errors';
 import {
-  AdminAction,
   type Burnable,
   type Mintable,
   type Upgradable,
 } from './interfaces/token/adminable';
-// eslint-disable-next-line putout/putout
 import type Viewable from './interfaces/token/viewable';
-// eslint-disable-next-line no-duplicate-imports
 import type { Transferable } from './interfaces';
-import Hooks from './Hooks';
-import type Hookable from './interfaces/token/hookable';
 import Approvable from './interfaces/token/approvable';
 
 class Token
   extends TokenContract
   implements
     Approvable,
-    Hookable,
     Mintable,
     Burnable,
     Viewable,
     Transferable,
     Upgradable
 {
-
-  // eslint-disable-next-line no-warning-comments
-  // TODO: check how many decimals mina has by default
-  public static defaultDecimals = 9;
-
-  @state(PublicKey) public hooks = State<PublicKey>();
-
+  @state(PublicKey) public adminAccount = State<PublicKey>();
   @state(UInt64) public totalSupply = State<UInt64>();
-
   @state(UInt64) public circulatingSupply = State<UInt64>();
 
-  public decimals: UInt64 = UInt64.from(Token.defaultDecimals);
-
-  public getHooksContract(): Hooks {
-    const admin = this.getHooks();
-    return new Hooks(admin);
-  }
+  public decimals: UInt64 = UInt64.from(9);
 
   public assertNotPaused(): void {
     this.paused.assertEquals(this.paused.get());
@@ -69,23 +49,27 @@ class Token
   }
 
   @method
-  public initialize(hooks: PublicKey, totalSupply: UInt64) {
-    super.init();
-    this.account.provedState.assertEquals(Bool(false));
+  public initialize(adminPublicKey: PublicKey, totalSupply: UInt64) {
+    this.account.provedState.requireEquals(Bool(false));
 
-    this.hooks.set(hooks);
+    this.adminAccount.set(adminPublicKey);
     this.totalSupply.set(totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
   }
 
+  requireAdminSignature(): AccountUpdate {
+    const adminAccount = this.adminAccount.getAndRequireEquals();
+    const adminAccountUpdate = AccountUpdate.create(adminAccount);
+    adminAccountUpdate.requireSignature();
+    return adminAccountUpdate;
+  }
   /**
    * Mintable
    */
 
   @method
   public mint(address: PublicKey, amount: UInt64): AccountUpdate {
-    const hooksContract = this.getHooksContract();
-    hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.mint));
+    this.requireAdminSignature();
 
     const totalSupply = this.getTotalSupply();
     const circulatingSupply = this.getCirculatingSupply();
@@ -104,10 +88,7 @@ class Token
 
   @method
   public setTotalSupply(amount: UInt64) {
-    const hooksContract = this.getHooksContract();
-    hooksContract.canAdmin(
-      AdminAction.fromType(AdminAction.types.setTotalSupply)
-    );
+    this.requireAdminSignature();
 
     this.totalSupply.set(amount);
   }
@@ -118,12 +99,8 @@ class Token
 
   @method
   public burn(from: PublicKey, amount: UInt64): AccountUpdate {
-    this.assertNotPaused();
+    this.requireAdminSignature();
 
-    const hooksContract = this.getHooksContract();
-    hooksContract.canAdmin(AdminAction.fromType(AdminAction.types.burn));
-
-    // eslint-disable-next-line putout/putout
     return this.token.burn({ address: from, amount });
   }
 
@@ -133,10 +110,7 @@ class Token
 
   @method
   public setVerificationKey(verificationKey: VerificationKey) {
-    const hooksContract = this.getHooksContract();
-    hooksContract.canAdmin(
-      AdminAction.fromType(AdminAction.types.setVerificationKey)
-    );
+    this.requireAdminSignature();
 
     this.account.verificationKey.set(verificationKey);
   }
@@ -178,13 +152,6 @@ class Token
     this.circulatingSupply.requireEquals(circulatingSupply);
 
     return circulatingSupply;
-  }
-
-  public getHooks(): PublicKey {
-    const hooks = this.hooks.get();
-    this.hooks.requireEquals(hooks);
-
-    return hooks;
   }
 
   public getDecimals(): UInt64 {
