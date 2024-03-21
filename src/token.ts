@@ -43,11 +43,6 @@ class Token
 
   public decimals: UInt64 = UInt64.from(9);
 
-  public assertNotPaused(): void {
-    this.paused.assertEquals(this.paused.get());
-    this.paused.get().assertFalse(errors.tokenPaused);
-  }
-
   @method
   public initialize(adminPublicKey: PublicKey, totalSupply: UInt64) {
     this.account.provedState.requireEquals(Bool(false));
