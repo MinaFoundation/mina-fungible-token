@@ -1,13 +1,10 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import {
   AccountUpdate,
-  Permissions,
   PublicKey,
   SmartContract,
   UInt64,
   method,
-  PrivateKey,
-  Circuit,
   state,
   State,
   DeployArgs,
