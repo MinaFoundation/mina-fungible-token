@@ -54,8 +54,7 @@ class Token
 
   requireAdminSignature(): AccountUpdate {
     const adminAccount = this.adminAccount.getAndRequireEquals();
-    const adminAccountUpdate = AccountUpdate.create(adminAccount);
-    adminAccountUpdate.requireSignature();
+    const adminAccountUpdate = AccountUpdate.createSigned(adminAccount);
     return adminAccountUpdate;
   }
   /**
@@ -95,8 +94,8 @@ class Token
   @method
   public burn(from: PublicKey, amount: UInt64): AccountUpdate {
     this.requireAdminSignature();
-
-    return this.token.burn({ address: from, amount });
+  
+    return this.internal.burn({ address: from, amount });
   }
 
   /**
@@ -124,7 +123,7 @@ class Token
    */
 
   public getAccountOf(address: PublicKey): ReturnType<typeof Account> {
-    return Account(address, this.token.id);
+    return Account(address, this.deriveTokenId());
   }
 
   public getBalanceOf(address: PublicKey): UInt64 {
