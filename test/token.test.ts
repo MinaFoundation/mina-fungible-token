@@ -204,7 +204,15 @@ describe('token integration', () => {
       await expect (async () => await tx.send()).rejects.toThrow();
     });
 
-    it.todo('should refuse to burn tokens without signature from the token admin');
+    it('should refuse to burn tokens without signature from the token admin', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.burn(context.senderAccount, burnAmount);
+      });
+
+      tx.sign([context.senderKey]);
+      await tx.prove();
+      await expect (async () => await tx.send()).rejects.toThrow();
+    });
   });
 
   describe('transfers', () => {
