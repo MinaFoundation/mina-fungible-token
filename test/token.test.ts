@@ -281,6 +281,21 @@ describe('token integration', () => {
         })
       )).rejects.toThrowError()
     });
+
+    it('rejects transactions with mismatched tokens', async () => {
+      const updateSend = AccountUpdate.createSigned(context.senderAccount, context.tokenA.deriveTokenId());
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg();
+      const updateReceive = AccountUpdate.create(context.receiverAccount, context.tokenB.deriveTokenId());
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount);
+      await expect(async () => (
+        await Mina.transaction(context.deployerAccount, () => {
+          AccountUpdate.fundNewAccount(context.senderAccount, 1)
+          context.tokenA.approveAccountUpdate(updateSend)
+          context.tokenB.approveAccountUpdate(updateReceive)
+        })
+      )).rejects.toThrowError()
+    });
+
   });
 
   describe('third party', () => {
@@ -359,7 +374,5 @@ describe('token integration', () => {
         ]))})
       )).rejects.toThrowError()
     });
-
-    it.todo('rejects transactions with mismatched tokens');
   });
 });
