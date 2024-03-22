@@ -193,6 +193,16 @@ describe('token integration', () => {
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
       ).toBe(initialBalance - burnAmount.toBigInt());
     });
+
+    it.todo('should refuse to mint tokens without signature from the token admin');
+    it.todo('should refuse to burn tokens without signature from the token admin');
+  });
+
+  describe('transfers', () => {
+    it.todo('should do a transfer initiated by the token contract');
+    it.todo('should reject a transaction not signed by the token holder');
+    it.todo('should do a transaction constructed manually, approved by the tokenb contract');
+    it.todo('should rejet unbalanced transactions');
   });
 
   describe('third party', () => {
@@ -271,5 +281,7 @@ describe('token integration', () => {
         ]))})
       )).rejects.toThrowError()
     });
+
+    it.todo('rejects transactions with mismatched tokens');
   });
 });
