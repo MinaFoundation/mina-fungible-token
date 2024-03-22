@@ -76,7 +76,6 @@ class Token
 
     // eslint-disable-next-line no-warning-comments
     // TODO: find out why amount can't be Int64, also for burn
-    // eslint-disable-next-line putout/putout
     return this.internal.mint({ address, amount });
   }
 

@@ -1,5 +1,5 @@
-import "reflect-metadata";
-import "core-js";
+import 'reflect-metadata';
+import 'core-js';
 export * from './interfaces';
 export * from './token';
 export * from './errors';

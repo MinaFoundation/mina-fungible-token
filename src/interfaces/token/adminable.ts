@@ -7,7 +7,6 @@ import {
   type State,
   Struct,
   Field,
-  Bool,
   VerificationKey,
 } from 'o1js';
 
