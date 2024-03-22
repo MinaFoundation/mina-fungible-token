@@ -214,7 +214,7 @@ describe('token integration', () => {
     });
 
     it('should send tokens from one contract to another', async () => {
-      const transferAmount = UInt64.from(0);
+      const transferAmount = UInt64.from(1);
       const updateWithdraw = context.thirdParty.withdraw(transferAmount);
       const updateDeposit = context.thirdParty2.deposit(transferAmount);
       updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
