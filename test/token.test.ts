@@ -4,7 +4,6 @@ import {
   PrivateKey,
   type PublicKey,
   UInt64,
-  Provable,
   Int64,
   AccountUpdateForest,
 } from 'o1js';
@@ -251,8 +250,27 @@ describe('token integration', () => {
       await expect (async () => await tx.send()).rejects.toThrow();
     });
 
-    it.todo('should do a transaction constructed manually, approved by the tokenb contract');
-    it.todo('should rejet unbalanced transactions');
+    it('should do a transaction constructed manually, approved by the token contract', async () => {
+      const initialBalanceSender = context.tokenA.getBalanceOf(context.senderAccount).toBigInt();
+      const initialBalanceReceiver = context.tokenA.getBalanceOf(context.receiverAccount).toBigInt();
+      const updateSend = AccountUpdate.createSigned(context.senderAccount, context.tokenA.deriveTokenId());
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg();
+      const updateReceive = AccountUpdate.create(context.receiverAccount, context.tokenA.deriveTokenId());
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount);
+
+      const tx = await Mina.transaction(context.deployerAccount, () => {
+        context.tokenA.approveAccountUpdates([updateSend, updateReceive])
+      });
+      await tx.sign([context.senderKey, context.deployerKey]).prove()
+      await tx.send();
+
+      expect(context.tokenA.getBalanceOf(context.senderAccount).toBigInt())
+        .toBe(initialBalanceSender - sendAmount.toBigInt());
+      expect(context.tokenA.getBalanceOf(context.receiverAccount).toBigInt())
+        .toBe(initialBalanceReceiver + sendAmount.toBigInt());
+    });
+
+    it.todo('should reject unbalanced transactions');
   });
 
   describe('third party', () => {
