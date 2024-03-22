@@ -43,7 +43,7 @@ jobs:
           cache: npm
 
       - name: 'Install dependencies'
-        run: npm ci --workspaces --include-workspace-root
+        run: npm ci
 
       - name: 'Build'
         run: npm run build
@@ -61,7 +61,7 @@ jobs:
           cache: npm
 
       - name: 'Install dependencies'
-        run: npm ci --workspaces --include-workspace-root
+        run: npm ci
 
       - name: 'Build'
         run: npm run build
@@ -81,13 +81,13 @@ jobs:
           cache: npm
 
       - name: 'Install dependencies'
-        run: npm ci --workspaces --include-workspace-root
+        run: npm ci
 
       - name: 'Build'
         run: npm run build
 
       - name: 'Reinstall monorepo packages'
-        run: npm ci --workspaces --include-workspace-root
+        run: npm ci
 
       - name: 'Test'
         run: npm run test:ci
