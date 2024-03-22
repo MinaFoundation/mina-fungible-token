@@ -18,7 +18,8 @@
     "format": "prettier --write --ignore-unknown **/*",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "Testw": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
-    "lint": "npx eslint src/* --fix"
+    "lint": "npx eslint src/* --fix",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.16.4",
