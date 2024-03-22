@@ -155,8 +155,9 @@ describe('token integration', () => {
   });
 
   const mintAmount = UInt64.from(1000);
+  const burnAmount = UInt64.from(100);
 
-  describe('mint', () => {
+  describe('mint/burn', () => {
     it('should mint for the sender account', async () => {
 
       const tx = await Mina.transaction(context.senderAccount, () => {
@@ -175,6 +176,18 @@ describe('token integration', () => {
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
       ).toBe(mintAmount.toBigInt());
+    });
+
+    it('should burn tokens for the sender account', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.burn(context.senderAccount, burnAmount);
+      });
+      tx.sign([context.senderKey, context.tokenAdminKey]);
+      await tx.prove();
+      await tx.send();
+      expect(
+        context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
+      ).toBe(mintAmount.toBigInt() - burnAmount.toBigInt());
     });
   });
 
@@ -210,7 +223,7 @@ describe('token integration', () => {
 
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-      ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+      ).toBe(mintAmount.toBigInt() - burnAmount.toBigInt() - depositAmount.toBigInt());
     });
 
     it('should send tokens from one contract to another', async () => {
