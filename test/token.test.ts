@@ -154,40 +154,44 @@ describe('token integration', () => {
     });
   });
 
-  const mintAmount = UInt64.from(1000);
-  const burnAmount = UInt64.from(100);
 
   describe('mint/burn', () => {
+    const mintAmount = UInt64.from(1000);
+    const burnAmount = UInt64.from(100);
+
     it('should mint for the sender account', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.senderAccount)
+        .toBigInt()
 
       const tx = await Mina.transaction(context.senderAccount, () => {
-        // eslint-disable-next-line no-warning-comments
-        // TODO: it looks like the 'directAdmin' account
-        // is also created and needs to be paid for
         AccountUpdate.fundNewAccount(context.senderAccount, 2);
         context.tokenA.mint(context.senderAccount, mintAmount);
       });
   
       tx.sign([context.senderKey, context.tokenAdminKey]);
-
       await tx.prove();
       await tx.send();
 
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-      ).toBe(mintAmount.toBigInt());
+      ).toBe(initialBalance + mintAmount.toBigInt());
     });
 
     it('should burn tokens for the sender account', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.senderAccount)
+        .toBigInt();
+
       const tx = await Mina.transaction(context.senderAccount, () => {
         context.tokenA.burn(context.senderAccount, burnAmount);
       });
+
       tx.sign([context.senderKey, context.tokenAdminKey]);
       await tx.prove();
       await tx.send();
+
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-      ).toBe(mintAmount.toBigInt() - burnAmount.toBigInt());
+      ).toBe(initialBalance - burnAmount.toBigInt());
     });
   });
 
@@ -195,6 +199,8 @@ describe('token integration', () => {
     const depositAmount = UInt64.from(100);
 
     it('should deposit from the user to the token account of the third party', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.senderAccount)
+        .toBigInt();
 
       const tokenId = context.tokenA.deriveTokenId();
 
@@ -223,10 +229,14 @@ describe('token integration', () => {
 
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-      ).toBe(mintAmount.toBigInt() - burnAmount.toBigInt() - depositAmount.toBigInt());
+      ).toBe(initialBalance - depositAmount.toBigInt());
     });
 
     it('should send tokens from one contract to another', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.thirdPartyAccount)
+        .toBigInt();
+      const initialBalance2 = context.tokenA.getBalanceOf(context.thirdParty2Account)
+        .toBigInt();
       const transferAmount = UInt64.from(1);
       const updateWithdraw = context.thirdParty.withdraw(transferAmount);
       const updateDeposit = context.thirdParty2.deposit(transferAmount);
@@ -241,10 +251,10 @@ describe('token integration', () => {
 
       expect(
         context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
-      ).toBe(depositAmount.toBigInt() - transferAmount.toBigInt());
+      ).toBe(initialBalance - transferAmount.toBigInt());
       expect(
         context.tokenA.getBalanceOf(context.thirdParty2Account).toBigInt()
-      ).toBe(transferAmount.toBigInt());
+      ).toBe(initialBalance2 + transferAmount.toBigInt());
     })
 
     it('should reject an unbalanced transaction', async () => {
