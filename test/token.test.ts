@@ -179,7 +179,7 @@ describe('token integration', () => {
   });
 
   describe('third party', () => {
-    const depositAmount = UInt64.from(1);
+    const depositAmount = UInt64.from(100);
 
     it('should deposit from the user to the token account of the third party', async () => {
 
@@ -223,7 +223,6 @@ describe('token integration', () => {
         context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
           updateWithdraw, updateDeposit
         ]))});
-      Provable.log(tx);
       await tx.sign([context.senderKey, context.thirdPartyKey]).prove()
       await tx.send();
 
@@ -234,19 +233,20 @@ describe('token integration', () => {
         context.tokenA.getBalanceOf(context.thirdParty2Account).toBigInt()
       ).toBe(transferAmount.toBigInt());
     })
-/*
-      it('should reject an unbalanced transaction', async () => {
-        const insufficientDeposit = UInt64.from(0);
-        expect(async () => (await Mina.transaction(context.senderAccount, () => {
-          const [fromAccountUpdate] = context.tokenA.transferFrom(
-            context.senderAccount,
-            insufficientDeposit,
-            AccountUpdate.MayUseToken.ParentsOwnToken
-          );
-          fromAccountUpdate.requireSignature();
-          context.thirdParty.deposit(fromAccountUpdate, depositAmount)
-        }))).toThrow(errors.nonZeroBalanceChange);
-      });
-*/
+
+    it('should reject an unbalanced transaction', async () => {
+      const depositAmount = UInt64.from(10);
+      const withdrawAmount = UInt64.from(5);
+      const updateWithdraw = context.thirdParty.withdraw(withdrawAmount);
+      const updateDeposit = context.thirdParty2.deposit(depositAmount);
+      updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
+      await expect(async () => (
+        await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
+          updateWithdraw, updateDeposit
+        ]))})
+      )).rejects.toThrowError()
+    });
   });
 });
