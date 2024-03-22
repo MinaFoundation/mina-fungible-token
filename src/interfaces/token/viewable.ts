@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { PublicKey, Account, UInt64, Bool } from 'o1js';
+import { PublicKey, Account, UInt64 } from 'o1js';
 
 interface Viewable {
   // eslint-disable-next-line no-warning-comments
