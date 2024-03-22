@@ -194,7 +194,16 @@ describe('token integration', () => {
       ).toBe(initialBalance - burnAmount.toBigInt());
     });
 
-    it.todo('should refuse to mint tokens without signature from the token admin');
+    it('should refuse to mint tokens without signature from the token admin', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.mint(context.senderAccount, mintAmount);
+      });
+
+      tx.sign([context.senderKey]);
+      await tx.prove();
+      await expect (async () => await tx.send()).rejects.toThrow();
+    });
+
     it.todo('should refuse to burn tokens without signature from the token admin');
   });
 
