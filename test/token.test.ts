@@ -242,7 +242,15 @@ describe('token integration', () => {
       expect(context.tokenA.getBalanceOf(context.receiverAccount).toBigInt())
         .toBe(initialBalanceReceiver + sendAmount.toBigInt());
     });
-    it.todo('should reject a transaction not signed by the token holder');
+
+    it('should reject a transaction not signed by the token holder', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.transfer(context.senderAccount, context.receiverAccount, sendAmount);
+      });
+      await tx.prove();
+      await expect (async () => await tx.send()).rejects.toThrow();
+    });
+
     it.todo('should do a transaction constructed manually, approved by the tokenb contract');
     it.todo('should rejet unbalanced transactions');
   });
