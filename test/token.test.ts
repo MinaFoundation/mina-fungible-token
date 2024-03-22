@@ -12,7 +12,6 @@ import {
 import ThirdParty from '../test/ThirdParty';
 
 import Token from '../src/token';
-import TokenAccount from '../src/TokenAccount';
 
 const proofsEnabled = false;
 const enforceTransactionLimits = false;
@@ -43,10 +42,6 @@ interface Context {
   thirdParty2Key: PrivateKey;
   thirdParty2Account: PublicKey;
   thirdParty2: ThirdParty;
-
-  tokenAccountA: TokenAccount;
-  tokenAccountB: TokenAccount;
-
 }
 
 describe('token integration', () => {
@@ -83,9 +78,6 @@ describe('token integration', () => {
       PrivateKey.randomKeypair();
     const thirdParty2 = new ThirdParty(thirdParty2Account);
 
-    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.deriveTokenId());
-    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.deriveTokenId());
-
     await Token.compile();
 
     context = {
@@ -113,10 +105,6 @@ describe('token integration', () => {
       thirdParty2Key,
       thirdParty2Account,
       thirdParty2,
-
-      tokenAccountA,
-      tokenAccountB,
-
     };
   });
 
@@ -160,32 +148,6 @@ describe('token integration', () => {
       });
 
       tx.sign([context.deployerKey, context.thirdPartyKey, context.thirdParty2Key]);
-
-      await tx.prove();
-      await tx.send();
-    });
-
-    it('should deploy a third party token account for token A', async () => {
-
-      const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.tokenAccountA.deploy({ ownerAddress: context.tokenAAccount });
-        context.tokenA.approve(context.tokenAccountA.self);
-      });
-
-      tx.sign([context.deployerKey, context.thirdPartyKey]);
-
-      await tx.prove();
-      await tx.send();
-    });
-
-    it('should deploy a third party token account for token B', async () => {
-
-      const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.tokenAccountB.deploy({ ownerAddress: context.tokenAAccount });
-        context.tokenB.approve(context.tokenAccountB.self);
-      });
-
-      tx.sign([context.deployerKey, context.thirdPartyKey]);
 
       await tx.prove();
       await tx.send();
