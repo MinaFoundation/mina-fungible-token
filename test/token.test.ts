@@ -270,7 +270,17 @@ describe('token integration', () => {
         .toBe(initialBalanceReceiver + sendAmount.toBigInt());
     });
 
-    it.todo('should reject unbalanced transactions');
+    it('should reject unbalanced transactions', async () => {
+      const updateSend = AccountUpdate.createSigned(context.senderAccount, context.tokenA.deriveTokenId());
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg();
+      const updateReceive = AccountUpdate.create(context.receiverAccount, context.tokenA.deriveTokenId());
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount).mul(2);
+      await expect(async () => (
+        await Mina.transaction(context.deployerAccount, () => {
+          context.tokenA.approveAccountUpdates([updateSend, updateReceive])
+        })
+      )).rejects.toThrowError()
+    });
   });
 
   describe('third party', () => {
