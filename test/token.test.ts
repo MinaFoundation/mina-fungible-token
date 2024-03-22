@@ -24,6 +24,9 @@ interface Context {
   senderKey: PrivateKey;
   senderAccount: PublicKey;
 
+  receiverKey: PrivateKey;
+  receiverAccount: PublicKey;
+
   tokenAdminKey: PrivateKey;
   tokenAdminAccount: PublicKey;
 
@@ -55,7 +58,8 @@ describe('token integration', () => {
     // We use the predefined test accounts for those
     let [
       { publicKey: deployerAccount, privateKey: deployerKey },
-      { publicKey: senderAccount, privateKey: senderKey }
+      { publicKey: senderAccount, privateKey: senderKey },
+      { publicKey: receiverAccount, privateKey: receiverKey }
     ] = Local.testAccounts;
 
     // Key pairs for non-Mina accounts
@@ -83,6 +87,9 @@ describe('token integration', () => {
     context = {
       deployerKey,
       deployerAccount,
+
+      receiverKey,
+      receiverAccount,
 
       senderKey,
       senderAccount,
@@ -216,7 +223,25 @@ describe('token integration', () => {
   });
 
   describe('transfers', () => {
-    it.todo('should do a transfer initiated by the token contract');
+    const sendAmount = UInt64.from(1);
+
+    it('should do a transfer initiated by the token contract', async () => {
+      const initialBalanceSender = context.tokenA.getBalanceOf(context.senderAccount).toBigInt();
+      const initialBalanceReceiver = context.tokenA.getBalanceOf(context.receiverAccount).toBigInt();
+
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1)
+        context.tokenA.transfer(context.senderAccount, context.receiverAccount, sendAmount);
+      });
+      tx.sign([context.senderKey]);
+      await tx.prove();
+      await tx.send();
+
+      expect(context.tokenA.getBalanceOf(context.senderAccount).toBigInt())
+        .toBe(initialBalanceSender - sendAmount.toBigInt());
+      expect(context.tokenA.getBalanceOf(context.receiverAccount).toBigInt())
+        .toBe(initialBalanceReceiver + sendAmount.toBigInt());
+    });
     it.todo('should reject a transaction not signed by the token holder');
     it.todo('should do a transaction constructed manually, approved by the tokenb contract');
     it.todo('should rejet unbalanced transactions');
