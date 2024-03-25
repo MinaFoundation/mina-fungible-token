@@ -227,6 +227,8 @@ describe('token integration', () => {
       await tx.prove();
       await expect (async () => await tx.send()).rejects.toThrow();
     });
+
+    it.todo('should refuse to set total supply to be less than circulating supply')
   });
 
   describe('transfers', () => {

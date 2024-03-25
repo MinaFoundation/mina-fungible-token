@@ -83,6 +83,9 @@ class Token
   public setTotalSupply(amount: UInt64) {
     this.requireAdminSignature();
 
+    this.getCirculatingSupply()
+    .assertLessThanOrEqual(amount);
+
     this.totalSupply.set(amount);
   }
 
