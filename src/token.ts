@@ -59,6 +59,12 @@ class Token
     const adminAccountUpdate = AccountUpdate.createSigned(adminAccount);
     return adminAccountUpdate;
   }
+
+  @method setAdminAccount(adminAccount: PublicKey) {
+    this.requireAdminSignature();
+    this.adminAccount.set(adminAccount);
+  }
+
   /**
    * Mintable
    */

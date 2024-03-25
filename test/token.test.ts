@@ -170,7 +170,7 @@ describe('token integration', () => {
   });
 
 
-  describe('mint/burn', () => {
+  describe('admin', () => {
     const mintAmount = UInt64.from(1000);
     const burnAmount = UInt64.from(100);
 
@@ -228,7 +228,8 @@ describe('token integration', () => {
       await expect (async () => await tx.send()).rejects.toThrow();
     });
 
-    it.todo('should refuse to set total supply to be less than circulating supply')
+    it.todo('should refuse to set total supply to be less than circulating supply');
+    it.todo('correctly changes the adminAccount');
   });
 
   describe('transfers', () => {
