@@ -20,9 +20,6 @@ class ThirdParty extends SmartContract implements Depositable, Withdrawable {
 
   public get tokenOwner() {
     this.ownerAddress.requireEquals(this.ownerAddress.get());
-    if(!this.ownerAddress.get()) {
-      throw new Error('Token owner address has not been set')
-    }
     return new Token(this.ownerAddress.get())
   }
 
