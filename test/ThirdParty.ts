@@ -12,10 +12,8 @@ import {
 } from 'o1js';
 
 import Token from '../src/token';
-import Depositable from '../src/interfaces/tokenAccount/depositable';
-import Withdrawable from '../src/interfaces/tokenAccount/withdrawable';
 
-class ThirdParty extends SmartContract implements Depositable, Withdrawable {
+class ThirdParty extends SmartContract {
   @state(PublicKey) ownerAddress = State<PublicKey>();
 
   public get tokenOwner() {
