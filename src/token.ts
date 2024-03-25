@@ -123,32 +123,26 @@ class Token
    * Viewable
    */
 
-  public getAccountOf(address: PublicKey): ReturnType<typeof Account> {
-    return Account(address, this.deriveTokenId());
-  }
-
+  @method
   public getBalanceOf(address: PublicKey): UInt64 {
-    const account = this.getAccountOf(address);
+    const account = Account(address, this.deriveTokenId());
     const balance = account.balance.get();
     account.balance.requireEquals(balance);
 
     return balance;
   }
 
+  @method
   public getTotalSupply(): UInt64 {
-    const totalSupply = this.totalSupply.get();
-    this.totalSupply.requireEquals(totalSupply);
-
-    return totalSupply;
+    return (this.totalSupply.getAndRequireEquals());
   }
 
+  @method
   public getCirculatingSupply(): UInt64 {
-    const circulatingSupply = this.circulatingSupply.get();
-    this.circulatingSupply.requireEquals(circulatingSupply);
-
-    return circulatingSupply;
+    return(this.circulatingSupply.getAndRequireEquals());
   }
 
+  @method
   public getDecimals(): UInt64 {
     return this.decimals;
   }
