@@ -92,7 +92,9 @@ class Token
 
   @method
   public burn(from: PublicKey, amount: UInt64): AccountUpdate {
-    this.requireAdminSignature();
+    // If you want to disallow burning without approval from
+    // the token admin, you could require a signature here:
+    // this.requireAdminSignature();
   
     return this.internal.burn({ address: from, amount });
   }

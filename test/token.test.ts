@@ -4,7 +4,6 @@ import {
   PrivateKey,
   type PublicKey,
   UInt64,
-  Provable,
   Int64,
   AccountUpdateForest,
 } from 'o1js';
@@ -12,7 +11,6 @@ import {
 import ThirdParty from '../test/ThirdParty';
 
 import Token from '../src/token';
-import TokenAccount from '../src/TokenAccount';
 
 const proofsEnabled = false;
 const enforceTransactionLimits = false;
@@ -24,6 +22,9 @@ interface Context {
 
   senderKey: PrivateKey;
   senderAccount: PublicKey;
+
+  receiverKey: PrivateKey;
+  receiverAccount: PublicKey;
 
   tokenAdminKey: PrivateKey;
   tokenAdminAccount: PublicKey;
@@ -43,10 +44,6 @@ interface Context {
   thirdParty2Key: PrivateKey;
   thirdParty2Account: PublicKey;
   thirdParty2: ThirdParty;
-
-  tokenAccountA: TokenAccount;
-  tokenAccountB: TokenAccount;
-
 }
 
 describe('token integration', () => {
@@ -60,7 +57,8 @@ describe('token integration', () => {
     // We use the predefined test accounts for those
     let [
       { publicKey: deployerAccount, privateKey: deployerKey },
-      { publicKey: senderAccount, privateKey: senderKey }
+      { publicKey: senderAccount, privateKey: senderKey },
+      { publicKey: receiverAccount, privateKey: receiverKey }
     ] = Local.testAccounts;
 
     // Key pairs for non-Mina accounts
@@ -83,14 +81,14 @@ describe('token integration', () => {
       PrivateKey.randomKeypair();
     const thirdParty2 = new ThirdParty(thirdParty2Account);
 
-    const tokenAccountA = new TokenAccount(thirdPartyAccount, tokenA.deriveTokenId());
-    const tokenAccountB = new TokenAccount(thirdPartyAccount, tokenB.deriveTokenId());
-
     await Token.compile();
 
     context = {
       deployerKey,
       deployerAccount,
+
+      receiverKey,
+      receiverAccount,
 
       senderKey,
       senderAccount,
@@ -113,10 +111,6 @@ describe('token integration', () => {
       thirdParty2Key,
       thirdParty2Account,
       thirdParty2,
-
-      tokenAccountA,
-      tokenAccountB,
-
     };
   });
 
@@ -164,62 +158,151 @@ describe('token integration', () => {
       await tx.prove();
       await tx.send();
     });
-
-    it('should deploy a third party token account for token A', async () => {
-
-      const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.tokenAccountA.deploy({ ownerAddress: context.tokenAAccount });
-        context.tokenA.approve(context.tokenAccountA.self);
-      });
-
-      tx.sign([context.deployerKey, context.thirdPartyKey]);
-
-      await tx.prove();
-      await tx.send();
-    });
-
-    it('should deploy a third party token account for token B', async () => {
-
-      const tx = await Mina.transaction(context.deployerAccount, () => {
-        context.tokenAccountB.deploy({ ownerAddress: context.tokenAAccount });
-        context.tokenB.approve(context.tokenAccountB.self);
-      });
-
-      tx.sign([context.deployerKey, context.thirdPartyKey]);
-
-      await tx.prove();
-      await tx.send();
-    });
   });
 
-  const mintAmount = UInt64.from(1000);
 
-  describe('mint', () => {
+  describe('mint/burn', () => {
+    const mintAmount = UInt64.from(1000);
+    const burnAmount = UInt64.from(100);
+
     it('should mint for the sender account', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.senderAccount)
+        .toBigInt()
 
       const tx = await Mina.transaction(context.senderAccount, () => {
-        // eslint-disable-next-line no-warning-comments
-        // TODO: it looks like the 'directAdmin' account
-        // is also created and needs to be paid for
         AccountUpdate.fundNewAccount(context.senderAccount, 2);
         context.tokenA.mint(context.senderAccount, mintAmount);
       });
   
       tx.sign([context.senderKey, context.tokenAdminKey]);
-
       await tx.prove();
       await tx.send();
 
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-      ).toBe(mintAmount.toBigInt());
+      ).toBe(initialBalance + mintAmount.toBigInt());
+    });
+
+    it('should burn tokens for the sender account', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.senderAccount)
+        .toBigInt();
+
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.burn(context.senderAccount, burnAmount);
+      });
+
+      tx.sign([context.senderKey]);
+      await tx.prove();
+      await tx.send();
+
+      expect(
+        context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
+      ).toBe(initialBalance - burnAmount.toBigInt());
+    });
+
+    it('should refuse to mint tokens without signature from the token admin', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.mint(context.senderAccount, mintAmount);
+      });
+
+      tx.sign([context.senderKey]);
+      await tx.prove();
+      await expect (async () => await tx.send()).rejects.toThrow();
+    });
+
+    it('should refuse to burn tokens without signature from the token holder', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.burn(context.senderAccount, burnAmount);
+      });
+
+      await tx.prove();
+      await expect (async () => await tx.send()).rejects.toThrow();
     });
   });
 
+  describe('transfers', () => {
+    const sendAmount = UInt64.from(1);
+
+    it('should do a transfer initiated by the token contract', async () => {
+      const initialBalanceSender = context.tokenA.getBalanceOf(context.senderAccount).toBigInt();
+      const initialBalanceReceiver = context.tokenA.getBalanceOf(context.receiverAccount).toBigInt();
+
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1)
+        context.tokenA.transfer(context.senderAccount, context.receiverAccount, sendAmount);
+      });
+      tx.sign([context.senderKey]);
+      await tx.prove();
+      await tx.send();
+
+      expect(context.tokenA.getBalanceOf(context.senderAccount).toBigInt())
+        .toBe(initialBalanceSender - sendAmount.toBigInt());
+      expect(context.tokenA.getBalanceOf(context.receiverAccount).toBigInt())
+        .toBe(initialBalanceReceiver + sendAmount.toBigInt());
+    });
+
+    it('should reject a transaction not signed by the token holder', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.transfer(context.senderAccount, context.receiverAccount, sendAmount);
+      });
+      await tx.prove();
+      await expect (async () => await tx.send()).rejects.toThrow();
+    });
+
+    it('should do a transaction constructed manually, approved by the token contract', async () => {
+      const initialBalanceSender = context.tokenA.getBalanceOf(context.senderAccount).toBigInt();
+      const initialBalanceReceiver = context.tokenA.getBalanceOf(context.receiverAccount).toBigInt();
+      const updateSend = AccountUpdate.createSigned(context.senderAccount, context.tokenA.deriveTokenId());
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg();
+      const updateReceive = AccountUpdate.create(context.receiverAccount, context.tokenA.deriveTokenId());
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount);
+
+      const tx = await Mina.transaction(context.deployerAccount, () => {
+        context.tokenA.approveAccountUpdates([updateSend, updateReceive])
+      });
+      await tx.sign([context.senderKey, context.deployerKey]).prove()
+      await tx.send();
+
+      expect(context.tokenA.getBalanceOf(context.senderAccount).toBigInt())
+        .toBe(initialBalanceSender - sendAmount.toBigInt());
+      expect(context.tokenA.getBalanceOf(context.receiverAccount).toBigInt())
+        .toBe(initialBalanceReceiver + sendAmount.toBigInt());
+    });
+
+    it('should reject unbalanced transactions', async () => {
+      const updateSend = AccountUpdate.createSigned(context.senderAccount, context.tokenA.deriveTokenId());
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg();
+      const updateReceive = AccountUpdate.create(context.receiverAccount, context.tokenA.deriveTokenId());
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount).mul(2);
+      await expect(async () => (
+        await Mina.transaction(context.deployerAccount, () => {
+          context.tokenA.approveAccountUpdates([updateSend, updateReceive])
+        })
+      )).rejects.toThrowError()
+    });
+
+    it('rejects transactions with mismatched tokens', async () => {
+      const updateSend = AccountUpdate.createSigned(context.senderAccount, context.tokenA.deriveTokenId());
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg();
+      const updateReceive = AccountUpdate.create(context.receiverAccount, context.tokenB.deriveTokenId());
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount);
+      await expect(async () => (
+        await Mina.transaction(context.deployerAccount, () => {
+          AccountUpdate.fundNewAccount(context.senderAccount, 1)
+          context.tokenA.approveAccountUpdate(updateSend)
+          context.tokenB.approveAccountUpdate(updateReceive)
+        })
+      )).rejects.toThrowError()
+    });
+
+  });
+
   describe('third party', () => {
-    const depositAmount = UInt64.from(1);
+    const depositAmount = UInt64.from(100);
 
     it('should deposit from the user to the token account of the third party', async () => {
+      const initialBalance = context.tokenA.getBalanceOf(context.senderAccount)
+        .toBigInt();
 
       const tokenId = context.tokenA.deriveTokenId();
 
@@ -248,11 +331,15 @@ describe('token integration', () => {
 
       expect(
         context.tokenA.getBalanceOf(context.senderAccount).toBigInt()
-      ).toBe(mintAmount.toBigInt() - depositAmount.toBigInt());
+      ).toBe(initialBalance - depositAmount.toBigInt());
     });
 
     it('should send tokens from one contract to another', async () => {
-      const transferAmount = UInt64.from(0);
+      const initialBalance = context.tokenA.getBalanceOf(context.thirdPartyAccount)
+        .toBigInt();
+      const initialBalance2 = context.tokenA.getBalanceOf(context.thirdParty2Account)
+        .toBigInt();
+      const transferAmount = UInt64.from(1);
       const updateWithdraw = context.thirdParty.withdraw(transferAmount);
       const updateDeposit = context.thirdParty2.deposit(transferAmount);
       updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
@@ -261,30 +348,30 @@ describe('token integration', () => {
         context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
           updateWithdraw, updateDeposit
         ]))});
-      Provable.log(tx);
       await tx.sign([context.senderKey, context.thirdPartyKey]).prove()
       await tx.send();
 
       expect(
         context.tokenA.getBalanceOf(context.thirdPartyAccount).toBigInt()
-      ).toBe(depositAmount.toBigInt() - transferAmount.toBigInt());
+      ).toBe(initialBalance - transferAmount.toBigInt());
       expect(
         context.tokenA.getBalanceOf(context.thirdParty2Account).toBigInt()
-      ).toBe(transferAmount.toBigInt());
+      ).toBe(initialBalance2 + transferAmount.toBigInt());
     })
-/*
-      it('should reject an unbalanced transaction', async () => {
-        const insufficientDeposit = UInt64.from(0);
-        expect(async () => (await Mina.transaction(context.senderAccount, () => {
-          const [fromAccountUpdate] = context.tokenA.transferFrom(
-            context.senderAccount,
-            insufficientDeposit,
-            AccountUpdate.MayUseToken.ParentsOwnToken
-          );
-          fromAccountUpdate.requireSignature();
-          context.thirdParty.deposit(fromAccountUpdate, depositAmount)
-        }))).toThrow(errors.nonZeroBalanceChange);
-      });
-*/
+
+    it('should reject an unbalanced transaction', async () => {
+      const depositAmount = UInt64.from(10);
+      const withdrawAmount = UInt64.from(5);
+      const updateWithdraw = context.thirdParty.withdraw(withdrawAmount);
+      const updateDeposit = context.thirdParty2.deposit(depositAmount);
+      updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent;
+      await expect(async () => (
+        await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.approveBase(AccountUpdateForest.fromFlatArray([
+          updateWithdraw, updateDeposit
+        ]))})
+      )).rejects.toThrowError()
+    });
   });
 });
