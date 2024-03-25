@@ -121,8 +121,9 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
-        context.tokenA.deploy();
-        context.tokenA.initialize(context.tokenAdminAccount, totalSupply);
+        context.tokenA.deploy({
+          adminPublicKey: context.tokenAdminAccount,
+          totalSupply: totalSupply});
       });
 
       tx.sign([context.deployerKey, context.tokenAKey]);
@@ -135,8 +136,9 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
-        context.tokenB.deploy();
-        context.tokenB.initialize(context.tokenAdminAccount, totalSupply);
+        context.tokenB.deploy({
+          adminPublicKey: context.tokenAdminAccount,
+          totalSupply: totalSupply});
       });
 
       tx.sign([context.deployerKey, context.tokenBKey]);

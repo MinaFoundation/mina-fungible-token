@@ -5,7 +5,6 @@
 
 import {
   AccountUpdate,
-  Bool,
   method,
   PublicKey,
   UInt64,
@@ -15,6 +14,7 @@ import {
   VerificationKey,
   TokenContract,
   AccountUpdateForest,
+  DeployArgs,
 } from 'o1js';
 
 import errors from './errors';
@@ -43,12 +43,10 @@ class Token
 
   public decimals: UInt64 = UInt64.from(9);
 
-  @method
-  public initialize(adminPublicKey: PublicKey, totalSupply: UInt64) {
-    this.account.provedState.requireEquals(Bool(false));
-
-    this.adminAccount.set(adminPublicKey);
-    this.totalSupply.set(totalSupply);
+  deploy(args: DeployArgs & {adminPublicKey: PublicKey, totalSupply: UInt64}) {
+    super.deploy();
+    this.adminAccount.set(args.adminPublicKey);
+    this.totalSupply.set(args.totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
   }
 
