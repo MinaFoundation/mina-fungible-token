@@ -191,7 +191,7 @@ describe('token integration', () => {
         context.tokenA.burn(context.senderAccount, burnAmount);
       });
 
-      tx.sign([context.senderKey, context.tokenAdminKey]);
+      tx.sign([context.senderKey]);
       await tx.prove();
       await tx.send();
 
@@ -210,12 +210,11 @@ describe('token integration', () => {
       await expect (async () => await tx.send()).rejects.toThrow();
     });
 
-    it('should refuse to burn tokens without signature from the token admin', async () => {
+    it('should refuse to burn tokens without signature from the token holder', async () => {
       const tx = await Mina.transaction(context.senderAccount, () => {
         context.tokenA.burn(context.senderAccount, burnAmount);
       });
 
-      tx.sign([context.senderKey]);
       await tx.prove();
       await expect (async () => await tx.send()).rejects.toThrow();
     });
