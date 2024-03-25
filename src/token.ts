@@ -72,8 +72,6 @@ class Token
       errors.mintAmountExceedsTotalSupply
     );
 
-    // eslint-disable-next-line no-warning-comments
-    // TODO: find out why amount can't be Int64, also for burn
     return this.internal.mint({ address, amount });
   }
 
