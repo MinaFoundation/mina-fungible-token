@@ -6,6 +6,7 @@ import {
   UInt64,
   Int64,
   AccountUpdateForest,
+  Provable,
 } from 'o1js';
 
 import ThirdParty from '../test/ThirdParty';
@@ -32,10 +33,12 @@ interface Context {
   tokenAKey: PrivateKey;
   tokenAAccount: PublicKey;
   tokenA: Token;
+  tokenASymbol: string;
 
   tokenBKey: PrivateKey;
   tokenBAccount: PublicKey;
   tokenB: Token;
+  tokenBSymbol: string;
 
   thirdPartyKey: PrivateKey;
   thirdPartyAccount: PublicKey;
@@ -99,10 +102,12 @@ describe('token integration', () => {
       tokenAKey,
       tokenAAccount,
       tokenA,
+      tokenASymbol: 'tokA',
 
       tokenBKey,
       tokenBAccount,
       tokenB,
+      tokenBSymbol: 'tokB',
 
       thirdPartyKey,
       thirdPartyAccount,
@@ -123,7 +128,8 @@ describe('token integration', () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenA.deploy({
           adminPublicKey: context.tokenAdminAccount,
-          totalSupply: totalSupply});
+          totalSupply: totalSupply,
+          tokenSymbol: "tokA"});
       });
 
       tx.sign([context.deployerKey, context.tokenAKey]);
@@ -138,7 +144,8 @@ describe('token integration', () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
         context.tokenB.deploy({
           adminPublicKey: context.tokenAdminAccount,
-          totalSupply: totalSupply});
+          totalSupply: totalSupply,
+          tokenSymbol: "tokB"});
       });
 
       tx.sign([context.deployerKey, context.tokenBKey]);

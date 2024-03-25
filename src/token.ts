@@ -43,11 +43,15 @@ class Token
 
   public decimals: UInt64 = UInt64.from(9);
 
-  deploy(args: DeployArgs & {adminPublicKey: PublicKey, totalSupply: UInt64}) {
+  deploy(args: DeployArgs & {
+      adminPublicKey: PublicKey,
+      totalSupply: UInt64,
+      tokenSymbol: string}) {
     super.deploy();
     this.adminAccount.set(args.adminPublicKey);
     this.totalSupply.set(args.totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
+    this.account.tokenSymbol.set(args.tokenSymbol);
   }
 
   requireAdminSignature(): AccountUpdate {
