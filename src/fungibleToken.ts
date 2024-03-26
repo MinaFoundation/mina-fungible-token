@@ -11,7 +11,6 @@ import {
   Account,
   state,
   State,
-  VerificationKey,
   TokenContract,
   AccountUpdateForest,
   DeployArgs,
@@ -21,7 +20,6 @@ import errors from './errors';
 import {
   type Burnable,
   type Mintable,
-  type Upgradable,
 } from './interfaces/token/adminable';
 import type Viewable from './interfaces/token/viewable';
 import type { Transferable } from './interfaces';
@@ -34,8 +32,7 @@ class FungibleToken
     Mintable,
     Burnable,
     Viewable,
-    Transferable,
-    Upgradable
+    Transferable
 {
   @state(PublicKey) public adminAccount = State<PublicKey>();
   @state(UInt64) public totalSupply = State<UInt64>();
@@ -111,17 +108,6 @@ class FungibleToken
       .sub(amount));
 
     return this.internal.burn({ address: from, amount });
-  }
-
-  /**
-   * Upgradable
-   */
-
-  @method
-  public setVerificationKey(verificationKey: VerificationKey) {
-    this.requireAdminSignature();
-
-    this.account.verificationKey.set(verificationKey);
   }
 
   /**
