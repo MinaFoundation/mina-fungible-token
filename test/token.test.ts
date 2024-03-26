@@ -11,7 +11,7 @@ import {
 
 import ThirdParty from '../test/ThirdParty';
 
-import Token from '../src/token';
+import FungibleToken from '../src/fungibleToken';
 
 const proofsEnabled = false;
 const enforceTransactionLimits = false;
@@ -32,12 +32,12 @@ interface Context {
 
   tokenAKey: PrivateKey;
   tokenAAccount: PublicKey;
-  tokenA: Token;
+  tokenA: FungibleToken;
   tokenASymbol: string;
 
   tokenBKey: PrivateKey;
   tokenBAccount: PublicKey;
-  tokenB: Token;
+  tokenB: FungibleToken;
   tokenBSymbol: string;
 
   thirdPartyKey: PrivateKey;
@@ -70,11 +70,11 @@ describe('token integration', () => {
 
     const {privateKey: tokenAKey, publicKey: tokenAAccount} =
       PrivateKey.randomKeypair();
-    const tokenA = new Token(tokenAAccount);
+    const tokenA = new FungibleToken(tokenAAccount);
 
     const {privateKey: tokenBKey, publicKey: tokenBAccount} =
       PrivateKey.randomKeypair();
-    const tokenB = new Token(tokenBAccount);
+    const tokenB = new FungibleToken(tokenBAccount);
 
     const {privateKey: thirdPartyKey, publicKey: thirdPartyAccount} =
       PrivateKey.randomKeypair();
@@ -84,7 +84,7 @@ describe('token integration', () => {
       PrivateKey.randomKeypair();
     const thirdParty2 = new ThirdParty(thirdParty2Account);
 
-    await Token.compile();
+    await FungibleToken.compile();
 
     context = {
       deployerKey,

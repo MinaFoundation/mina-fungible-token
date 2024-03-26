@@ -27,7 +27,7 @@ import type Viewable from './interfaces/token/viewable';
 import type { Transferable } from './interfaces';
 import Approvable from './interfaces/token/approvable';
 
-class Token
+class FungibleToken
   extends TokenContract
   implements
     Approvable,
@@ -162,4 +162,4 @@ class Token
   }
 }
 
-export default Token;
+export default FungibleToken;
