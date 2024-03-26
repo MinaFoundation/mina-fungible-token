@@ -73,14 +73,15 @@ class Token
   public mint(address: PublicKey, amount: UInt64): AccountUpdate {
     this.requireAdminSignature();
 
-    const totalSupply = this.getTotalSupply();
-    const circulatingSupply = this.getCirculatingSupply();
+    const totalSupply = this.totalSupply.getAndRequireEquals();
+    const circulatingSupply = this.circulatingSupply.getAndRequireEquals();
 
     const newCirculatingSupply = circulatingSupply.add(amount);
     newCirculatingSupply.assertLessThanOrEqual(
       totalSupply,
       errors.mintAmountExceedsTotalSupply
     );
+    this.circulatingSupply.set(newCirculatingSupply);
 
     return this.internal.mint({ address, amount });
   }
@@ -104,7 +105,11 @@ class Token
     // If you want to disallow burning without approval from
     // the token admin, you could require a signature here:
     // this.requireAdminSignature();
-  
+
+    this.circulatingSupply.set(
+      this.circulatingSupply.getAndRequireEquals()
+      .sub(amount));
+
     return this.internal.burn({ address: from, amount });
   }
 

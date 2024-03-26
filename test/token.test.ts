@@ -228,7 +228,14 @@ describe('token integration', () => {
       await expect (async () => await tx.send()).rejects.toThrow();
     });
 
-    it.todo('should refuse to set total supply to be less than circulating supply');
+    it('should refuse to set total supply to be less than circulating supply', async () => {
+      await expect(async () => (
+        await Mina.transaction(context.senderAccount, () => {
+          context.tokenA.setTotalSupply(UInt64.from(1))
+        })
+      )).rejects.toThrow();
+    });
+
     it.todo('correctly changes the adminAccount');
   });
 
