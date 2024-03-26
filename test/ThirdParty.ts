@@ -11,19 +11,14 @@ import {
   Int64,
 } from 'o1js';
 
-import Token from '../src/token';
-import Depositable from '../src/interfaces/tokenAccount/depositable';
-import Withdrawable from '../src/interfaces/tokenAccount/withdrawable';
+import FungibleToken from '../src/fungibleToken';
 
-class ThirdParty extends SmartContract implements Depositable, Withdrawable {
+class ThirdParty extends SmartContract {
   @state(PublicKey) ownerAddress = State<PublicKey>();
 
   public get tokenOwner() {
     this.ownerAddress.requireEquals(this.ownerAddress.get());
-    if(!this.ownerAddress.get()) {
-      throw new Error('Token owner address has not been set')
-    }
-    return new Token(this.ownerAddress.get())
+    return new FungibleToken(this.ownerAddress.get())
   }
 
   deploy(args: DeployArgs & {ownerAddress: PublicKey}) {

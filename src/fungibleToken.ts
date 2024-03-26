@@ -5,37 +5,34 @@
 
 import {
   AccountUpdate,
-  Bool,
   method,
   PublicKey,
   UInt64,
   Account,
   state,
   State,
-  VerificationKey,
   TokenContract,
   AccountUpdateForest,
+  DeployArgs,
 } from 'o1js';
 
 import errors from './errors';
 import {
   type Burnable,
   type Mintable,
-  type Upgradable,
 } from './interfaces/token/adminable';
 import type Viewable from './interfaces/token/viewable';
 import type { Transferable } from './interfaces';
 import Approvable from './interfaces/token/approvable';
 
-class Token
+class FungibleToken
   extends TokenContract
   implements
     Approvable,
     Mintable,
     Burnable,
     Viewable,
-    Transferable,
-    Upgradable
+    Transferable
 {
   @state(PublicKey) public adminAccount = State<PublicKey>();
   @state(UInt64) public totalSupply = State<UInt64>();
@@ -43,13 +40,15 @@ class Token
 
   public decimals: UInt64 = UInt64.from(9);
 
-  @method
-  public initialize(adminPublicKey: PublicKey, totalSupply: UInt64) {
-    this.account.provedState.requireEquals(Bool(false));
-
-    this.adminAccount.set(adminPublicKey);
-    this.totalSupply.set(totalSupply);
+  deploy(args: DeployArgs & {
+      adminPublicKey: PublicKey,
+      totalSupply: UInt64,
+      tokenSymbol: string}) {
+    super.deploy();
+    this.adminAccount.set(args.adminPublicKey);
+    this.totalSupply.set(args.totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
+    this.account.tokenSymbol.set(args.tokenSymbol);
   }
 
   requireAdminSignature(): AccountUpdate {
@@ -57,6 +56,12 @@ class Token
     const adminAccountUpdate = AccountUpdate.createSigned(adminAccount);
     return adminAccountUpdate;
   }
+
+  @method setAdminAccount(adminAccount: PublicKey) {
+    this.requireAdminSignature();
+    this.adminAccount.set(adminAccount);
+  }
+
   /**
    * Mintable
    */
@@ -65,23 +70,25 @@ class Token
   public mint(address: PublicKey, amount: UInt64): AccountUpdate {
     this.requireAdminSignature();
 
-    const totalSupply = this.getTotalSupply();
-    const circulatingSupply = this.getCirculatingSupply();
+    const totalSupply = this.totalSupply.getAndRequireEquals();
+    const circulatingSupply = this.circulatingSupply.getAndRequireEquals();
 
     const newCirculatingSupply = circulatingSupply.add(amount);
     newCirculatingSupply.assertLessThanOrEqual(
       totalSupply,
       errors.mintAmountExceedsTotalSupply
     );
+    this.circulatingSupply.set(newCirculatingSupply);
 
-    // eslint-disable-next-line no-warning-comments
-    // TODO: find out why amount can't be Int64, also for burn
     return this.internal.mint({ address, amount });
   }
 
   @method
   public setTotalSupply(amount: UInt64) {
     this.requireAdminSignature();
+
+    this.getCirculatingSupply()
+    .assertLessThanOrEqual(amount);
 
     this.totalSupply.set(amount);
   }
@@ -95,19 +102,12 @@ class Token
     // If you want to disallow burning without approval from
     // the token admin, you could require a signature here:
     // this.requireAdminSignature();
-  
+
+    this.circulatingSupply.set(
+      this.circulatingSupply.getAndRequireEquals()
+      .sub(amount));
+
     return this.internal.burn({ address: from, amount });
-  }
-
-  /**
-   * Upgradable
-   */
-
-  @method
-  public setVerificationKey(verificationKey: VerificationKey) {
-    this.requireAdminSignature();
-
-    this.account.verificationKey.set(verificationKey);
   }
 
   /**
@@ -123,35 +123,29 @@ class Token
    * Viewable
    */
 
-  public getAccountOf(address: PublicKey): ReturnType<typeof Account> {
-    return Account(address, this.deriveTokenId());
-  }
-
+  @method
   public getBalanceOf(address: PublicKey): UInt64 {
-    const account = this.getAccountOf(address);
+    const account = Account(address, this.deriveTokenId());
     const balance = account.balance.get();
     account.balance.requireEquals(balance);
 
     return balance;
   }
 
+  @method
   public getTotalSupply(): UInt64 {
-    const totalSupply = this.totalSupply.get();
-    this.totalSupply.requireEquals(totalSupply);
-
-    return totalSupply;
+    return (this.totalSupply.getAndRequireEquals());
   }
 
+  @method
   public getCirculatingSupply(): UInt64 {
-    const circulatingSupply = this.circulatingSupply.get();
-    this.circulatingSupply.requireEquals(circulatingSupply);
-
-    return circulatingSupply;
+    return(this.circulatingSupply.getAndRequireEquals());
   }
 
+  @method
   public getDecimals(): UInt64 {
     return this.decimals;
   }
 }
 
-export default Token;
+export default FungibleToken;

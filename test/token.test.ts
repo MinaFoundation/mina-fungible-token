@@ -10,7 +10,7 @@ import {
 
 import ThirdParty from '../test/ThirdParty';
 
-import Token from '../src/token';
+import FungibleToken from '../src/fungibleToken';
 
 const proofsEnabled = false;
 const enforceTransactionLimits = false;
@@ -29,13 +29,18 @@ interface Context {
   tokenAdminKey: PrivateKey;
   tokenAdminAccount: PublicKey;
 
+  newTokenAdminKey: PrivateKey;
+  newTokenAdminAccount: PublicKey;
+
   tokenAKey: PrivateKey;
   tokenAAccount: PublicKey;
-  tokenA: Token;
+  tokenA: FungibleToken;
+  tokenASymbol: string;
 
   tokenBKey: PrivateKey;
   tokenBAccount: PublicKey;
-  tokenB: Token;
+  tokenB: FungibleToken;
+  tokenBSymbol: string;
 
   thirdPartyKey: PrivateKey;
   thirdPartyAccount: PublicKey;
@@ -65,13 +70,16 @@ describe('token integration', () => {
     const {privateKey: tokenAdminKey, publicKey: tokenAdminAccount} =
       PrivateKey.randomKeypair();
 
+    const {privateKey: newTokenAdminKey, publicKey: newTokenAdminAccount} =
+      PrivateKey.randomKeypair();
+
     const {privateKey: tokenAKey, publicKey: tokenAAccount} =
       PrivateKey.randomKeypair();
-    const tokenA = new Token(tokenAAccount);
+    const tokenA = new FungibleToken(tokenAAccount);
 
     const {privateKey: tokenBKey, publicKey: tokenBAccount} =
       PrivateKey.randomKeypair();
-    const tokenB = new Token(tokenBAccount);
+    const tokenB = new FungibleToken(tokenBAccount);
 
     const {privateKey: thirdPartyKey, publicKey: thirdPartyAccount} =
       PrivateKey.randomKeypair();
@@ -81,7 +89,7 @@ describe('token integration', () => {
       PrivateKey.randomKeypair();
     const thirdParty2 = new ThirdParty(thirdParty2Account);
 
-    await Token.compile();
+    await FungibleToken.compile();
 
     context = {
       deployerKey,
@@ -96,13 +104,18 @@ describe('token integration', () => {
       tokenAdminKey,
       tokenAdminAccount,
 
+      newTokenAdminKey,
+      newTokenAdminAccount,
+
       tokenAKey,
       tokenAAccount,
       tokenA,
+      tokenASymbol: 'tokA',
 
       tokenBKey,
       tokenBAccount,
       tokenB,
+      tokenBSymbol: 'tokB',
 
       thirdPartyKey,
       thirdPartyAccount,
@@ -121,8 +134,10 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
-        context.tokenA.deploy();
-        context.tokenA.initialize(context.tokenAdminAccount, totalSupply);
+        context.tokenA.deploy({
+          adminPublicKey: context.tokenAdminAccount,
+          totalSupply: totalSupply,
+          tokenSymbol: "tokA"});
       });
 
       tx.sign([context.deployerKey, context.tokenAKey]);
@@ -135,8 +150,10 @@ describe('token integration', () => {
 
       const tx = await Mina.transaction(context.deployerAccount, () => {
         AccountUpdate.fundNewAccount(context.deployerAccount, 1);
-        context.tokenB.deploy();
-        context.tokenB.initialize(context.tokenAdminAccount, totalSupply);
+        context.tokenB.deploy({
+          adminPublicKey: context.tokenAdminAccount,
+          totalSupply: totalSupply,
+          tokenSymbol: "tokB"});
       });
 
       tx.sign([context.deployerKey, context.tokenBKey]);
@@ -161,7 +178,7 @@ describe('token integration', () => {
   });
 
 
-  describe('mint/burn', () => {
+  describe('admin', () => {
     const mintAmount = UInt64.from(1000);
     const burnAmount = UInt64.from(100);
 
@@ -217,6 +234,38 @@ describe('token integration', () => {
 
       await tx.prove();
       await expect (async () => await tx.send()).rejects.toThrow();
+    });
+
+    it('should refuse to set total supply to be less than circulating supply', async () => {
+      await expect(async () => (
+        await Mina.transaction(context.senderAccount, () => {
+          context.tokenA.setTotalSupply(UInt64.from(1))
+        })
+      )).rejects.toThrow();
+    });
+
+    it('correctly changes the adminAccount', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.setAdminAccount(context.newTokenAdminAccount)
+      });
+      tx.sign([context.senderKey, context.tokenAdminKey]);
+      await tx.prove();
+      await tx.send();
+
+      const tx2 = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.setTotalSupply(totalSupply);
+      });
+      tx2.sign([context.senderKey, context.newTokenAdminKey]);
+      await tx2.prove();
+      await tx2.send();
+
+      const tx3 = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.setTotalSupply(totalSupply);
+      });
+      tx3.sign([context.senderKey, context.tokenAdminKey]);
+      await tx3.prove();
+      await expect (async () => await tx3.send()).rejects.toThrow();
     });
   });
 

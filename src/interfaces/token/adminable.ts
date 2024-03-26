@@ -7,7 +7,6 @@ import {
   type State,
   Struct,
   Field,
-  VerificationKey,
 } from 'o1js';
 
 class AdminAction extends Struct({
@@ -36,9 +35,5 @@ interface Burnable {
   burn: (from: PublicKey, amount: UInt64) => AccountUpdate;
 }
 
-interface Upgradable {
-  setVerificationKey: (verificationKey: VerificationKey) => void;
-}
-
-export type { Mintable, Burnable, Upgradable };
+export type { Mintable, Burnable };
 export { AdminAction };
