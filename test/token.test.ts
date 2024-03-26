@@ -6,7 +6,6 @@ import {
   UInt64,
   Int64,
   AccountUpdateForest,
-  Provable,
 } from 'o1js';
 
 import ThirdParty from '../test/ThirdParty';
@@ -29,6 +28,9 @@ interface Context {
 
   tokenAdminKey: PrivateKey;
   tokenAdminAccount: PublicKey;
+
+  newTokenAdminKey: PrivateKey;
+  newTokenAdminAccount: PublicKey;
 
   tokenAKey: PrivateKey;
   tokenAAccount: PublicKey;
@@ -68,6 +70,9 @@ describe('token integration', () => {
     const {privateKey: tokenAdminKey, publicKey: tokenAdminAccount} =
       PrivateKey.randomKeypair();
 
+    const {privateKey: newTokenAdminKey, publicKey: newTokenAdminAccount} =
+      PrivateKey.randomKeypair();
+
     const {privateKey: tokenAKey, publicKey: tokenAAccount} =
       PrivateKey.randomKeypair();
     const tokenA = new FungibleToken(tokenAAccount);
@@ -98,6 +103,9 @@ describe('token integration', () => {
 
       tokenAdminKey,
       tokenAdminAccount,
+
+      newTokenAdminKey,
+      newTokenAdminAccount,
 
       tokenAKey,
       tokenAAccount,
@@ -236,7 +244,29 @@ describe('token integration', () => {
       )).rejects.toThrow();
     });
 
-    it.todo('correctly changes the adminAccount');
+    it('correctly changes the adminAccount', async () => {
+      const tx = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.setAdminAccount(context.newTokenAdminAccount)
+      });
+      tx.sign([context.senderKey, context.tokenAdminKey]);
+      await tx.prove();
+      await tx.send();
+
+      const tx2 = await Mina.transaction(context.senderAccount, () => {
+        AccountUpdate.fundNewAccount(context.senderAccount, 1);
+        context.tokenA.setTotalSupply(totalSupply);
+      });
+      tx2.sign([context.senderKey, context.newTokenAdminKey]);
+      await tx2.prove();
+      await tx2.send();
+
+      const tx3 = await Mina.transaction(context.senderAccount, () => {
+        context.tokenA.setTotalSupply(totalSupply);
+      });
+      tx3.sign([context.senderKey, context.tokenAdminKey]);
+      await tx3.prove();
+      await expect (async () => await tx3.send()).rejects.toThrow();
+    });
   });
 
   describe('transfers', () => {
