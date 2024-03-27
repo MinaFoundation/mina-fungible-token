@@ -43,12 +43,15 @@ class FungibleToken
   deploy(args: DeployArgs & {
       adminPublicKey: PublicKey,
       totalSupply: UInt64,
-      tokenSymbol: string}) {
+      tokenSymbol: string,
+      zkAppURI: string
+    }) {
     super.deploy();
     this.adminAccount.set(args.adminPublicKey);
     this.totalSupply.set(args.totalSupply);
     this.circulatingSupply.set(UInt64.from(0));
     this.account.tokenSymbol.set(args.tokenSymbol);
+    this.account.zkappUri.set(args.zkAppURI);
   }
 
   requireAdminSignature(): AccountUpdate {

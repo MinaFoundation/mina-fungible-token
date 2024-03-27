@@ -137,7 +137,9 @@ describe('token integration', () => {
         context.tokenA.deploy({
           adminPublicKey: context.tokenAdminAccount,
           totalSupply: totalSupply,
-          tokenSymbol: "tokA"});
+          tokenSymbol: "tokA",
+          zkAppURI: ""
+        });
       });
 
       tx.sign([context.deployerKey, context.tokenAKey]);
@@ -153,7 +155,9 @@ describe('token integration', () => {
         context.tokenB.deploy({
           adminPublicKey: context.tokenAdminAccount,
           totalSupply: totalSupply,
-          tokenSymbol: "tokB"});
+          tokenSymbol: "tokB",
+          zkAppURI: ""
+        });
       });
 
       tx.sign([context.deployerKey, context.tokenBKey]);
