@@ -1,11 +1,19 @@
 /* eslint-disable new-cap */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import { PublicKey, UInt64, AccountUpdate } from 'o1js';
+import { PublicKey, UInt64, AccountUpdate, Struct, UInt8 } from 'o1js';
+
+
+class TransferData extends Struct({
+    methodId: UInt8,
+    addressFrom: PublicKey,
+    addressTo: PublicKey,
+    amount: UInt64
+  }) {}
 
 interface Transferable {
     transfer(from: PublicKey | AccountUpdate,
              to: PublicKey | AccountUpdate,
-             amount: UInt64): void;
+             amount: UInt64): TransferData;
     }
 
-export {Transferable};
+export { type Transferable, TransferData };

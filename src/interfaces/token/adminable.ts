@@ -1,39 +1,33 @@
 /* eslint-disable new-cap */
 /* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-import {
-  type PublicKey,
-  type UInt64,
-  type AccountUpdate,
+import { PublicKey, UInt64,
   type State,
   Struct,
-  Field,
+  UInt8,
 } from 'o1js';
 
-class AdminAction extends Struct({
-  type: Field,
-}) {
-  public static types = {
-    mint: 0,
-    burn: 1,
-    setTotalSupply: 2,
-    setVerificationKey: 3,
-  };
 
-  public static fromType(type: number): AdminAction {
-    return new AdminAction({ type: Field(type) });
-  }
-}
+class MintData extends Struct({
+  methodId: UInt8,
+  addressTo: PublicKey,
+  amount: UInt64
+}) {}
+
+class BurnData extends Struct({
+  methodId: UInt8,
+  addressFrom: PublicKey,
+  amount: UInt64
+}) {}
 
 interface Mintable {
   totalSupply: State<UInt64>;
   circulatingSupply: State<UInt64>;
-  mint: (to: PublicKey, amount: UInt64) => AccountUpdate;
+  mint: (to: PublicKey, amount: UInt64) => MintData;
   setTotalSupply: (amount: UInt64) => void;
 }
 
 interface Burnable {
-  burn: (from: PublicKey, amount: UInt64) => AccountUpdate;
+  burn: (from: PublicKey, amount: UInt64) => BurnData;
 }
 
-export type { Mintable, Burnable };
-export { AdminAction };
+export { type Mintable, type Burnable, MintData, BurnData };

@@ -7,4 +7,4 @@ interface Approvable {
   approveAccountUpdates(accountUpdates: (AccountUpdate | AccountUpdateTree)[]): void;
 }
 
-export default Approvable;
+export type { Approvable };

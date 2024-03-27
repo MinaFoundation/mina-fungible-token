@@ -8,4 +8,4 @@ interface Viewable {
   getDecimals: () => UInt64;
 }
 
-export default Viewable;
+export type { Viewable };

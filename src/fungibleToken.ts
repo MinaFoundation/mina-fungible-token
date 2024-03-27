@@ -14,16 +14,19 @@ import {
   TokenContract,
   AccountUpdateForest,
   DeployArgs,
+  UInt8,
 } from 'o1js';
 
 import errors from './errors';
 import {
   type Burnable,
   type Mintable,
-} from './interfaces/token/adminable';
-import type Viewable from './interfaces/token/viewable';
-import type { Transferable } from './interfaces';
-import Approvable from './interfaces/token/approvable';
+  type Transferable,
+  type Viewable,
+  type Approvable,
+  MintData, BurnData, TransferData
+} from './interfaces';
+
 
 class FungibleToken
   extends TokenContract
@@ -67,7 +70,7 @@ class FungibleToken
    */
 
   @method
-  public mint(address: PublicKey, amount: UInt64): AccountUpdate {
+  public mint(address: PublicKey, amount: UInt64): MintData {
     this.requireAdminSignature();
 
     const totalSupply = this.totalSupply.getAndRequireEquals();
@@ -79,16 +82,16 @@ class FungibleToken
       errors.mintAmountExceedsTotalSupply
     );
     this.circulatingSupply.set(newCirculatingSupply);
-
-    return this.internal.mint({ address, amount });
+    
+    this.internal.mint({ address, amount });
+    return new MintData({methodId: UInt8.from(1), addressTo: address, amount})
   }
 
   @method
   public setTotalSupply(amount: UInt64) {
     this.requireAdminSignature();
 
-    this.getCirculatingSupply()
-    .assertLessThanOrEqual(amount);
+    this.getCirculatingSupply().assertLessThanOrEqual(amount);
 
     this.totalSupply.set(amount);
   }
@@ -98,7 +101,7 @@ class FungibleToken
    */
 
   @method
-  public burn(from: PublicKey, amount: UInt64): AccountUpdate {
+  public burn(from: PublicKey, amount: UInt64): BurnData {
     // If you want to disallow burning without approval from
     // the token admin, you could require a signature here:
     // this.requireAdminSignature();
@@ -107,7 +110,8 @@ class FungibleToken
       this.circulatingSupply.getAndRequireEquals()
       .sub(amount));
 
-    return this.internal.burn({ address: from, amount });
+    this.internal.burn({ address: from, amount });
+    return new BurnData({methodId: UInt8.from(2), addressFrom: from, amount});
   }
 
   /**
@@ -117,6 +121,17 @@ class FungibleToken
   @method
   public approveBase(updates: AccountUpdateForest) {
     this.checkZeroBalanceChange(updates);
+  }
+
+  @method
+  public transfer(from: PublicKey, to: PublicKey, amount: UInt64): TransferData {
+    super.transfer(from, to, amount);
+    return new TransferData({
+      methodId: UInt8.from(3), 
+      addressFrom: from, 
+      addressTo: to, 
+      amount
+    });
   }
 
   /**
