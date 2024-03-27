@@ -1,8 +1,3 @@
-/* eslint-disable max-statements */
-/* eslint-disable max-lines */
-/* eslint-disable new-cap */
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-
 import {
   AccountUpdate,
   method,

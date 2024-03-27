@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import { AccountUpdate, AccountUpdateForest, AccountUpdateTree } from 'o1js';
 
 interface Approvable {

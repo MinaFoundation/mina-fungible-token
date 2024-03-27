@@ -1,5 +1,3 @@
-/* eslint-disable new-cap */
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import { PublicKey, UInt64, AccountUpdate, Struct, UInt8 } from 'o1js';
 
 

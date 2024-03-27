@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import { PublicKey, UInt64 } from 'o1js';
 
 interface Viewable {
