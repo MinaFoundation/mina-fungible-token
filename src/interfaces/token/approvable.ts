@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
 import { AccountUpdate, AccountUpdateForest, AccountUpdateTree } from 'o1js';
 
 interface Approvable {
@@ -7,4 +6,4 @@ interface Approvable {
   approveAccountUpdates(accountUpdates: (AccountUpdate | AccountUpdateTree)[]): void;
 }
 
-export default Approvable;
+export type { Approvable };
