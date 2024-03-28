@@ -110,7 +110,7 @@ class FungibleToken
    */
 
   @method
-  public transfer(from: PublicKey | AccountUpdate, to: PublicKey | AccountUpdate, amount: UInt64) {
+  public transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
     super.transfer(from, to, amount);
   }
 
