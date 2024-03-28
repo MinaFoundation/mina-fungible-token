@@ -1,8 +1,3 @@
-/* eslint-disable max-statements */
-/* eslint-disable max-lines */
-/* eslint-disable new-cap */
-/* eslint-disable @typescript-eslint/prefer-readonly-parameter-types */
-
 import {
   AccountUpdate,
   method,
@@ -16,14 +11,11 @@ import {
   DeployArgs,
 } from 'o1js';
 
-import errors from './errors';
-import {
-  type Burnable,
-  type Mintable,
-} from './interfaces/token/adminable';
-import type Viewable from './interfaces/token/viewable';
-import type { Transferable } from './interfaces';
-import Approvable from './interfaces/token/approvable';
+import { errors } from './errors';
+import type {
+  Burnable, Mintable, Viewable, Transferable, Approvable
+} from './interfaces';
+
 
 class FungibleToken
   extends TokenContract
@@ -111,6 +103,15 @@ class FungibleToken
       .sub(amount));
 
     return this.internal.burn({ address: from, amount });
+  }
+
+  /**
+   * Transferable
+   */
+
+  @method
+  public transfer(from: PublicKey | AccountUpdate, to: PublicKey | AccountUpdate, amount: UInt64) {
+    super.transfer(from, to, amount);
   }
 
   /**
