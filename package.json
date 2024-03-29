@@ -7,7 +7,7 @@
   "scripts": {
     "task": "node --no-warnings= --loader ts-node/esm",
     "test": "npm run task -- --test FungibleToken.test.ts",
-    "build": "tsc -b"
+    "build": "tsc"
   },
   "peerDependencies": {
     "o1js": "0.17.0"

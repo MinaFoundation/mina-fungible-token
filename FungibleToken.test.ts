@@ -38,8 +38,6 @@ describe("token integration", () => {
       enforceTransactionLimits: false,
     })
     Mina.setActiveInstance(Local)
-
-    await FungibleToken.compile()
     ;[deployer, sender, receiver] = Local.testAccounts as TestAccounts
 
     // Key pairs for non-Mina accounts

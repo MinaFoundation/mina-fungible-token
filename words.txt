@@ -3,6 +3,7 @@ approvable
 dprint
 esbenp
 harrysolovay
+kantp
 keypair
 mina
 mintable
