@@ -9,7 +9,7 @@ A Mina fungible token reference implementation.
 
 Within a fresh clone of this repository...
 
-```ts
+```sh
 npm i
 npm run task examples/<example-file-name>
 ```
