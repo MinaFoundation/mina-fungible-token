@@ -4,12 +4,12 @@ In this repository, we develop a reference implementation for a standard for def
 
 To install dependencies:
 
-```bash
+```sh
 npm install
 ```
 
 To run tests:
 
-```bash
+```sh
 npm run test
 ```

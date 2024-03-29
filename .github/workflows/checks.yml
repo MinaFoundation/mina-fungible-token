@@ -1,0 +1,33 @@
+name: Checks
+on:
+  pull_request:
+  merge_group:
+  push:
+    branches:
+      - develop
+jobs:
+  cspell:
+    name: Ensure correct spelling
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: streetsidesoftware/cspell-action@v6
+  fmt:
+    name: Ensure correct formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dprint/check@v2.2
+  test:
+    name: Ensure typecheck and tests pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+          cache-dependency-path: package-lock.json
+          node-version: 21.x
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test

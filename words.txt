@@ -1,0 +1,6 @@
+alexa
+approvable
+keypair
+mina
+mintable
+zkapp
