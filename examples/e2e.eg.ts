@@ -1,6 +1,5 @@
-import assert from "node:assert"
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
+import { AccountUpdate, Field, Mina, PrivateKey, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
 import type { TestAccounts } from "../util/index.js"
 
@@ -9,8 +8,6 @@ Mina.setActiveInstance(Local)
 
 const [deployer, owner, alexa, billy] = Local.testAccounts as TestAccounts
 const contractAccount = PrivateKey.randomKeypair()
-
-// await FungibleToken.compile()
 
 const contract = new FungibleToken(contractAccount.publicKey)
 
@@ -29,10 +26,11 @@ const deployTxPending = await deployTx
   .send()
 const deployTxResult = await deployTxPending.wait()
 console.log("Deploy tx result:", deployTxResult)
-assert(deployTxResult.status === "included")
+equal(deployTxResult.status, "included")
 
-const alexaBalanceBeforeMint = contract.getBalanceOf(alexa.publicKey)
-console.log("Alexa balance before mint:", alexaBalanceBeforeMint.value)
+const alexaBalanceBeforeMint = contract.getBalanceOf(alexa.publicKey).toBigInt()
+console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
+equal(alexaBalanceBeforeMint, 0n)
 
 const mintTx = await Mina.transaction(owner.publicKey, () => {
   AccountUpdate.fundNewAccount(owner.publicKey, 1)
@@ -42,24 +40,30 @@ await mintTx.prove()
 const mintTxPending = await mintTx.sign([owner.privateKey]).send()
 const mintTxResult = await mintTxPending.wait()
 console.log("Mint tx result:", mintTxResult)
+equal(mintTxResult.status, "included")
 
-const alexaBalanceAfterMint = contract.getBalanceOf(alexa.publicKey)
-console.log("Alexa balance after mint:", alexaBalanceAfterMint.value)
+const alexaBalanceAfterMint = contract.getBalanceOf(alexa.publicKey).toBigInt()
+console.log("Alexa balance after mint:", alexaBalanceAfterMint)
+equal(alexaBalanceAfterMint, BigInt(2e9))
 
 const billyBalanceBeforeMint = contract.getBalanceOf(billy.publicKey)
-console.log("Billy balance before mint:", billyBalanceBeforeMint.value)
+console.log("Billy balance before mint:", billyBalanceBeforeMint.toBigInt())
+equal(alexaBalanceBeforeMint, 0n)
 
 const transferTx = await Mina.transaction(alexa.publicKey, () => {
   AccountUpdate.fundNewAccount(billy.publicKey, 1)
   contract.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
 })
 await transferTx.prove()
-const transferTxPending = await transferTx.sign([alexa.privateKey]).send()
+const transferTxPending = await transferTx.sign([alexa.privateKey, billy.privateKey]).send()
 const transferTxResult = await transferTxPending.wait()
 console.log("Transfer tx result:", transferTxResult)
+equal(transferTxResult.status, "included")
 
-const alexaBalanceAfterTransfer = contract.getBalanceOf(alexa.publicKey)
-console.log("Alexa balance after transfer:", alexaBalanceAfterTransfer.value)
+const alexaBalanceAfterTransfer = contract.getBalanceOf(alexa.publicKey).toBigInt()
+console.log("Alexa balance after transfer:", alexaBalanceAfterTransfer)
+equal(alexaBalanceAfterTransfer, BigInt(1e9))
 
-const billyBalanceAfterTransfer = contract.getBalanceOf(billy.publicKey)
-console.log("Billy balance after transfer:", billyBalanceAfterTransfer.value)
+const billyBalanceAfterTransfer = contract.getBalanceOf(billy.publicKey).toBigInt()
+console.log("Billy balance after transfer:", billyBalanceAfterTransfer)
+equal(billyBalanceAfterTransfer, BigInt(1e9))
