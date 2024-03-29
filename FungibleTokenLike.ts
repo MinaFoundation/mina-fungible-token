@@ -1,6 +1,5 @@
 import type { AccountUpdate, AccountUpdateForest, AccountUpdateTree, PublicKey, UInt64 } from "o1js"
 
-// TODO: comments
 export interface FungibleTokenLike {
   getBalanceOf(address: PublicKey): UInt64
   getTotalSupply(): UInt64

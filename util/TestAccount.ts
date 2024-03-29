@@ -5,7 +5,6 @@ export type TestAccount = {
   privateKey: PrivateKey
 }
 
-// TODO: delete following resolution of https://github.com/o1-labs/o1js/issues/1516
 export type TestAccounts = ArrayOfLength<TestAccount, 10>
 
 type ArrayOfLength<T, L extends number, A extends T[] = []> = number extends L ? T[]

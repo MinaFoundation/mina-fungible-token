@@ -38,15 +38,13 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.account.zkappUri.set(props.zkAppURI)
   }
 
-  requireAdminSignature(): AccountUpdate {
+  requireAdminSignature() {
     const adminAccount = this.adminAccount.getAndRequireEquals()
-    // TODO: figure out why errors when returning directly
-    const adminAccountUpdate = AccountUpdate.createSigned(adminAccount)
-    return adminAccountUpdate
+    return AccountUpdate.createSigned(adminAccount)
   }
 
   @method
-  setAdminAccount(adminAccount: PublicKey): void {
+  setAdminAccount(adminAccount: PublicKey) {
     this.requireAdminSignature()
     this.adminAccount.set(adminAccount)
   }
