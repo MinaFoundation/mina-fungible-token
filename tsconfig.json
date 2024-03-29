@@ -18,9 +18,6 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "outDir": "target",
-    "paths": {
-      "mina-fungible-token": ["./index.ts"]
-    },
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
