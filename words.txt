@@ -2,9 +2,11 @@ alexa
 approvable
 dprint
 esbenp
+harrysolovay
 keypair
 mina
 mintable
+qwadratic
 typecheck
 yzhang
 zkapp
