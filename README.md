@@ -1,15 +1,19 @@
-# mina-token
+# `mina-fungible-token`
 
-In this repository, we develop a reference implementation for a standard for defining fungible tokens on Mina.
+> Note: This library is in early stages of development. Use with caution. Issue submissions are
+> greatly appreciated!
 
-To install dependencies:
+A Mina fungible token reference implementation.
 
-```bash
-npm install
+## Running [Examples](./examples)
+
+Within a fresh clone of this repository...
+
+```sh
+npm i
+npm run task examples/<example-file-name>
 ```
 
-To run tests:
+## License
 
-```bash
-npm run test
-```
+`mina-fungible-token` is [Apache licensed](LICENSE).
