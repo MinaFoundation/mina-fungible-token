@@ -6,8 +6,8 @@
   "types": "target/index.d.ts",
   "scripts": {
     "task": "node --no-warnings= --loader ts-node/esm",
-    "build": "tsc -b",
-    "test": "node --no-warnings= --loader ts-node/esm --test FungibleTokenTest.test.ts"
+    "test": "npm run task --test FungibleTokenTest.test.ts",
+    "build": "tsc -b"
   },
   "peerDependencies": {
     "o1js": "0.17.0"
