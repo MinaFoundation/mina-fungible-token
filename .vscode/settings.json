@@ -15,10 +15,5 @@
     "editor.defaultFormatter": "dprint.dprint"
   },
   "editor.formatOnSave": true,
-  "editor.tabSize": 2,
-  "markdownlint.config": {
-    "MD013": false,
-    "MD024": false,
-    "MD033": false
-  }
+  "editor.tabSize": 2
 }
