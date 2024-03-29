@@ -50,7 +50,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
-  mint(address: PublicKey, amount: UInt64): AccountUpdate {
+  mint(address: PublicKey, amount: UInt64) {
     this.requireAdminSignature()
     const totalSupply = this.totalSupply.getAndRequireEquals()
     const circulatingSupply = this.circulatingSupply.getAndRequireEquals()
@@ -61,14 +61,14 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
-  setTotalSupply(amount: UInt64): void {
+  setTotalSupply(amount: UInt64) {
     this.requireAdminSignature()
     this.getCirculatingSupply().assertLessThanOrEqual(amount)
     this.totalSupply.set(amount)
   }
 
   @method
-  burn(from: PublicKey, amount: UInt64): AccountUpdate {
+  burn(from: PublicKey, amount: UInt64) {
     // If you want to disallow burning without approval from
     // the token admin, you could require a signature here:
     // this.requireAdminSignature();
@@ -78,17 +78,17 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
-  transfer(from: PublicKey, to: PublicKey, amount: UInt64): void {
+  transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
     super.transfer(from, to, amount)
   }
 
   @method
-  approveBase(updates: AccountUpdateForest): void {
+  approveBase(updates: AccountUpdateForest) {
     this.checkZeroBalanceChange(updates)
   }
 
   @method
-  getBalanceOf(address: PublicKey): UInt64 {
+  getBalanceOf(address: PublicKey) {
     const account = Account(address, this.deriveTokenId())
     const balance = account.balance.get()
     account.balance.requireEquals(balance)
@@ -96,7 +96,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
-  getTotalSupply(): UInt64 {
+  getTotalSupply() {
     return this.totalSupply.getAndRequireEquals()
   }
 
@@ -106,7 +106,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
-  getDecimals(): UInt64 {
+  getDecimals() {
     return this.decimals
   }
 }
