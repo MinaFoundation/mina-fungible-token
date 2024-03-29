@@ -2,8 +2,8 @@
   "name": "mina-fungible-token",
   "license": "Apache-2.0",
   "type": "module",
-  "main": "target/npm/index.js",
-  "types": "target/npm/index.d.ts",
+  "main": "target/index.js",
+  "types": "target/index.d.ts",
   "scripts": {
     "task": "node --no-warnings= --loader ts-node/esm",
     "build": "tsc -b",
