@@ -1,13 +1,15 @@
 import { equal } from "node:assert"
 import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
-import type { TestAccount, TestAccounts } from "../util/index.js"
+import { testAccounts } from "../testAccounts.js"
 
-const Local = Mina.LocalBlockchain({ proofsEnabled: false })
+const Local = Mina.Network("http://localhost:8080/graphql")
 Mina.setActiveInstance(Local)
 
-const [deployer, owner, alexa, billy] = Local.testAccounts as TestAccounts
+const [deployer, owner, alexa, billy] = await testAccounts(4)
 const contract = PrivateKey.randomKeypair()
+
+await FungibleToken.compile()
 
 const token = new FungibleToken(contract.publicKey)
 
