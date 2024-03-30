@@ -64,10 +64,10 @@ describe("token integration", () => {
       const tx = await Mina.transaction(deployer.publicKey, () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 1)
         tokenAContract.deploy({
-          adminPublicKey: tokenAdmin.publicKey,
-          totalSupply: totalSupply,
-          tokenSymbol: "tokA",
-          zkAppURI: "",
+          owner: tokenAdmin.publicKey,
+          supply: totalSupply,
+          symbol: "tokA",
+          src: "",
         })
       })
 
@@ -81,10 +81,10 @@ describe("token integration", () => {
       const tx = await Mina.transaction(deployer.publicKey, () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 1)
         tokenBContract.deploy({
-          adminPublicKey: tokenAdmin.publicKey,
-          totalSupply: totalSupply,
-          tokenSymbol: "tokB",
-          zkAppURI: "",
+          owner: tokenAdmin.publicKey,
+          supply: totalSupply,
+          symbol: "tokB",
+          src: "",
         })
       })
 
@@ -175,14 +175,14 @@ describe("token integration", () => {
     it("should refuse to set total supply to be less than circulating supply", async () => {
       await rejects(() =>
         Mina.transaction(sender.publicKey, () => {
-          tokenAContract.setTotalSupply(UInt64.from(1))
+          tokenAContract.setSupply(UInt64.from(1))
         })
       )
     })
 
     it("correctly changes the adminAccount", async () => {
       const tx = await Mina.transaction(sender.publicKey, () => {
-        tokenAContract.setAdminAccount(newTokenAdmin.publicKey)
+        tokenAContract.setOwner(newTokenAdmin.publicKey)
       })
       tx.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx.prove()
@@ -190,14 +190,14 @@ describe("token integration", () => {
 
       const tx2 = await Mina.transaction(sender.publicKey, () => {
         AccountUpdate.fundNewAccount(sender.publicKey, 1)
-        tokenAContract.setTotalSupply(totalSupply)
+        tokenAContract.setSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
 
       const tx3 = await Mina.transaction(sender.publicKey, () => {
-        tokenAContract.setTotalSupply(totalSupply)
+        tokenAContract.setSupply(totalSupply)
       })
       tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()
