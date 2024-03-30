@@ -11,7 +11,7 @@ import {
   TokenContract,
   UInt64,
 } from "o1js"
-import type { FungibleTokenLike } from "./FungibleTokenLike"
+import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** The initial administrator of the token contract. */
