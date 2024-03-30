@@ -14,8 +14,8 @@ import {
   state,
   UInt64,
 } from "o1js"
-import { TestAccount, TestAccounts } from "util/TestAccount.js"
 import { FungibleToken } from "./index.js"
+import { TestAccount, testAccounts } from "./testAccounts.js"
 
 describe("token integration", () => {
   let deployer: TestAccount
@@ -33,22 +33,23 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    const Local = Mina.LocalBlockchain({
-      proofsEnabled: false,
-      enforceTransactionLimits: false,
-    })
+    const Local = Mina.Network("http://localhost:8080/graphql")
     Mina.setActiveInstance(Local)
-    ;[deployer, sender, receiver] = Local.testAccounts as TestAccounts
+    ;[deployer, sender, receiver] = await testAccounts(3)
 
     // Key pairs for non-Mina accounts
     tokenAdmin = PrivateKey.randomKeypair()
     newTokenAdmin = PrivateKey.randomKeypair()
+
+    await FungibleToken.compile()
 
     tokenA = PrivateKey.randomKeypair()
     tokenAContract = new FungibleToken(tokenA.publicKey)
 
     tokenB = PrivateKey.randomKeypair()
     tokenBContract = new FungibleToken(tokenB.publicKey)
+
+    await ThirdParty.compile()
 
     thirdPartyA = PrivateKey.randomKeypair()
     thirdPartyAContract = new ThirdParty(thirdPartyA.publicKey)
