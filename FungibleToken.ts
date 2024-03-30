@@ -7,84 +7,106 @@ import {
   PublicKey,
   State,
   state,
+  Struct,
   TokenContract,
   UInt64,
 } from "o1js"
-import type { FungibleTokenLike } from "./FungibleTokenLike"
+import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
-  adminPublicKey: PublicKey
-  totalSupply: UInt64
-  tokenSymbol: string
-  zkAppURI: string
+  /** The initial administrator of the token contract. */
+  owner: PublicKey
+  /** The initial supply of the token. */
+  supply: UInt64
+  /** The token symbol. */
+  symbol: string
+  /** A source code reference, which is placed within the `zkappUri` of the contract account. */
+  src: string
 }
 
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
-  @state(PublicKey)
-  adminAccount = State<PublicKey>()
-  @state(UInt64)
-  totalSupply = State<UInt64>()
-  @state(UInt64)
-  circulatingSupply = State<UInt64>()
-
   decimals = UInt64.from(9)
 
-  deploy(props: FungibleTokenDeployProps): void {
+  @state(PublicKey)
+  private owner = State<PublicKey>()
+  @state(UInt64)
+  private supply = State<UInt64>()
+  @state(UInt64)
+  private circulating = State<UInt64>()
+
+  readonly events = {
+    SetOwner: PublicKey,
+    Mint: MintEvent,
+    SetSupply: UInt64,
+    Burn: BurnEvent,
+    Transfer: TransferEvent,
+  }
+
+  deploy(props: FungibleTokenDeployProps) {
     super.deploy(props)
-    this.adminAccount.set(props.adminPublicKey)
-    this.totalSupply.set(props.totalSupply)
-    this.circulatingSupply.set(UInt64.from(0))
-    this.account.tokenSymbol.set(props.tokenSymbol)
-    this.account.zkappUri.set(props.zkAppURI)
+
+    this.owner.set(props.owner)
+    this.supply.set(props.supply)
+    this.circulating.set(UInt64.from(0))
+
+    this.account.tokenSymbol.set(props.symbol)
+    this.account.zkappUri.set(props.src)
   }
 
-  requireAdminSignature() {
-    const adminAccount = this.adminAccount.getAndRequireEquals()
-    return AccountUpdate.createSigned(adminAccount)
-  }
-
-  @method
-  setAdminAccount(adminAccount: PublicKey) {
-    this.requireAdminSignature()
-    this.adminAccount.set(adminAccount)
+  private ensureOwnerSignature() {
+    const owner = this.owner.getAndRequireEquals()
+    return AccountUpdate.createSigned(owner)
   }
 
   @method
-  mint(address: PublicKey, amount: UInt64) {
-    this.requireAdminSignature()
-    const totalSupply = this.totalSupply.getAndRequireEquals()
-    const circulatingSupply = this.circulatingSupply.getAndRequireEquals()
-    const newCirculatingSupply = circulatingSupply.add(amount)
-    newCirculatingSupply.assertLessThanOrEqual(totalSupply, MINT_AMOUNT_EXCEEDS_TOTAL_SUPPLY)
-    this.circulatingSupply.set(newCirculatingSupply)
-    return this.internal.mint({ address, amount })
+  setOwner(owner: PublicKey) {
+    this.ensureOwnerSignature()
+    this.owner.set(owner)
   }
 
   @method
-  setTotalSupply(amount: UInt64) {
-    this.requireAdminSignature()
-    this.getCirculatingSupply().assertLessThanOrEqual(amount)
-    this.totalSupply.set(amount)
+  mint(recipient: PublicKey, amount: UInt64) {
+    this.ensureOwnerSignature()
+    const supply = this.supply.getAndRequireEquals()
+    const circulating = this.circulating.getAndRequireEquals()
+    const nextCirculating = circulating.add(amount)
+    // TODO: is this where we'd use `Provable.if` and witness creation?
+    nextCirculating.assertLessThanOrEqual(
+      supply,
+      "Minting the provided amount would overflow the total supply.",
+    )
+    this.circulating.set(nextCirculating)
+    const accountUpdate = this.internal.mint({ address: recipient, amount })
+    this.emitEvent("Mint", new MintEvent({ recipient, amount }))
+    return accountUpdate
+  }
+
+  @method
+  setSupply(amount: UInt64) {
+    this.ensureOwnerSignature()
+    this.getCirculating().assertLessThanOrEqual(amount)
+    this.supply.set(amount)
+    this.emitEvent("SetSupply", amount)
   }
 
   @method
   burn(from: PublicKey, amount: UInt64) {
-    // If you want to disallow burning without approval from
-    // the token admin, you could require a signature here:
-    // this.requireAdminSignature();
-
-    this.circulatingSupply.set(this.circulatingSupply.getAndRequireEquals().sub(amount))
-    return this.internal.burn({ address: from, amount })
+    this.circulating.set(this.circulating.getAndRequireEquals().sub(amount))
+    const accountUpdate = this.internal.burn({ address: from, amount })
+    this.emitEvent("Burn", new BurnEvent({ from, amount }))
+    return accountUpdate
   }
 
   @method
   transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
     super.transfer(from, to, amount)
+    this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
   @method
   approveBase(updates: AccountUpdateForest) {
     this.checkZeroBalanceChange(updates)
+    // TODO: event emission here
   }
 
   @method
@@ -96,13 +118,13 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
-  getTotalSupply() {
-    return this.totalSupply.getAndRequireEquals()
+  getSupply() {
+    return this.supply.getAndRequireEquals()
   }
 
   @method
-  getCirculatingSupply(): UInt64 {
-    return this.circulatingSupply.getAndRequireEquals()
+  getCirculating(): UInt64 {
+    return this.circulating.getAndRequireEquals()
   }
 
   @method
@@ -111,5 +133,18 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 }
 
-const MINT_AMOUNT_EXCEEDS_TOTAL_SUPPLY =
-  "Minting the provided amount would overflow the total supply."
+export class MintEvent extends Struct({
+  recipient: PublicKey,
+  amount: UInt64,
+}) {}
+
+export class BurnEvent extends Struct({
+  from: PublicKey,
+  amount: UInt64,
+}) {}
+
+export class TransferEvent extends Struct({
+  from: PublicKey,
+  to: PublicKey,
+  amount: UInt64,
+}) {}
