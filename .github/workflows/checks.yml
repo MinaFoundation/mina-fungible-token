@@ -32,6 +32,7 @@ jobs:
           - 5432:5432
           - 8080:8080
           - 8181:8181
+          - 8282:8282
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
