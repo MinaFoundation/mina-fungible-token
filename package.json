@@ -5,6 +5,7 @@
   "type": "module",
   "main": "target/index.js",
   "types": "target/index.d.ts",
+  "repository": "github:MinaFoundation/mina-fungible-token",
   "scripts": {
     "task": "node --no-warnings= --loader ts-node/esm",
     "local": "docker run --rm --pull=always -it --env NETWORK_TYPE='single-node' --env PROOF_LEVEL='none' --env LOG_LEVEL='Info' -p 3085:3085 -p 5432:5432 -p 8080:8080 -p 8181:8181 -p 8282:8282 o1labs/mina-local-network:o1js-main-latest-lightnet",
@@ -12,10 +13,10 @@
     "build": "tsc"
   },
   "peerDependencies": {
-    "o1js": "0.17.0"
+    "o1js": "^0.17.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.4.3"
   }
 }
