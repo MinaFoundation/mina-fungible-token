@@ -4,7 +4,7 @@ on:
   merge_group:
   push:
     branches:
-      - develop
+      - main
 jobs:
   cspell:
     name: Ensure correct spelling
@@ -42,4 +42,5 @@ jobs:
       - run: npm ci
       - run: npm run build
       - uses: o1-labs/wait-for-mina-network-action@v1
+        timeout-minutes: 8
       - run: npm run test

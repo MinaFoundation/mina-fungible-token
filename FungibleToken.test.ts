@@ -5,6 +5,7 @@ import {
   AccountUpdateForest,
   DeployArgs,
   Int64,
+  Lightnet,
   method,
   Mina,
   PrivateKey,
@@ -15,7 +16,9 @@ import {
   UInt64,
 } from "o1js"
 import { FungibleToken } from "./index.js"
-import { TestAccount, testAccounts } from "./testAccounts.js"
+import { lightnetConfig, TestAccount } from "./test_util.js"
+
+Mina.setActiveInstance(Mina.Network(lightnetConfig))
 
 describe("token integration", () => {
   let deployer: TestAccount
@@ -33,9 +36,11 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    const Local = Mina.Network("http://localhost:8080/graphql")
-    Mina.setActiveInstance(Local)
-    ;[deployer, sender, receiver] = await testAccounts(3)
+    ;[deployer, sender, receiver] = await Promise.all([
+      Lightnet.acquireKeyPair(),
+      Lightnet.acquireKeyPair(),
+      Lightnet.acquireKeyPair(),
+    ])
 
     // Key pairs for non-Mina accounts
     tokenAdmin = PrivateKey.randomKeypair()

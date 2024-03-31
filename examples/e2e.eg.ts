@@ -1,18 +1,23 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
+import { AccountUpdate, Lightnet, Mina, PrivateKey, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
-import { testAccounts } from "../testAccounts.js"
+import { lightnetConfig } from "../test_util.js"
 
-const Local = Mina.Network("http://localhost:8080/graphql")
-Mina.setActiveInstance(Local)
+Mina.setActiveInstance(Mina.Network(lightnetConfig))
 
-const [deployer, owner, alexa, billy] = await testAccounts(4)
+const [deployer, owner, alexa, billy] = await Promise.all([
+  Lightnet.acquireKeyPair(),
+  Lightnet.acquireKeyPair(),
+  Lightnet.acquireKeyPair(),
+  Lightnet.acquireKeyPair(),
+])
 const contract = PrivateKey.randomKeypair()
 
 await FungibleToken.compile()
 
 const token = new FungibleToken(contract.publicKey)
 
+console.log("Deploying token contract.")
 const deployTx = await Mina.transaction(deployer.publicKey, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.deploy({
@@ -25,12 +30,14 @@ const deployTx = await Mina.transaction(deployer.publicKey, () => {
 await deployTx.prove()
 deployTx.sign([deployer.privateKey, contract.privateKey])
 const deployTxResult = await deployTx.send().then((v) => v.wait())
+console.log("Deploy tx result:", deployTxResult)
 equal(deployTxResult.status, "included")
 
 const alexaBalanceBeforeMint = token.getBalanceOf(alexa.publicKey).toBigInt()
 console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
 equal(alexaBalanceBeforeMint, 0n)
 
+console.log("Minting new tokens to Alexa.")
 const mintTx = await Mina.transaction(owner.publicKey, () => {
   AccountUpdate.fundNewAccount(owner.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(2e9))
@@ -49,6 +56,7 @@ const billyBalanceBeforeMint = token.getBalanceOf(billy.publicKey)
 console.log("Billy balance before mint:", billyBalanceBeforeMint.toBigInt())
 equal(alexaBalanceBeforeMint, 0n)
 
+console.log("Transferring tokens from Alexa to Billy")
 const transferTx = await Mina.transaction(alexa.publicKey, () => {
   AccountUpdate.fundNewAccount(billy.publicKey, 1)
   token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
