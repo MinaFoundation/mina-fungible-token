@@ -21,17 +21,6 @@ jobs:
   test:
     name: Ensure typecheck and tests pass
     runs-on: ubuntu-latest
-    services:
-      mina-local-network:
-        image: o1labs/mina-local-network:o1js-main-latest-lightnet
-        env:
-          NETWORK_TYPE: single-node
-          PROOF_LEVEL: none
-        ports:
-          - 3085:3085
-          - 5432:5432
-          - 8080:8080
-          - 8181:8181
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,5 +30,4 @@ jobs:
           node-version: 21.x
       - run: npm ci
       - run: npm run build
-      - uses: o1-labs/wait-for-mina-network-action@v1
       - run: npm run test

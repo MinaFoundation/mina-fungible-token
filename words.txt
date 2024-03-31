@@ -5,8 +5,6 @@ esbenp
 harrysolovay
 kantp
 keypair
-lightnet
-merkle
 mina
 mintable
 qwadratic

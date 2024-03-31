@@ -14,8 +14,8 @@ import {
   state,
   UInt64,
 } from "o1js"
+import { TestAccount, TestAccounts } from "util/TestAccount.js"
 import { FungibleToken } from "./index.js"
-import { TestAccount, testAccounts } from "./testAccounts.js"
 
 describe("token integration", () => {
   let deployer: TestAccount
@@ -33,23 +33,22 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    const Local = Mina.Network("http://localhost:8080/graphql")
+    const Local = Mina.LocalBlockchain({
+      proofsEnabled: false,
+      enforceTransactionLimits: false,
+    })
     Mina.setActiveInstance(Local)
-    ;[deployer, sender, receiver] = await testAccounts(3)
+    ;[deployer, sender, receiver] = Local.testAccounts as TestAccounts
 
     // Key pairs for non-Mina accounts
     tokenAdmin = PrivateKey.randomKeypair()
     newTokenAdmin = PrivateKey.randomKeypair()
-
-    await FungibleToken.compile()
 
     tokenA = PrivateKey.randomKeypair()
     tokenAContract = new FungibleToken(tokenA.publicKey)
 
     tokenB = PrivateKey.randomKeypair()
     tokenBContract = new FungibleToken(tokenB.publicKey)
-
-    await ThirdParty.compile()
 
     thirdPartyA = PrivateKey.randomKeypair()
     thirdPartyAContract = new ThirdParty(thirdPartyA.publicKey)
@@ -65,10 +64,10 @@ describe("token integration", () => {
       const tx = await Mina.transaction(deployer.publicKey, () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 1)
         tokenAContract.deploy({
-          owner: tokenAdmin.publicKey,
-          supply: totalSupply,
-          symbol: "tokA",
-          src: "",
+          adminPublicKey: tokenAdmin.publicKey,
+          totalSupply: totalSupply,
+          tokenSymbol: "tokA",
+          zkAppURI: "",
         })
       })
 
@@ -82,10 +81,10 @@ describe("token integration", () => {
       const tx = await Mina.transaction(deployer.publicKey, () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 1)
         tokenBContract.deploy({
-          owner: tokenAdmin.publicKey,
-          supply: totalSupply,
-          symbol: "tokB",
-          src: "",
+          adminPublicKey: tokenAdmin.publicKey,
+          totalSupply: totalSupply,
+          tokenSymbol: "tokB",
+          zkAppURI: "",
         })
       })
 
@@ -176,14 +175,14 @@ describe("token integration", () => {
     it("should refuse to set total supply to be less than circulating supply", async () => {
       await rejects(() =>
         Mina.transaction(sender.publicKey, () => {
-          tokenAContract.setSupply(UInt64.from(1))
+          tokenAContract.setTotalSupply(UInt64.from(1))
         })
       )
     })
 
     it("correctly changes the adminAccount", async () => {
       const tx = await Mina.transaction(sender.publicKey, () => {
-        tokenAContract.setOwner(newTokenAdmin.publicKey)
+        tokenAContract.setAdminAccount(newTokenAdmin.publicKey)
       })
       tx.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx.prove()
@@ -191,14 +190,14 @@ describe("token integration", () => {
 
       const tx2 = await Mina.transaction(sender.publicKey, () => {
         AccountUpdate.fundNewAccount(sender.publicKey, 1)
-        tokenAContract.setSupply(totalSupply)
+        tokenAContract.setTotalSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
 
       const tx3 = await Mina.transaction(sender.publicKey, () => {
-        tokenAContract.setSupply(totalSupply)
+        tokenAContract.setTotalSupply(totalSupply)
       })
       tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()
