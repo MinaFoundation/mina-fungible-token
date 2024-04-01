@@ -1,17 +1,24 @@
 import { equal } from "node:assert"
 import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
-import type { TestAccount, TestAccounts } from "../util/index.js"
+import { TestAccounts } from "../test_util.js"
 
-const Local = Mina.LocalBlockchain({ proofsEnabled: false })
-Mina.setActiveInstance(Local)
+const devnet = Mina.LocalBlockchain({
+  proofsEnabled: false,
+  enforceTransactionLimits: false,
+})
+Mina.setActiveInstance(devnet)
 
-const [deployer, owner, alexa, billy] = Local.testAccounts as TestAccounts
+const [deployer, owner, alexa, billy] = devnet.testAccounts as TestAccounts
 const contract = PrivateKey.randomKeypair()
 
 const token = new FungibleToken(contract.publicKey)
 
-const deployTx = await Mina.transaction(deployer.publicKey, () => {
+console.log("Deploying token contract.")
+const deployTx = await Mina.transaction({
+  sender: deployer.publicKey,
+  fee: 1e8,
+}, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.deploy({
     owner: owner.publicKey,
@@ -23,13 +30,18 @@ const deployTx = await Mina.transaction(deployer.publicKey, () => {
 await deployTx.prove()
 deployTx.sign([deployer.privateKey, contract.privateKey])
 const deployTxResult = await deployTx.send().then((v) => v.wait())
+console.log("Deploy tx result:", deployTxResult)
 equal(deployTxResult.status, "included")
 
 const alexaBalanceBeforeMint = token.getBalanceOf(alexa.publicKey).toBigInt()
 console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
 equal(alexaBalanceBeforeMint, 0n)
 
-const mintTx = await Mina.transaction(owner.publicKey, () => {
+console.log("Minting new tokens to Alexa.")
+const mintTx = await Mina.transaction({
+  sender: owner.publicKey,
+  fee: 1e9,
+}, () => {
   AccountUpdate.fundNewAccount(owner.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(2e9))
 })
@@ -47,7 +59,11 @@ const billyBalanceBeforeMint = token.getBalanceOf(billy.publicKey)
 console.log("Billy balance before mint:", billyBalanceBeforeMint.toBigInt())
 equal(alexaBalanceBeforeMint, 0n)
 
-const transferTx = await Mina.transaction(alexa.publicKey, () => {
+console.log("Transferring tokens from Alexa to Billy")
+const transferTx = await Mina.transaction({
+  sender: alexa.publicKey,
+  fee: 1e9,
+}, () => {
   AccountUpdate.fundNewAccount(billy.publicKey, 1)
   token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
 })

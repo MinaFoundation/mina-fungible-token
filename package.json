@@ -5,16 +5,17 @@
   "type": "module",
   "main": "target/index.js",
   "types": "target/index.d.ts",
+  "repository": "github:MinaFoundation/mina-fungible-token",
   "scripts": {
     "task": "node --no-warnings= --loader ts-node/esm",
     "test": "npm run task -- --test FungibleToken.test.ts",
     "build": "tsc"
   },
   "peerDependencies": {
-    "o1js": "0.17.0"
+    "o1js": "^0.17.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
-    "typescript": "^5.2.2"
+    "typescript": "^5.4.3"
   }
 }
