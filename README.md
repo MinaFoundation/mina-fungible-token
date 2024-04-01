@@ -7,14 +7,6 @@ A Mina fungible token reference implementation.
 
 ## Running [Examples](./examples)
 
-1. Start [Lightnet](https://hub.docker.com/r/o1labs/mina-local-network).
-
-```sh
-npm run local
-```
-
-2. From another terminal, run the following.
-
 ```sh
 npm i
 npm run task examples/<example-file-name>.ts

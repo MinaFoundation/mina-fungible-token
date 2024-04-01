@@ -1,24 +1,21 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Lightnet, Mina, PrivateKey, UInt64 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
-import { lightnetConfig } from "../test_util.js"
+import { TestAccounts } from "../test_util.js"
 
-Mina.setActiveInstance(Mina.Network(lightnetConfig))
+const local = Mina.LocalBlockchain({ proofsEnabled: false })
+Mina.setActiveInstance(local)
 
-const [deployer, owner, alexa, billy] = await Promise.all([
-  Lightnet.acquireKeyPair(),
-  Lightnet.acquireKeyPair(),
-  Lightnet.acquireKeyPair(),
-  Lightnet.acquireKeyPair(),
-])
+const [deployer, owner, alexa, billy] = local.testAccounts as TestAccounts
 const contract = PrivateKey.randomKeypair()
-
-await FungibleToken.compile()
 
 const token = new FungibleToken(contract.publicKey)
 
 console.log("Deploying token contract.")
-const deployTx = await Mina.transaction(deployer.publicKey, () => {
+const deployTx = await Mina.transaction({
+  sender: deployer.publicKey,
+  fee: 1e8,
+}, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.deploy({
     owner: owner.publicKey,
@@ -38,7 +35,10 @@ console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
 equal(alexaBalanceBeforeMint, 0n)
 
 console.log("Minting new tokens to Alexa.")
-const mintTx = await Mina.transaction(owner.publicKey, () => {
+const mintTx = await Mina.transaction({
+  sender: owner.publicKey,
+  fee: 1e9,
+}, () => {
   AccountUpdate.fundNewAccount(owner.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(2e9))
 })
@@ -57,7 +57,10 @@ console.log("Billy balance before mint:", billyBalanceBeforeMint.toBigInt())
 equal(alexaBalanceBeforeMint, 0n)
 
 console.log("Transferring tokens from Alexa to Billy")
-const transferTx = await Mina.transaction(alexa.publicKey, () => {
+const transferTx = await Mina.transaction({
+  sender: alexa.publicKey,
+  fee: 1e9,
+}, () => {
   AccountUpdate.fundNewAccount(billy.publicKey, 1)
   token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
 })

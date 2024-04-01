@@ -1,10 +1,10 @@
 import { PrivateKey, PublicKey } from "o1js"
 
-export const lightnetConfig = {
-  mina: "http://localhost:8080/graphql",
-  archive: "http://localhost:8282",
-  lightnetAccountManager: "http://localhost:8181",
-}
+export type TestAccounts = ArrayOfLength<TestAccount, 10>
+
+type ArrayOfLength<T, L extends number, A extends T[] = []> = number extends L ? T[]
+  : L extends A["length"] ? A
+  : ArrayOfLength<T, L, [...A, T]>
 
 export type TestAccount = {
   publicKey: PublicKey
