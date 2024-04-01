@@ -17,8 +17,11 @@ import {
 import { FungibleToken } from "./index.js"
 import { TestAccount, TestAccounts } from "./test_util.js"
 
-const local = Mina.LocalBlockchain({ proofsEnabled: false })
-Mina.setActiveInstance(local)
+const devnet = Mina.LocalBlockchain({
+  proofsEnabled: false,
+  enforceTransactionLimits: false,
+})
+Mina.setActiveInstance(devnet)
 
 describe("token integration", () => {
   let deployer: TestAccount
@@ -36,7 +39,7 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    ;[deployer, sender, receiver] = local.testAccounts as TestAccounts
+    ;[deployer, sender, receiver] = devnet.testAccounts as TestAccounts
 
     tokenAdmin = PrivateKey.randomKeypair()
     newTokenAdmin = PrivateKey.randomKeypair()
