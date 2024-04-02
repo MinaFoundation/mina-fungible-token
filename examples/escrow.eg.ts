@@ -1,27 +1,42 @@
 import { equal } from "node:assert"
-import { TestAccounts } from "test_util.js";
-import { FungibleToken } from "../index.js";
-import { AccountUpdate, DeployArgs, Mina, PrivateKey, PublicKey, SmartContract, State, UInt64, method, state } from "o1js";
+import {
+  AccountUpdate,
+  DeployArgs,
+  method,
+  Mina,
+  PrivateKey,
+  PublicKey,
+  SmartContract,
+  State,
+  state,
+  UInt64,
+} from "o1js"
+import { TestAccounts } from "test_util.js"
+import { FungibleToken } from "../index.js"
 
 export class TokenEscrow extends SmartContract {
-  @state(PublicKey) tokenAddress = State<PublicKey>()
-  @state(UInt64) total = State<UInt64>()
+  @state(PublicKey)
+  tokenAddress = State<PublicKey>()
+  @state(UInt64)
+  total = State<UInt64>()
 
-  deploy(args: DeployArgs & {tokenAddress: PublicKey}) {
+  deploy(args: DeployArgs & { tokenAddress: PublicKey }) {
     super.deploy(args)
 
     this.tokenAddress.set(args.tokenAddress)
     this.total.set(UInt64.zero)
   }
 
-  @method deposit(from: PublicKey, amount: UInt64) {
+  @method
+  deposit(from: PublicKey, amount: UInt64) {
     const token = new FungibleToken(this.tokenAddress.getAndRequireEquals())
     token.transfer(from, this.address, amount)
     const total = this.total.getAndRequireEquals()
     this.total.set(total.add(amount))
   }
 
-  @method withdraw(to: PublicKey, amount: UInt64) {
+  @method
+  withdraw(to: PublicKey, amount: UInt64) {
     const token = new FungibleToken(this.tokenAddress.getAndRequireEquals())
     const total = this.total.getAndRequireEquals()
     total.greaterThanOrEqual(amount)
@@ -54,7 +69,6 @@ escrow ${escrowContract.publicKey}
 const token = new FungibleToken(tokenContract.publicKey)
 const escrow = new TokenEscrow(escrowContract.publicKey)
 
-
 console.log("Deploying token contract.")
 const deployTokenTx = await Mina.transaction({
   sender: deployer.publicKey,
@@ -81,7 +95,7 @@ const deployEscrowTx = await Mina.transaction({
 }, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   escrow.deploy({
-    tokenAddress: tokenContract.publicKey
+    tokenAddress: tokenContract.publicKey,
   })
 })
 await deployEscrowTx.prove()
@@ -155,7 +169,6 @@ equal(escrowBalanceAfterDeposit2, BigInt(5e9))
 
 const escrowTotalAfterDeposits = await escrow.total.get()
 equal(escrowTotalAfterDeposits.toBigInt(), escrowBalanceAfterDeposit2)
-
 
 console.log("Escrow deployer withdraws portion of tokens to Jackie.")
 const withdrawTx = await Mina.transaction({
