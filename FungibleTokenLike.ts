@@ -40,11 +40,6 @@ export interface FungibleTokenLike {
    */
   approveBase(updates: AccountUpdateForest): void
   /**
-   * Approves a single account update (with arbitrarily many children).
-   * @param updates the account update or updates.
-   */
-  approveAccountUpdate(updates: AccountUpdate | AccountUpdateTree): void
-  /**
    * Approves a list of account updates (with arbitrarily many children).
    * @param updates the account update or updates.
    */

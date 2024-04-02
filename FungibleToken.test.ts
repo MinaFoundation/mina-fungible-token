@@ -349,8 +349,8 @@ describe("token integration", () => {
           fee: 1e8,
         }, () => {
           AccountUpdate.fundNewAccount(sender.publicKey, 1)
-          tokenAContract.approveAccountUpdate(updateSend)
-          tokenBContract.approveAccountUpdate(updateReceive)
+          tokenAContract.approveAccountUpdates([updateSend])
+          tokenBContract.approveAccountUpdates([updateReceive])
         })
       ))
     })
