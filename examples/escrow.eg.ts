@@ -57,14 +57,14 @@ const [deployer, owner, alexa, billy, jackie] = devnet.testAccounts as TestAccou
 const tokenContract = PrivateKey.randomKeypair()
 const escrowContract = PrivateKey.randomKeypair()
 console.log(`
-deployer ${deployer.publicKey.toBase58()}
-owner ${owner.publicKey.toBase58()}
-alexa ${alexa.publicKey.toBase58()}
-billy ${billy.publicKey.toBase58()}
-jackie ${jackie.publicKey.toBase58()}
+  deployer ${deployer.publicKey.toBase58()}
+  owner ${owner.publicKey.toBase58()}
+  alexa ${alexa.publicKey.toBase58()}
+  billy ${billy.publicKey.toBase58()}
+  jackie ${jackie.publicKey.toBase58()}
 
-token ${tokenContract.publicKey}
-escrow ${escrowContract.publicKey}
+  token ${tokenContract.publicKey.toBase58()}
+  escrow ${escrowContract.publicKey.toBase58()}
 `)
 const token = new FungibleToken(tokenContract.publicKey)
 const escrow = new TokenEscrow(escrowContract.publicKey)
@@ -167,7 +167,7 @@ const escrowBalanceAfterDeposit2 = token.getBalanceOf(escrowContract.publicKey).
 console.log("Escrow balance after deposit:", escrowBalanceAfterDeposit2)
 equal(escrowBalanceAfterDeposit2, BigInt(5e9))
 
-const escrowTotalAfterDeposits = await escrow.total.get()
+const escrowTotalAfterDeposits = escrow.total.get()
 equal(escrowTotalAfterDeposits.toBigInt(), escrowBalanceAfterDeposit2)
 
 console.log("Escrow deployer withdraws portion of tokens to Jackie.")
@@ -188,5 +188,5 @@ const escrowBalanceAfterWithdraw = token.getBalanceOf(escrowContract.publicKey).
 console.log("Escrow balance after deposit:", escrowBalanceAfterDeposit2)
 equal(escrowBalanceAfterWithdraw, BigInt(1e9))
 
-const escrowTotalAfterWithdraw = await escrow.total.get()
+const escrowTotalAfterWithdraw = escrow.total.get()
 equal(escrowTotalAfterWithdraw.toBigInt(), escrowBalanceAfterWithdraw)

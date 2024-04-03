@@ -62,6 +62,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   setOwner(owner: PublicKey) {
     this.ensureOwnerSignature()
     this.owner.set(owner)
+    this.emitEvent("SetOwner", owner)
   }
 
   @method
