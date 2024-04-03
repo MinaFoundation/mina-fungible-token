@@ -3,7 +3,7 @@ language = "en"
 multilingual = false
 src = "documentation"
 title = "Mina Fungible Token Documentation"
-description = "Information on using implementing and interacting with custom fungible tokens on Mina."
+description = "Deploy and interact with custom fungible tokens on Mina."
 
 [build]
 build-dir = "target/documentation"
