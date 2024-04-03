@@ -4,8 +4,8 @@ The token standard implementation is a Token Manager zkApp that is splitted in 2
 
 The low-level implementation is included in `o1js` library `TokenContract` abstract class. See the overview in the o1js [Custom Tokens tutorial](https://docs.minaprotocol.com/zkapps/o1js/custom-tokens)
 
-[!WARNING]
-Please note that this is a beta release. The implementation will change soon. The API may also change in future.
+> [!WARNING]
+> Please note that this is a beta release. The implementation will change soon. The API may also change in future.
 
 The high-level part inherts from the `TokenContract` class and has following user-facing features:
 

@@ -39,8 +39,8 @@ Token accounts are specific for each type of custom token, so a single public ke
 
 A token account is automatically created for a public key whenever an existing account receives a transaction denoted with a custom token. 
 
-[!IMPORTANT]
-When a token account is created for the first time, an account creation fee must be paid the same as creating a new standard account.
+> [!IMPORTANT]
+> When a token account is created for the first time, an account creation fee must be paid the same as creating a new standard account.
 
 ### Token ID
 
