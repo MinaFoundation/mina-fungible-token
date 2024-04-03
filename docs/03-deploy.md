@@ -10,8 +10,8 @@ import {
 class MyToken extends FungibleToken {}
 ```
 
->> [!NOTE]
->> If you inherit from `FungibleToken` to override some functionality, you will need to compile both parent and child contracts to be able to prove code for both of them
+> [!NOTE]
+> If you inherit from `FungibleToken` to override some functionality, you will need to compile both parent and child contracts to be able to prove code for both of them
 
 To deploy a token manager contract, create and compile the token contract instance, then create, prove and sign the deploy transaction:
 
