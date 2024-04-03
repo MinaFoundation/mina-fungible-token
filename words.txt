@@ -1,3 +1,4 @@
+MYTKN
 alexa
 approvable
 devnet
@@ -6,10 +7,13 @@ esbenp
 harrysolovay
 kantp
 keypair
+mdbook
 merkle
 mina
 mintable
+peaceiris
 qwadratic
+struct
 typecheck
 yzhang
 zkapp

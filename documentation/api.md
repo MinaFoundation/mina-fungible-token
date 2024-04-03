@@ -1,7 +1,7 @@
 # API overview
 
-The token standard implementation is a Token Manager zkApp that is splitted in 2 parts: low-level
-and high-level one.
+The token standard implementation is a Token Manager zkApp that is split in 2 parts: low-level and
+high-level one.
 
 The low-level implementation is included in `o1js` library `TokenContract` abstract class. See the
 overview in the o1js
@@ -10,7 +10,7 @@ overview in the o1js
 > [!WARNING] Please note that this is a beta release. The implementation will change soon. The API
 > may also change in future.
 
-The high-level part inherts from the `TokenContract` class and has following user-facing features:
+The high-level part inherits from the `TokenContract` class and has following user-facing features:
 
 ## On-chain State, `decimals` and deploy arguments
 
