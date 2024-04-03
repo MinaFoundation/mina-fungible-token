@@ -1,4 +1,6 @@
 name: Documentation
+permissions:
+  actions: write
 on:
   push:
     branches:
