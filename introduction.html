@@ -1,0 +1,267 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Introduction - Mina Fungible Token Documentation</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="Information on using implementing and interacting with custom fungible tokens on Mina.">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "coal" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html" class="active"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API</a></li><li class="chapter-item expanded "><a href="deploy.html"><strong aria-hidden="true">3.</strong> Deploy</a></li><li class="chapter-item expanded "><a href="token_operations.html"><strong aria-hidden="true">4.</strong> Token Operations</a></li><li class="chapter-item expanded "><a href="use_in_zk_app.html"><strong aria-hidden="true">5.</strong> Use in ZkApp</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Mina Fungible Token Documentation</h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/MinaFoundation/mina-fungible-token" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/MinaFoundation/mina-fungible-token/edit/main/documentation/introduction.md" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
+<p>Mina natively supports custom tokens
+(<a href="https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics">MIP-4</a>). Each
+account on Mina can correspond to a custom token.</p>
+<p>To create a new token, one creates a smart contract, which becomes the manager for the token, and
+uses that contract to set the rules around how the token can be minted, burned and transferred. The
+contract may also set a token symbol. Uniqueness is not enforced for token names. Instead the public
+key of the contract is used to derive the token's unique identifier.</p>
+<h2 id="show-me-the-code"><a class="header" href="#show-me-the-code">SHOW ME THE CODE</a></h2>
+<p>The
+<a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts"><code>mina-fungible-token</code> repo's e2e example</a>
+showcases the entire lifecycle of a token.</p>
+<p>After running <code>npm i mina-fungible-token</code>, import the <code>FungibleToken</code> contract and deploy it like
+so.</p>
+<pre><code class="language-ts">const token = new FungibleToken(contract.publicKey)
+
+const deployTx = await Mina.transaction({
+  sender: deployer.publicKey,
+  fee,
+}, () =&gt; {
+  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+  token.deploy({
+    owner: owner.publicKey,
+    supply: UInt64.from(10_000_000_000_000),
+    symbol: &quot;abc&quot;,
+    src: &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts&quot;,
+  })
+})
+await deployTx.prove()
+deployTx.sign([deployer.privateKey, contract.privateKey])
+await deployTx.send()
+</code></pre>
+<blockquote>
+<p>Note: this example assumes that <code>contract</code> and <code>deployer</code> are valid key pairs in scope.</p>
+</blockquote>
+<h2 id="how"><a class="header" href="#how">How?</a></h2>
+<p>How is this custom token mechanism implemented in Mina?</p>
+<h3 id="token-manager"><a class="header" href="#token-manager">Token Manager</a></h3>
+<p>The token manager account is a contract with the following capabilities.</p>
+<ul>
+<li>Set a token symbol (also called token name) for its token. Uniqueness is not enforced for token
+names because the public key of the manager account is used to derive a unique identifier for each
+token.</li>
+<li>Mint new tokens. The zkApp updates an account's balance by adding the newly created tokens to it.
+You can send minted tokens to any existing account in the network.</li>
+<li>Burn tokens (the opposite of minting). Burning tokens deducts the balance of a certain address by
+the specified amount. A zkApp cannot burn more tokens than the specified account has.</li>
+<li>Send tokens between two accounts. Any account can initiate a transfer, and the transfer must be
+approved by a Token Manager zkApp (see <a href="#approval-mechanism">Approval mechanism</a>).</li>
+</ul>
+<h3 id="token-account"><a class="header" href="#token-account">Token Account</a></h3>
+<p>Token accounts are like regular accounts, but they hold a balance of a specific custom token instead
+of MINA. A token account is created from an existing account and is specified by a public key <em>and</em>
+a token id.</p>
+<p>Token accounts are specific for each type of custom token, so a single public key can have many
+different token accounts.</p>
+<p>A token account is automatically created for a public key whenever an existing account receives a
+transaction denoted with a custom token.</p>
+<blockquote>
+<p>[!IMPORTANT] When a token account is created for the first time, an account creation fee must be
+paid the same as creating a new standard account.</p>
+</blockquote>
+<h3 id="token-id"><a class="header" href="#token-id">Token ID</a></h3>
+<p>Token ids are unique identifiers that distinguish between different types of custom tokens. Custom
+token identifiers are globally unique across the entire network.</p>
+<p>Token ids are derived from a Token Manager zkApp. Use <code>deriveTokenId()</code> function to get id of a
+token.</p>
+<h3 id="approval-mechanism"><a class="header" href="#approval-mechanism">Approval mechanism</a></h3>
+<p>Sending tokens between two accounts must be approved by a Token Manager zkApp. This can be done with
+<code>approveBase()</code> method of the custom token standard reference implementation.</p>
+<p>If you customize the <code>transfer()</code> function or constructing <code>AccountUpdate</code>s for sending tokens
+manually, don't forget to call <code>approveBase()</code>.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+
+                            <a rel="next" href="api.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+
+                    <a rel="next" href="api.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </body>
+</html>
