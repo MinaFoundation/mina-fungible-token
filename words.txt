@@ -9,6 +9,7 @@ kantp
 keypair
 mdbook
 merkle
+michaelfbryan
 mina
 mintable
 peaceiris
