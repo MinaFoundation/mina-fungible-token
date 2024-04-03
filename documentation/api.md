@@ -1,11 +1,14 @@
-# FungibleTokenBase API overview
+# API overview
 
-The token standard implementation is a Token Manager zkApp that is splitted in 2 parts: low-level and high-level one.
+The token standard implementation is a Token Manager zkApp that is splitted in 2 parts: low-level
+and high-level one.
 
-The low-level implementation is included in `o1js` library `TokenContract` abstract class. See the overview in the o1js [Custom Tokens tutorial](https://docs.minaprotocol.com/zkapps/o1js/custom-tokens)
+The low-level implementation is included in `o1js` library `TokenContract` abstract class. See the
+overview in the o1js
+[Custom Tokens tutorial](https://docs.minaprotocol.com/zkapps/o1js/custom-tokens)
 
-> [!WARNING]
-> Please note that this is a beta release. The implementation will change soon. The API may also change in future.
+> [!WARNING] Please note that this is a beta release. The implementation will change soon. The API
+> may also change in future.
 
 The high-level part inherts from the `TokenContract` class and has following user-facing features:
 
@@ -21,17 +24,21 @@ The on-chain state is defined as follows:
 
 - `owner` is set on deployment, and some of token functionality requires an admin signature.
 
-    If you want to implement admin-only method, just call `this.ensureOwnerSignature()` helper in the method you want to protect.
+  If you want to implement admin-only method, just call `this.ensureOwnerSignature()` helper in the
+  method you want to protect.
 
-- `supply` defines a maximum amount of tokens to exist. It is set on deployment and can be modified with `setSupply()` function (can be called by admin only)
+- `supply` defines a maximum amount of tokens to exist. It is set on deployment and can be modified
+  with `setSupply()` function (can be called by admin only)
 
-- `circulating` tracks the total amount in circulation. When new tokens are minted, the `circulating` increases by an amount minted.
+- `circulating` tracks the total amount in circulation. When new tokens are minted, the
+  `circulating` increases by an amount minted.
 
 - The `decimals` is a constant, that defines where to place the decimal comma in the token amounts.
 
 - The `deploy()` function requires `owner` and `supply` to be passed as parameters.
 
-- Along with state variables initial values, the `deploy()` function also takes `symbol` (to set `account.tokenSymbol`) and `src` (to set `account.zkappUri`)
+- Along with state variables initial values, the `deploy()` function also takes `symbol` (to set
+  `account.tokenSymbol`) and `src` (to set `account.zkappUri`)
 
 ## Methods
 
@@ -61,8 +68,7 @@ getDecimals()
 
 ## Events
 
-On each token operation, the event is emitted.
-The events are declared as follows:
+On each token operation, the event is emitted. The events are declared as follows:
 
 ```ts
 events = {
@@ -90,4 +96,4 @@ class TransferEvent extends Struct({
 }) {}
 ```
 
-That completes a review of a fungible token. 
+That completes a review of a fungible token.

@@ -1,11 +1,12 @@
-# Implement a smart contract that use tokens
+# Use in a ZkApp
 
-With zkApps, you can also build smart contracts that interact with tokens. For example, a simple escrow contract, where tokens can be deposited to and withdrawn from.
+With zkApps, you can also build smart contracts that interact with tokens. For example, a simple
+escrow contract, where tokens can be deposited to and withdrawn from.
 
 ## Escrow contract code
 
-Interacting with tokens from a zkApp is as simple as writing off-chain code (same code like in previous chapter is executed from within zkApp methods):
-
+Interacting with tokens from a zkApp is as simple as writing off-chain code (same code like in
+previous chapter is executed from within zkApp methods):
 
 ```ts
 export class TokenEscrow extends SmartContract {
@@ -16,7 +17,6 @@ export class TokenEscrow extends SmartContract {
 
   deploy(args: DeployArgs & { tokenAddress: PublicKey }) {
     super.deploy(args)
-
     this.tokenAddress.set(args.tokenAddress)
     this.total.set(UInt64.zero)
   }
@@ -42,4 +42,6 @@ export class TokenEscrow extends SmartContract {
 
 ## Interacting with token escrow
 
-Refer to [examples/escrow.eg.ts](https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts) to see executable `TokenEscrow` example.
+Refer to
+[examples/escrow.eg.ts](https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts)
+to see executable `TokenEscrow` example.
