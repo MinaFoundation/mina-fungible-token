@@ -16,7 +16,7 @@ import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** The initial administrator of the token contract. */
   owner: PublicKey
-  /** The initial supply of the token. */
+  /** The max supply of the token. */
   supply: UInt64
   /** The token symbol. */
   symbol: string
