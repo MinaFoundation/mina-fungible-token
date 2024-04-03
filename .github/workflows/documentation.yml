@@ -1,6 +1,7 @@
 name: Documentation
 permissions:
-  actions: write
+  pages: write
+  contents: write
 on:
   push:
     branches:
