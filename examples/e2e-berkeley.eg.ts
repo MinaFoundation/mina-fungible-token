@@ -99,7 +99,6 @@ const mintTx2 = await Mina.transaction({
   fee,
   nonce,
 }, () => {
-  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(1e9))
 })
 await mintTx2.prove()
