@@ -58,7 +58,7 @@ console.log("Alexa balance after mint:", alexaBalanceAfterMint)
 equal(alexaBalanceAfterMint, BigInt(2e9))
 
 const billyBalanceBeforeMint = token.getBalanceOf(billy.publicKey)
-console.log("Billy balance before mint:", billyBalanceBeforeMint.toBigInt())
+console.log("Billy balance before transfer:", billyBalanceBeforeMint.toBigInt())
 equal(alexaBalanceBeforeMint, 0n)
 
 console.log("Transferring tokens from Alexa to Billy")
@@ -66,11 +66,11 @@ const transferTx = await Mina.transaction({
   sender: alexa.publicKey,
   fee,
 }, () => {
-  AccountUpdate.fundNewAccount(billy.publicKey, 1)
+  AccountUpdate.fundNewAccount(alexa.publicKey, 1)
   token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
 })
 await transferTx.prove()
-transferTx.sign([alexa.privateKey, billy.privateKey])
+transferTx.sign([alexa.privateKey])
 const transferTxResult = await transferTx.send().then((v) => v.wait())
 console.log("Transfer tx result:", transferTxResult.toPretty())
 equal(transferTxResult.status, "included")
