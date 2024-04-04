@@ -1,5 +1,5 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, Provable, PublicKey, Transaction, UInt64, fetchAccount } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, PublicKey, Transaction, UInt64, fetchAccount } from "o1js"
 import { FungibleToken } from "../index.js"
 
 const url = "https://proxy.berkeley.minaexplorer.com/graphql"
@@ -27,11 +27,13 @@ query {
   return Number(json.data.account.inferredNonce)
 }
 
-async function tweakMintPrecondition(mempoolMintAmount: number, mintTx: Transaction, tokenPublicKey: PublicKey) {
+async function tweakMintPrecondition(mintAmount: number, mempoolMintAmount: number, mintTx: Transaction, tokenPublicKey: PublicKey) {
   for (let au of mintTx.transaction.accountUpdates) {
     if (au.publicKey === tokenPublicKey) {
-      const prevVal = au.body.preconditions.account.state[3]!.value
-      au.body.preconditions.account.state[3]!.value = prevVal.add(mempoolMintAmount)
+      const prevPreconditionVal = au.body.preconditions.account.state[3]!.value
+      au.body.preconditions.account.state[3]!.value = prevPreconditionVal.add(mempoolMintAmount)
+      const newPreconditionVal = au.body.preconditions.account.state[3]!.value
+      au.body.update.appState[3]!.value = newPreconditionVal.add(mintAmount)
     }
   }
 }
@@ -109,7 +111,8 @@ mintTx1.sign([deployer.privateKey])
 const mintTxResult1 = await mintTx1.send()
 console.log("Mint tx 1:", mintTxResult1.hash)
 
-await sleep(3000)
+// small delay here is needed to wait for GraphQL mempool to be updated
+await sleep(1000)
 
 console.log("[2] Minting new tokens to Alexa.")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
@@ -121,19 +124,23 @@ const mintTx2 = await Mina.transaction({
   fee,
   nonce,
 }, () => {
-  token.mint(alexa.publicKey, UInt64.from(1e9))
+  token.mint(alexa.publicKey, UInt64.from(2e9))
 })
 
-console.log('precondition before tweak')
+console.log('AU before tweak')
 for (let au of mintTx2.transaction.accountUpdates) {
-  if (au.publicKey === contract.publicKey)
-    console.log(au.body.preconditions.account.state[3]?.value.toString())
+  if (au.publicKey === contract.publicKey) {
+    console.log(au.toPretty().update)
+    console.log(au.toPretty().preconditions)
+  }
 }
-tweakMintPrecondition(1e9, mintTx2, contract.publicKey)
-console.log('precondition after tweak')
+tweakMintPrecondition(2e9, 1e9, mintTx2, contract.publicKey)
+console.log('AU after tweak')
 for (let au of mintTx2.transaction.accountUpdates) {
-  if (au.publicKey === contract.publicKey)
-    console.log(au.body.preconditions.account.state[3]?.value.toString())
+  if (au.publicKey === contract.publicKey) {
+    console.log(au.toPretty().update)
+    console.log(au.toPretty().preconditions)
+  }
 }
 
 await mintTx2.prove()
