@@ -4,7 +4,7 @@ import { FungibleToken } from "../index.js"
 
 const url = "https://proxy.berkeley.minaexplorer.com/graphql"
 
-// we use it here because some transactions from sender may be already in a mempool, 
+// we use it here because some transactions from sender may be already in a mempool,
 // resulting in rejection of a transaction with same nonce
 // this is demonstrated in mint phase (we don't wait after first mint to include a second one)
 async function getInferredNonce(publicKey: string) {
@@ -16,11 +16,13 @@ query {
 }`
 
   const response = await fetch(
-    url, {
-      method: 'POST', 
+    url,
+    {
+      method: "POST",
       body: JSON.stringify({ operationName: null, query, variables: {} }),
-      headers: {'Content-Type': 'application/json'}
-  })
+      headers: { "Content-Type": "application/json" },
+    },
+  )
   const json = await response.json()
   return Number(json.data.account.inferredNonce)
 }
@@ -33,13 +35,13 @@ const fee = 1e8
 const deployerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const deployer = {
   publicKey: deployerKey.toPublicKey(),
-  privateKey: deployerKey
+  privateKey: deployerKey,
 }
 
 const [alexa, billy, contract] = [
   PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair()
+  PrivateKey.randomKeypair(),
 ]
 
 await FungibleToken.compile()
@@ -47,10 +49,11 @@ const token = new FungibleToken(contract.publicKey)
 
 let nonce = await getInferredNonce(deployer.publicKey.toBase58())
 console.log("Deploying token contract.")
-console.log('Nonce:', nonce)
+console.log("Nonce:", nonce)
 const deployTx = await Mina.transaction({
   sender: deployer.publicKey,
-  fee, nonce
+  fee,
+  nonce,
 }, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.deploy({
@@ -72,11 +75,12 @@ equal(alexaBalanceBeforeMint, 0n)
 
 console.log("[1] Minting new tokens to Alexa.")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log('Nonce:', nonce)
+console.log("Nonce:", nonce)
 const mintTx1 = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
   sender: deployer.publicKey,
-  fee, nonce
+  fee,
+  nonce,
 }, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(1e9))
@@ -84,15 +88,16 @@ const mintTx1 = await Mina.transaction({
 await mintTx1.prove()
 mintTx1.sign([deployer.privateKey])
 const mintTxResult1 = await mintTx1.send()
-console.log('Mint tx 1:', mintTxResult1.hash)
+console.log("Mint tx 1:", mintTxResult1.hash)
 
 console.log("[2] Minting new tokens to Alexa.")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log('Nonce:', nonce)
+console.log("Nonce:", nonce)
 const mintTx2 = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
   sender: deployer.publicKey,
-  fee, nonce
+  fee,
+  nonce,
 }, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(1e9))
@@ -113,11 +118,12 @@ equal(alexaBalanceBeforeMint, 0n)
 
 console.log("Transferring tokens from Alexa to Billy")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log('Nonce:', nonce)
+console.log("Nonce:", nonce)
 const transferTx = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
   sender: deployer.publicKey,
-  fee, nonce
+  fee,
+  nonce,
 }, () => {
   AccountUpdate.fundNewAccount(billy.publicKey, 1)
   token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
@@ -138,11 +144,12 @@ equal(billyBalanceAfterTransfer, BigInt(1e9))
 
 console.log("Burning Billy's tokens")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log('Nonce:', nonce)
+console.log("Nonce:", nonce)
 const burnTx = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
   sender: deployer.publicKey,
-  fee, nonce
+  fee,
+  nonce,
 }, () => {
   token.burn(billy.publicKey, new UInt64(6e8))
 })
