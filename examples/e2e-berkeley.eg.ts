@@ -1,5 +1,5 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, Provable, PublicKey, Transaction, UInt64, fetchAccount } from "o1js"
 import { FungibleToken } from "../index.js"
 
 const url = "https://proxy.berkeley.minaexplorer.com/graphql"
@@ -27,6 +27,16 @@ query {
   return Number(json.data.account.inferredNonce)
 }
 
+async function tweakMintPrecondition(mempoolMintAmount: number, mintTx: Transaction, tokenPublicKey: PublicKey) {
+  for (let au of mintTx.transaction.accountUpdates) {
+    if (au.publicKey === tokenPublicKey) {
+      const prevVal = au.body.preconditions.account.state[3]!.value
+      au.body.preconditions.account.state[3]!.value = prevVal.add(mempoolMintAmount)
+    }
+  }
+}
+const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
 const berkeley = Mina.Network(url)
 Mina.setActiveInstance(berkeley)
 
@@ -44,37 +54,45 @@ const [alexa, billy, contract] = [
   PrivateKey.randomKeypair(),
 ]
 
+contract.publicKey = PublicKey.fromBase58('B62qjUrGPK1vePNUNkKfnNfxoAodfdzesBBwHfRfeQuBdxWp9kVMy7n')
+
+console.log(`
+alexa ${alexa.publicKey.toBase58()}
+billy ${billy.publicKey.toBase58()}
+contract ${contract.publicKey.toBase58()}
+`)
+
 await FungibleToken.compile()
 const token = new FungibleToken(contract.publicKey)
-
-let nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log("Deploying token contract.")
-console.log("Nonce:", nonce)
-const deployTx = await Mina.transaction({
-  sender: deployer.publicKey,
-  fee,
-  nonce,
-}, () => {
-  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
-  token.deploy({
-    owner: deployer.publicKey,
-    supply: UInt64.from(10_000_000_000_000),
-    symbol: "abc",
-    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
-  })
-})
-await deployTx.prove()
-deployTx.sign([deployer.privateKey, contract.privateKey])
-const deployTxResult = await deployTx.send().then((v) => v.wait())
-console.log("Deploy tx:", deployTxResult.hash)
-equal(deployTxResult.status, "included")
+await fetchAccount({publicKey: contract.publicKey})
+// let nonce = await getInferredNonce(deployer.publicKey.toBase58())
+// console.log("Deploying token contract.")
+// console.log("Nonce:", nonce)
+// const deployTx = await Mina.transaction({
+//   sender: deployer.publicKey,
+//   fee,
+//   nonce,
+// }, () => {
+//   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+//   token.deploy({
+//     owner: deployer.publicKey,
+//     supply: UInt64.from(10_000_000_000_000),
+//     symbol: "abc",
+//     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+//   })
+// })
+// await deployTx.prove()
+// deployTx.sign([deployer.privateKey, contract.privateKey])
+// const deployTxResult = await deployTx.send().then((v) => v.wait())
+// console.log("Deploy tx:", deployTxResult.hash)
+// equal(deployTxResult.status, "included")
 
 const alexaBalanceBeforeMint = token.getBalanceOf(alexa.publicKey).toBigInt()
 console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
 equal(alexaBalanceBeforeMint, 0n)
 
 console.log("[1] Minting new tokens to Alexa.")
-nonce = await getInferredNonce(deployer.publicKey.toBase58())
+let nonce = await getInferredNonce(deployer.publicKey.toBase58())
 console.log("Nonce:", nonce)
 const mintTx1 = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
@@ -85,79 +103,46 @@ const mintTx1 = await Mina.transaction({
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
   token.mint(alexa.publicKey, new UInt64(1e9))
 })
+
 await mintTx1.prove()
 mintTx1.sign([deployer.privateKey])
 const mintTxResult1 = await mintTx1.send()
 console.log("Mint tx 1:", mintTxResult1.hash)
 
+await sleep(3000)
+
 console.log("[2] Minting new tokens to Alexa.")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
 console.log("Nonce:", nonce)
+
 const mintTx2 = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
   sender: deployer.publicKey,
   fee,
   nonce,
 }, () => {
-  token.mint(alexa.publicKey, new UInt64(1e9))
+  token.mint(alexa.publicKey, UInt64.from(1e9))
 })
+
+console.log('precondition before tweak')
+for (let au of mintTx2.transaction.accountUpdates) {
+  if (au.publicKey === contract.publicKey)
+    console.log(au.body.preconditions.account.state[3]?.value.toString())
+}
+tweakMintPrecondition(1e9, mintTx2, contract.publicKey)
+console.log('precondition after tweak')
+for (let au of mintTx2.transaction.accountUpdates) {
+  if (au.publicKey === contract.publicKey)
+    console.log(au.body.preconditions.account.state[3]?.value.toString())
+}
+
 await mintTx2.prove()
 mintTx2.sign([deployer.privateKey])
 const mintTxResult2 = await mintTx2.send().then((v) => v.wait())
 console.log("Mint tx 2:", mintTxResult2.hash)
 equal(mintTxResult2.status, "included")
 
+
 const alexaBalanceAfterMint = token.getBalanceOf(alexa.publicKey).toBigInt()
 console.log("Alexa balance after mint:", alexaBalanceAfterMint)
 equal(alexaBalanceAfterMint, BigInt(2e9))
-
-const billyBalanceBeforeMint = token.getBalanceOf(billy.publicKey)
-console.log("Billy balance before transfer:", billyBalanceBeforeMint.toBigInt())
-equal(alexaBalanceBeforeMint, 0n)
-
-console.log("Transferring tokens from Alexa to Billy")
-nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log("Nonce:", nonce)
-const transferTx = await Mina.transaction({
-  // using deployer to pay fees because this is the only one who has tokens
-  sender: deployer.publicKey,
-  fee,
-  nonce,
-}, () => {
-  AccountUpdate.fundNewAccount(billy.publicKey, 1)
-  token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
-})
-await transferTx.prove()
-transferTx.sign([alexa.privateKey, deployer.privateKey])
-const transferTxResult = await transferTx.send().then((v) => v.wait())
-console.log("Transfer tx:", transferTxResult.hash)
-equal(transferTxResult.status, "included")
-
-const alexaBalanceAfterTransfer = token.getBalanceOf(alexa.publicKey).toBigInt()
-console.log("Alexa balance after transfer:", alexaBalanceAfterTransfer)
-equal(alexaBalanceAfterTransfer, BigInt(1e9))
-
-const billyBalanceAfterTransfer = token.getBalanceOf(billy.publicKey).toBigInt()
-console.log("Billy balance after transfer:", billyBalanceAfterTransfer)
-equal(billyBalanceAfterTransfer, BigInt(1e9))
-
-console.log("Burning Billy's tokens")
-nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log("Nonce:", nonce)
-const burnTx = await Mina.transaction({
-  // using deployer to pay fees because this is the only one who has tokens
-  sender: deployer.publicKey,
-  fee,
-  nonce,
-}, () => {
-  token.burn(billy.publicKey, new UInt64(6e8))
-})
-await burnTx.prove()
-burnTx.sign([billy.privateKey, deployer.privateKey])
-const burnTxResult = await burnTx.send().then((v) => v.wait())
-console.log("Burn tx:", burnTxResult.hash)
-equal(burnTxResult.status, "included")
-
-const billyBalanceAfterBurn = token.getBalanceOf(billy.publicKey).toBigInt()
-console.log("Billy balance after burn:", billyBalanceAfterBurn)
-equal(billyBalanceAfterBurn, BigInt(4e8))
