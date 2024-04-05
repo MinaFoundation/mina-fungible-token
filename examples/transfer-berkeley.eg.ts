@@ -57,6 +57,7 @@ contract ${contract.publicKey.toBase58()}
 await FungibleToken.compile()
 const token = new FungibleToken(contract.publicKey)
 await fetchAccount({publicKey: contract.publicKey})
+let nonce
 // let nonce = await getInferredNonce(deployer.publicKey.toBase58())
 // console.log("Deploying token contract.")
 // console.log("Nonce:", nonce)
@@ -79,24 +80,24 @@ await fetchAccount({publicKey: contract.publicKey})
 // console.log("Deploy tx:", deployTxResult.hash)
 // equal(deployTxResult.status, "included")
 
-console.log("Minting new tokens to deployer.")
-let nonce = await getInferredNonce(deployer.publicKey.toBase58())
-console.log("Nonce:", nonce)
-const mintTx1 = await Mina.transaction({
-  // using deployer to pay fees because this is the only one who has tokens
-  sender: deployer.publicKey,
-  fee,
-  nonce,
-}, () => {
-  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
-  token.mint(deployer.publicKey, new UInt64(2e9))
-})
+// console.log("Minting new tokens to deployer.")
+// let nonce = await getInferredNonce(deployer.publicKey.toBase58())
+// console.log("Nonce:", nonce)
+// const mintTx1 = await Mina.transaction({
+//   // using deployer to pay fees because this is the only one who has tokens
+//   sender: deployer.publicKey,
+//   fee,
+//   nonce,
+// }, () => {
+//   // AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+//   token.mint(deployer.publicKey, new UInt64(2e9))
+// })
 
-await mintTx1.prove()
-mintTx1.sign([deployer.privateKey])
-const mintTxResult1 = await mintTx1.send()
-console.log("Mint tx 1:", mintTxResult1.hash)
-await mintTxResult1.wait()
+// await mintTx1.prove()
+// mintTx1.sign([deployer.privateKey])
+// const mintTxResult1 = await mintTx1.send()
+// console.log("Mint tx 1:", mintTxResult1.hash)
+// await mintTxResult1.wait()
 
 
 console.log("[1] Transfer tokens to Billy.")
@@ -125,31 +126,35 @@ for (let au of transferTx1.transaction.accountUpdates) {
   console.log(au.toPretty().update)
 }
 
-console.log("[2] Transfer tokens to Billy.")
-nonce += 1
-console.log("Nonce:", nonce)
+await transferTxResult1.wait()
 
-const transferTx2 = await Mina.transaction({
-  // using deployer to pay fees because this is the only one who has tokens
-  sender: deployer.publicKey,
-  fee,
-  nonce,
-}, () => {
-  token.transfer(deployer.publicKey, billy.publicKey, UInt64.from(1e9))
-})
 
-await transferTx2.prove()
-transferTx2.sign([deployer.privateKey])
-const transferTxResult2 = await transferTx2.send()
-console.log("Transfer tx 2:", transferTxResult2.hash)
 
-console.log('Transfer tx 2 Account Updates')
-for (let au of transferTx2.transaction.accountUpdates) {
-  console.log(au.publicKey.toBase58())
-  console.log(au.toPretty().preconditions)
-  console.log(au.toPretty().update)
-}
+// console.log("[2] Transfer tokens to Billy.")
+// nonce += 1
+// console.log("Nonce:", nonce)
 
-const transferTx2Included = await transferTxResult2.wait()
-equal(transferTx2Included.status, "included")
+// const transferTx2 = await Mina.transaction({
+//   // using deployer to pay fees because this is the only one who has tokens
+//   sender: deployer.publicKey,
+//   fee,
+//   nonce,
+// }, () => {
+//   token.transfer(deployer.publicKey, billy.publicKey, UInt64.from(1e9))
+// })
+
+// await transferTx2.prove()
+// transferTx2.sign([deployer.privateKey])
+// const transferTxResult2 = await transferTx2.send()
+// console.log("Transfer tx 2:", transferTxResult2.hash)
+
+// console.log('Transfer tx 2 Account Updates')
+// for (let au of transferTx2.transaction.accountUpdates) {
+//   console.log(au.publicKey.toBase58())
+//   console.log(au.toPretty().preconditions)
+//   console.log(au.toPretty().update)
+// }
+
+// const transferTx2Included = await transferTxResult2.wait()
+// equal(transferTx2Included.status, "included")
 

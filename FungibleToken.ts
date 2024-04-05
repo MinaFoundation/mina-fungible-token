@@ -2,9 +2,12 @@ import {
   Account,
   AccountUpdate,
   AccountUpdateForest,
+  Bool,
   DeployArgs,
+  Field,
   method,
   PublicKey,
+  Reducer,
   State,
   state,
   Struct,
@@ -41,6 +44,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     Burn: BurnEvent,
     Transfer: TransferEvent,
   }
+
+  reducer = Reducer({ actionType: Field });
 
   deploy(props: FungibleTokenDeployProps) {
     super.deploy(props)
