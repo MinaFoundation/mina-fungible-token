@@ -27,16 +27,13 @@ query {
   return Number(json.data.account.inferredNonce)
 }
 
-async function tweakMintPrecondition(mintAmount: number, mempoolMintAmount: number, mintTx: Transaction, tokenPublicKey: PublicKey) {
-  for (let au of mintTx.transaction.accountUpdates) {
-    if (au.publicKey === tokenPublicKey) {
-      const prevPreconditionVal = au.body.preconditions.account.state[3]!.value
-      au.body.preconditions.account.state[3]!.value = prevPreconditionVal.add(mempoolMintAmount)
-      const newPreconditionVal = au.body.preconditions.account.state[3]!.value
-      au.body.update.appState[3]!.value = newPreconditionVal.add(mintAmount)
-    }
-  }
+function tweakMintPrecondition(token: FungibleToken, mempoolMintAmount: number) {
+  console.log('####', token.self.body.preconditions.account.state[3]?.value)
+  const prevPreconditionVal = token.self.body.preconditions.account.state[3]!.value
+  token.self.body.preconditions.account.state[3]!.value = prevPreconditionVal.add(mempoolMintAmount)
+  console.log('####', token.self.body.preconditions.account.state[3]?.value)
 }
+
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 const berkeley = Mina.Network(url)
@@ -93,7 +90,7 @@ const alexaBalanceBeforeMint = token.getBalanceOf(alexa.publicKey).toBigInt()
 console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
 equal(alexaBalanceBeforeMint, 0n)
 
-console.log("[1] Minting new tokens to Alexa.")
+console.log("Minting new tokens to Alexa.")
 let nonce = await getInferredNonce(deployer.publicKey.toBase58())
 console.log("Nonce:", nonce)
 const mintTx1 = await Mina.transaction({
@@ -103,53 +100,88 @@ const mintTx1 = await Mina.transaction({
   nonce,
 }, () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
-  token.mint(alexa.publicKey, new UInt64(1e9))
+  token.mint(deployer.publicKey, new UInt64(2e9))
 })
+
+// console.log('AU 1')
+// for (let au of mintTx1.transaction.accountUpdates) {
+//   if (au.publicKey === contract.publicKey) {
+//     console.log(au.toPretty().preconditions)
+//     console.log(au.toPretty().update)
+//   }
+// }
 
 await mintTx1.prove()
 mintTx1.sign([deployer.privateKey])
 const mintTxResult1 = await mintTx1.send()
 console.log("Mint tx 1:", mintTxResult1.hash)
+await mintTxResult1.wait()
 
-// small delay here is needed to wait for GraphQL mempool to be updated
+// small delay is needed to wait for graphQL database update
 await sleep(1000)
 
-console.log("[2] Minting new tokens to Alexa.")
+const alexaBalanceAfterMint = token.getBalanceOf(deployer.publicKey).toBigInt()
+console.log("Alexa balance after mint:", alexaBalanceAfterMint)
+// equal(alexaBalanceAfterMint, BigInt(2e9))
+
+console.log("[1] Transfer tokens to Billy.")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
 console.log("Nonce:", nonce)
 
-const mintTx2 = await Mina.transaction({
+const transferTx1 = await Mina.transaction({
   // using deployer to pay fees because this is the only one who has tokens
   sender: deployer.publicKey,
   fee,
   nonce,
 }, () => {
-  token.mint(alexa.publicKey, UInt64.from(2e9))
+  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+  token.transfer(deployer.publicKey, billy.publicKey, UInt64.from(1e9))
 })
 
-console.log('AU before tweak')
-for (let au of mintTx2.transaction.accountUpdates) {
-  if (au.publicKey === contract.publicKey) {
-    console.log(au.toPretty().update)
-    console.log(au.toPretty().preconditions)
-  }
-}
-tweakMintPrecondition(2e9, 1e9, mintTx2, contract.publicKey)
-console.log('AU after tweak')
-for (let au of mintTx2.transaction.accountUpdates) {
-  if (au.publicKey === contract.publicKey) {
-    console.log(au.toPretty().update)
-    console.log(au.toPretty().preconditions)
-  }
+await transferTx1.prove()
+transferTx1.sign([deployer.privateKey])
+const transferTxResult1 = await transferTx1.send()
+console.log("Transfer tx 1:", transferTxResult1.hash)
+
+console.log('Transfer tx 1 Account Updates')
+for (let au of transferTx1.transaction.accountUpdates) {
+  console.log(au.publicKey.toBase58())
+  console.log(au.toPretty().preconditions)
+  console.log(au.toPretty().update)
 }
 
-await mintTx2.prove()
-mintTx2.sign([deployer.privateKey])
-const mintTxResult2 = await mintTx2.send().then((v) => v.wait())
-console.log("Mint tx 2:", mintTxResult2.hash)
-equal(mintTxResult2.status, "included")
+console.log("[2] Transfer tokens to Billy.")
+nonce += 1
+console.log("Nonce:", nonce)
 
+const transferTx2 = await Mina.transaction({
+  // using deployer to pay fees because this is the only one who has tokens
+  sender: deployer.publicKey,
+  fee,
+  nonce,
+}, () => {
+  token.transfer(deployer.publicKey, billy.publicKey, UInt64.from(1e9))
+})
 
-const alexaBalanceAfterMint = token.getBalanceOf(alexa.publicKey).toBigInt()
-console.log("Alexa balance after mint:", alexaBalanceAfterMint)
-equal(alexaBalanceAfterMint, BigInt(2e9))
+await transferTx2.prove()
+transferTx2.sign([deployer.privateKey])
+const transferTxResult2 = await transferTx2.send()
+console.log("Transfer tx 2:", transferTxResult2.hash)
+
+console.log('Transfer tx 2 Account Updates')
+for (let au of transferTx2.transaction.accountUpdates) {
+  console.log(au.publicKey.toBase58())
+  console.log(au.toPretty().preconditions)
+  console.log(au.toPretty().update)
+}
+
+const transferTx2Included = await transferTxResult2.wait()
+equal(transferTx2Included.status, "included")
+
+const alexaBalanceAfter2Transfers = token.getBalanceOf(deployer.publicKey).toBigInt()
+console.log("Alexa balance after 2 transfers:", alexaBalanceAfter2Transfers)
+// equal(alexaBalanceAfter2Transfers, BigInt(0))
+
+const billyBalanceAfter2Transfers = token.getBalanceOf(billy.publicKey).toBigInt()
+console.log("Alexa balance after 2 transfers:", billyBalanceAfter2Transfers)
+// equal(billyBalanceAfter2Transfers, BigInt(2e9))
