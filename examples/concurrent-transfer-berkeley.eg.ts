@@ -1,5 +1,5 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, PublicKey, Transaction, UInt64, fetchAccount } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, PublicKey, UInt64, fetchAccount } from "o1js"
 import { FungibleToken } from "../index.js"
 
 const url = "https://proxy.berkeley.minaexplorer.com/graphql"
@@ -25,13 +25,6 @@ query {
   )
   const json = await response.json()
   return Number(json.data.account.inferredNonce)
-}
-
-function tweakMintPrecondition(token: FungibleToken, mempoolMintAmount: number) {
-  console.log('####', token.self.body.preconditions.account.state[3]?.value)
-  const prevPreconditionVal = token.self.body.preconditions.account.state[3]!.value
-  token.self.body.preconditions.account.state[3]!.value = prevPreconditionVal.add(mempoolMintAmount)
-  console.log('####', token.self.body.preconditions.account.state[3]?.value)
 }
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -86,11 +79,7 @@ await fetchAccount({publicKey: contract.publicKey})
 // console.log("Deploy tx:", deployTxResult.hash)
 // equal(deployTxResult.status, "included")
 
-const alexaBalanceBeforeMint = token.getBalanceOf(alexa.publicKey).toBigInt()
-console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
-equal(alexaBalanceBeforeMint, 0n)
-
-console.log("Minting new tokens to Alexa.")
+console.log("Minting new tokens to deployer.")
 let nonce = await getInferredNonce(deployer.publicKey.toBase58())
 console.log("Nonce:", nonce)
 const mintTx1 = await Mina.transaction({
@@ -103,26 +92,12 @@ const mintTx1 = await Mina.transaction({
   token.mint(deployer.publicKey, new UInt64(2e9))
 })
 
-// console.log('AU 1')
-// for (let au of mintTx1.transaction.accountUpdates) {
-//   if (au.publicKey === contract.publicKey) {
-//     console.log(au.toPretty().preconditions)
-//     console.log(au.toPretty().update)
-//   }
-// }
-
 await mintTx1.prove()
 mintTx1.sign([deployer.privateKey])
 const mintTxResult1 = await mintTx1.send()
 console.log("Mint tx 1:", mintTxResult1.hash)
 await mintTxResult1.wait()
 
-// small delay is needed to wait for graphQL database update
-await sleep(1000)
-
-const alexaBalanceAfterMint = token.getBalanceOf(deployer.publicKey).toBigInt()
-console.log("Alexa balance after mint:", alexaBalanceAfterMint)
-// equal(alexaBalanceAfterMint, BigInt(2e9))
 
 console.log("[1] Transfer tokens to Billy.")
 nonce = await getInferredNonce(deployer.publicKey.toBase58())
@@ -178,10 +153,3 @@ for (let au of transferTx2.transaction.accountUpdates) {
 const transferTx2Included = await transferTxResult2.wait()
 equal(transferTx2Included.status, "included")
 
-const alexaBalanceAfter2Transfers = token.getBalanceOf(deployer.publicKey).toBigInt()
-console.log("Alexa balance after 2 transfers:", alexaBalanceAfter2Transfers)
-// equal(alexaBalanceAfter2Transfers, BigInt(0))
-
-const billyBalanceAfter2Transfers = token.getBalanceOf(billy.publicKey).toBigInt()
-console.log("Alexa balance after 2 transfers:", billyBalanceAfter2Transfers)
-// equal(billyBalanceAfter2Transfers, BigInt(2e9))
