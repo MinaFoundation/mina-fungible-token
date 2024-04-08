@@ -3,26 +3,27 @@
 > WIP –– please don't read this quite yet!
 
 This document is part specification and part meta-discussion. The specification portion touches on a
-design for a "Fungible Tokenbase", which outline common actions, state reduction and lifecycle of an
-approach to fungible tokens on Mina. The aim is to describe the minimum functionality necessary in a
-common-good contract that enables dependents to compose use-case-specific fungible tokens while
-still providing a common interface against which the community can develop (ie. exchanges, DAOs,
-wallets, indexers and other programs). The process of speccing led to critical questions about not
-only the implementation, but also the ultimate purpose of the specification itself.
+design for a "Fungible Tokenbase", which outlines an approach to modeling fungible tokens on Mina
+(common actions, state reduction and lifecycle). The aim is to describe the minimum functionality
+necessary in a common-good contract that enables dependents to compose use-case-specific fungible
+tokens while still providing a common interface against which the community can develop. The process
+of speccing this out led to critical questions about not only the possibility of implementation, but
+also the ultimate purpose of the specification itself.
 
 ## Purpose of Specification
 
 Typically a specification would describe all the constraints that affect how one integrates with the
 specified software. In the context of Ethereum, [EIPs](https://eips.ethereum.org/) provide a source
 of truth on how to implement contracts and front-end clients such that they are interoperable with
-other implementors. This is possible largely due to the fact that each contract is a service, the
-instructions of which live in on-chain storage as ABIs. **This is not true of Mina**. To interact
-with a Mina contract, one needs to run the contract code themselves. Each instuction affects how
-contract results are ultimately proven. If the user executes seemingly spec–compliant contract
-methods––even if those methods' signatures are aligned with the spec types––the result may vary from
-that of other implementations. In the world of Mina, the implementation is––more or less––the spec.
-This complicates the creation of tools that need to interact with the contract, as these tools need
-to know more than just the spec/capabilities of the contract (they need the actual contract).
+implementations of the given spec they target. This is possible largely due to the fact that each
+contract is a service, the instructions of which live in on-chain storage as ABIs. **This is not
+true of Mina**. To interact with a Mina contract, one needs to run the contract code. Each
+instruction affects how contract results are ultimately proven. If the user executes seemingly
+spec–compliant contract methods––even if those methods' type signatures are aligned with those of
+the spec––the results may vary from that of other implementations. In the world of Mina, the
+implementation is––more or less––the spec. This complicates the creation of tools that need to
+interact with the contract, as these tools need to know more than just the types and capabilities of
+the contract (they need the actual contract).
 
 Some missing pieces need to come into place before we can develop contract standards which solve the
 problems that standards are meant to solve. The first piece is a system for sharing metadata about
@@ -31,7 +32,7 @@ unknown contract has the specified / expected provable properties.
 
 ### North Star
 
-To be clear: I don't believe that a specification as TypeScript declarations would benefit the
+To be clear: I don't believe that a specification as TypeScript interfaces would benefit the
 community. I do however believe that we can implement and deploy a contract and corresponding
 service that satisfy common fungible-token-related needs (including those of tool builders). This
 will be the focus of the rest of this document.

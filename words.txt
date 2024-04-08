@@ -1,6 +1,8 @@
 MYTKN
 alexa
 approvable
+deallocate
+deallocation
 devnet
 dprint
 esbenp
@@ -15,6 +17,7 @@ mintable
 peaceiris
 qwadratic
 struct
+tokenbase
 typecheck
 yzhang
 zkapp
