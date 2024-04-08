@@ -17,8 +17,10 @@ import {
 import { FungibleToken } from "./index.js"
 import { TestAccount, TestAccounts } from "./test_util.js"
 
+const proofsEnabled = false;
+
 const devnet = Mina.LocalBlockchain({
-  proofsEnabled: false,
+  proofsEnabled: proofsEnabled,
   enforceTransactionLimits: false,
 })
 Mina.setActiveInstance(devnet)
@@ -55,6 +57,11 @@ describe("token integration", () => {
 
     thirdPartyB = PrivateKey.randomKeypair()
     thirdPartyBContract = new ThirdParty(thirdPartyB.publicKey)
+
+    if(proofsEnabled) {
+      await FungibleToken.compile()
+      await ThirdParty.compile()
+    }
   })
 
   const totalSupply = UInt64.from(10_000_000_000_000)
