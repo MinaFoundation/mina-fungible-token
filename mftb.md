@@ -3,76 +3,86 @@
 > WIP –– please don't read this quite yet!
 
 This document is part specification and part meta-discussion. The specification portion touches on a
-design for a "Fungible Tokenbase", which outlines an approach to modeling fungible tokens on Mina
-(common actions, state reduction and lifecycle). The aim is to describe the minimum functionality
-necessary in a common-good contract that enables dependents to compose use-case-specific fungible
-tokens while still providing a common interface against which the community can develop. The process
-of speccing this out led to critical questions about not only the possibility of implementation, but
-also the ultimate purpose of the specification itself.
+design for a "Fungible Tokenbase", which outlines an approach to modeling fungible tokens on Mina.
+This includes interfaces for common actions, descriptions of how actions should be reduced into
+subsequent states, and the fungible token lifecycle. It describes the minimum functionality
+necessary in a common-good contract which enables dependents to compose use-case-specific fungible
+tokens while still providing a common interface against which the community (namely wallets) can
+develop. The process of speccing this out led to critical questions about not only the possibility
+of implementation, but also the ultimate purpose of the specification itself.
 
 ## Purpose of Specification
 
 Typically a specification would describe all the constraints that affect how one integrates with the
-specified software. In the context of Ethereum, [EIPs](https://eips.ethereum.org/) provide a source
-of truth on how to implement contracts and front-end clients such that they are interoperable with
-implementations of the given spec they target. This is possible largely due to the fact that each
-contract is a service, the instructions of which live in on-chain storage as ABIs. **This is not
-true of Mina**. To interact with a Mina contract, one needs to run the contract code. Each
-instruction affects how contract results are ultimately proven. If the user executes seemingly
-spec–compliant contract methods––even if those methods' type signatures are aligned with those of
-the spec––the results may vary from that of other implementations. In the world of Mina, the
-implementation is––more or less––the spec. This complicates the creation of tools that need to
-interact with the contract, as these tools need to know more than just the types and capabilities of
-the contract (they need the actual contract).
+specified software. In the context of Ethereum, [EIPs](https://eips.ethereum.org/) specify how to
+implement contracts and contract consumers such that they are interoperable with other
+implementations of the target spec. This is possible because contract instructions live in on-chain
+storage as ABIs. **This is not true of Mina**. To interact with a Mina contract, one needs to run
+the contract code. Each instruction affects how contract results are ultimately proven. If the user
+executes seemingly spec–compliant contract methods––even if those methods' type signatures are
+aligned with those of the spec––the results may vary from that of other implementations. In the
+world of Mina, the implementation is––more or less––the spec. This complicates the creation of tools
+that need to interact with contracts, as these tools need to know more than just the types and
+capabilities of the contract; they need the actual contract.
 
-Some missing pieces need to come into place before we can develop contract standards which solve the
-problems that standards are meant to solve. The first piece is a system for sharing metadata about
-the provable properties of a contract. The second missing piece is tools for asserting that a given
-unknown contract has the specified / expected provable properties.
+### Long-term Consideration
 
-### North Star
+Some missing pieces need to come into place before we can design contract specs which solve the
+problems that specs are meant to solve: the first step is to build a system for extracting and
+sharing metadata about the provable properties of a contract. The second step is to create a tool
+which asserts that a given unknown contract has the specified properties. This would enable the
+creation and confirmation of "spec"-compliant contracts in the Mina sense of the word "spec."
 
-To be clear: I don't believe that a specification as TypeScript interfaces would benefit the
-community. I do however believe that we can implement and deploy a contract and corresponding
-service that satisfy common fungible-token-related needs (including those of tool builders). This
-will be the focus of the rest of this document.
+## Near-term Recommendation
+
+I don't believe that speccing via TypeScript interfaces alone will benefit the community. To deliver
+a worthwhile fungible-token solution, we could create and deploy a contract and corresponding
+service that satisfy common use cases. Although not a "spec", this contract and service could
+provide common APIs with which developers could manage fungible tokens and administrate those tokens
+from their own, use-case-specific contracts. Exploring this possibility will be the focus of the
+remainder of this document.
 
 ## Design
 
 ### Goals
 
-#### Simplicity
-
-- custom token types can be created without the deployment of a custom contract.
-
-#### Programmability
-
-#### Timelessness
+- **Wallet-friendly**: wallets should be able to display and prove data of `FungibleTokenbase`s
+  without needing to dynamically import the code of token admin contracts.
+- **Forgo Deployment**: it should be possible to create custom token types without the deployment of
+  a custom fungible token contract. Token types are just data after all; token-type-specific
+  contracts––at least for basic functionality––is unnecessary.
+- **Extensible**: the token contract should offer all functionality necessary for 3rd-party
+  contracts to become token admins and craft use-case-specific functionality.
+- **Scalable**: the contract should support concurrent transactions.
+- **Access Patterns**: the contract-accompanying service should facilitate interaction with
+  persisted off-chain state (computing new merkle roots, paginating lists of tokens and token
+  accounts, misc.).
 
 ### Non-goals
 
-#### Access Patterns
-
-#### Authorization
-
-#### Purging
-
-- hence no minimum balance
+- **Fine-grained Authorization**: there is no separation of administrative role by action. The token
+  admin can perform all actions. Meanwhile accounts can manipulate their token-specific accounts
+  (unless frozen by the token admin). To implement more advanced authorization, developers can
+  create and set as admin a contract that delegates back to the token base.
+- **Account Purging or "Sufficiency"**: the fungible token base does not seek to represent
+  existential deposits nor weight custom tokens against native tokens such as Mina. There is no
+  minimum balance. When a token account has no funds, it is no longer represented in state. If it
+  "receives" funds (either from a transfer or from allocation) it exists.
 
 ### Actions
 
-It seems that actions and reducers are the recommended path for new contracts, as this enables
+It seems that actions and reducers are the recommended path for new o1js contracts, as this enables
 multiple actions to be queued in a single block. Therefore, the Fungible Tokenbase API is typed as
-actions ([see actions drawbacks](#actions-and-reducers)).
+actions ([see actions drawbacks](#actions-and-reducers)). These actions are used to reduce a new
+state whenever a `Commit` action is dispatched. This means that users can run many commands in rapid
+succession while still ensuring inclusion later. This lazy state model is seemingly key to
+scalability.
+
+> Note: actions/reducers have [drawbacks](#actions-and-reducers).
 
 #### `Create`
 
-Our first action is to create a new token type. Anyone can dispatch this action. It will fail if the
-specified ID already exists.
-
-> Alternatively, the method could increment a counter state and return it as the ID. However, this
-> requires an unreleased o1js feature `@method.returns`. Also, it breaks the rollup reduction's
-> commutativity.
+Our first action is to create a new token type. Everyone is authorized to dispatch this action.
 
 ```ts
 interface Create {
@@ -88,6 +98,8 @@ interface Create {
   decimals: UInt8
 }
 ```
+
+**Successful State Change:**
 
 Off-chain, this action should result in the addition of a new entry to a mapping from token ID to
 `TokenInfo`.
@@ -118,12 +130,14 @@ export interface AccountInfo {
 }
 ```
 
+**Errors**
+
+- `TokenIdAlreadyExistsError` – The ID specified in the``create` call already exists.
+
 #### `Destroy`
 
-The inverse of `Create` is `Destroy`, which accepts a single prop `token`, the ID of the token to
-destroy.
-
-> Note: this action should result in failure if the token supply is greater than zero.
+The inverse of the `Create` action is `Destroy`, which accepts a single prop `token`, the ID of the
+token to destroy.
 
 ```ts
 interface Destroy {
@@ -273,33 +287,22 @@ interface SetMetadata {
 }
 ```
 
-#### `SetAdmin`
-
-```ts
-interface SetAdmin {
-  /** The token, the admin of which is to be set. */
-  token: TokenId
-  /** The new admin to set. */
-  admin: PublicKey
-}
-```
-
 ## Architecture
 
 ### Actions and Reducers
 
-There are several drawbacks, namely the need for a rollup method to reduce the actions and previous
-state into the next state. Another drawback is that the action sequence must be processed in such a
-way as to preserve commutativity, which is difficult for the use cases of a fungible token account
-manager. Users may submit actions which touch on the same state. Even if this was not a constraint,
-there is another constraint: operations involving the merkle root representing the accounts map must
-be atomic (cc @kantp). With all of this in mind, I'd imagine much of the following API will take
-shape off-chain. However, this API can serve as a north star for what we'd like to be able to
-express with ZK.
+There are several drawbacks to the actions/reducers approach. Namely the need for a commit method to
+reduce the actions and previous state into the next state. Another drawback is that the action
+sequence must be processed in such a way as to preserve commutativity, which is difficult for the
+use cases of a fungible token account manager. Users may submit actions which touch on the same
+state. Even if this was not a constraint, there is another constraint: operations involving the
+merkle root representing the accounts map must be atomic (cc @kantp). With all of this in mind, I'd
+imagine much of the following API will take shape off-chain. However, this API can serve as a north
+star for what we'd like to be able to express with ZK.
 
 ### Representing Mappings
 
 ### Native Token Mechanism
 
 [^tokenbase]: _Tokenbase_ is not a standard term, yet it seemed fitting for this system. That being
-said, alternative (and perhaps more standard) terminology might be better.
+said, alternative terminology might be better.
