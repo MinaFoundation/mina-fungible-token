@@ -1,26 +1,24 @@
-# Mina Fungible Tokenbase[^tokenbase] Discussion
-
-> WIP –– please don't read this quite yet!
+# Mina Fungible _Tokenbase_[^tokenbase] Discussion
 
 This document is part specification and part meta-discussion. The specification portion touches on a
 design for a "Fungible Tokenbase", which outlines an approach to modeling fungible tokens on Mina.
 This includes interfaces for common actions, descriptions of how actions should be reduced into
-subsequent states, and the fungible token lifecycle. It describes the minimum functionality
-necessary in a common-good contract which enables dependents to compose use-case-specific fungible
-tokens while still providing a common interface against which the community (namely wallets) can
-develop. The process of speccing this out led to critical questions about not only the possibility
-of implementation, but also the ultimate purpose of the specification itself.
+subsequent states, and the fungible token lifecycle. It describes the minimum functionality with
+which _admin contracts_[^admin_contracts] can compose use-case-specific fungible tokens while still
+providing a common interface against which the community (namely wallets) can develop. The process
+of speccing this out led to critical questions about not only the possibility of implementation, but
+also the ultimate purpose of the specification itself.
 
 ## Purpose of Specification
 
 Typically a specification would describe all the constraints that affect how one integrates with the
 specified software. In the context of Ethereum, [EIPs](https://eips.ethereum.org/) specify how to
 implement contracts and contract consumers such that they are interoperable with other
-implementations of the target spec. This is possible because contract instructions live in on-chain
-storage as ABIs. **This is not true of Mina**. To interact with a Mina contract, one needs to run
-the contract code. Each instruction affects how contract results are ultimately proven. If the user
-executes seemingly spec–compliant contract methods––even if those methods' type signatures are
-aligned with those of the spec––the results may vary from that of other implementations. In the
+implementations against the target spec. This is possible because contract instructions live in
+on-chain storage as ABIs. **This is not true of Mina**. To interact with a Mina contract, one needs
+to run the contract code. Each instruction affects how contract results are ultimately proven. If
+the user executes seemingly spec–compliant contract methods––even if those methods' type signatures
+are aligned with those of the spec––the results may vary from that of other implementations. In the
 world of Mina, the implementation is––more or less––the spec. This complicates the creation of tools
 that need to interact with contracts, as these tools need to know more than just the types and
 capabilities of the contract; they need the actual contract.
@@ -50,35 +48,44 @@ remainder of this document.
   without needing to dynamically import the code of token admin contracts.
 - **Forgo Deployment**: it should be possible to create custom token types without the deployment of
   a custom fungible token contract. Token types are just data after all; token-type-specific
-  contracts––at least for basic functionality––is unnecessary.
-- **Extensible**: the token contract should offer all functionality necessary for 3rd-party
-  contracts to become token admins and craft use-case-specific functionality.
-- **Scalable**: the contract should support concurrent transactions.
-- **Access Patterns**: the contract-accompanying service should facilitate interaction with
-  persisted off-chain state (computing new merkle roots, paginating lists of tokens and token
-  accounts, misc.).
+  contracts––at least for basic functionality––are unnecessary.
+- **Extensible**: the `FungibleTokenbase` contract should offer all functionality necessary for a
+  3rd-party contract to become the token admin and craft use-case-specific functionality.
+- **Scalability**: the contract should support concurrent transactions at scale.
+- **Off-chain State Management API**: the contract-accompanying service should facilitate
+  interaction with persisted off-chain state (computing new merkle roots, paginating lists of tokens
+  and token accounts, reading allocation lists by allocation ID, allocator ID, allocated ID, token
+  ID, misc).
 
 ### Non-goals
 
 - **Fine-grained Authorization**: there is no separation of administrative role by action. The token
-  admin can perform all actions. Meanwhile accounts can manipulate their token-specific accounts
-  (unless frozen by the token admin). To implement more advanced authorization, developers can
-  create and set as admin a contract that delegates back to the token base.
-- **Account Purging or "Sufficiency"**: the fungible token base does not seek to represent
-  existential deposits nor weight custom tokens against native tokens such as Mina. There is no
-  minimum balance. When a token account has no funds, it is no longer represented in state. If it
-  "receives" funds (either from a transfer or from allocation) it exists.
+  admin can dispatch all actions. Meanwhile non-admin accounts can manipulate their token-specific
+  accounts (unless frozen by the token admin). To implement more advanced authorization, developers
+  can create and set as admin a contract that delegates back to the token base.
+- **Account Purging or "Sufficiency"**: the fungible token base does not represent existential
+  deposits nor weight custom tokens against native tokens such as Mina. There is no minimum balance.
+  When a token account has no funds, it is no longer represented in state. If it "receives" funds
+  (either from a transfer or from an allocation) it exists.
 
 ### Actions
 
 It seems that actions and reducers are the recommended path for new o1js contracts, as this enables
-multiple actions to be queued in a single block. Therefore, the Fungible Tokenbase API is typed as
-actions ([see actions drawbacks](#actions-and-reducers)). These actions are used to reduce a new
-state whenever a `Commit` action is dispatched. This means that users can run many commands in rapid
-succession while still ensuring inclusion later. This lazy state model is seemingly key to
-scalability.
+multiple actions to be queued in a single block (concurrent transactions (ish)). These actions are
+used to reduce a new state whenever a `Commit` action is dispatched. This means that users can run
+many commands in rapid succession while still ensuring inclusion later. This lazy state model is
+seemingly key to contract scalability. Therefore, the `FungibleTokenbase` contract API is described
+via action interfaces.
 
-> Note: actions/reducers have [drawbacks](#actions-and-reducers).
+> Note: the resulting state change descriptions are imprecise, as it is still unclear what
+> representations should live off-chain. For instance, the contract depends on representations of
+> potentially large mappings. Therefore, many of the actions will be accompanied by merkle paths and
+> proofs.
+
+> Note: errors are not yet represented.
+
+> Note: the actions + reducers approach has [several drawbacks](#actions-and-reducers-drawbacks)
+> which may impact the feasibility of a scalable `FungibleTokenbase` implementation.
 
 #### `Create`
 
@@ -99,10 +106,7 @@ interface Create {
 }
 ```
 
-**Successful State Change:**
-
-Off-chain, this action should result in the addition of a new entry to a mapping from token ID to
-`TokenInfo`.
+This action should result in the addition of a new entry to a mapping from token ID to `TokenInfo`.
 
 ```ts
 interface TokenInfo {
@@ -129,10 +133,6 @@ export interface AccountInfo {
   frozen: Bool
 }
 ```
-
-**Errors**
-
-- `TokenIdAlreadyExistsError` – The ID specified in the``create` call already exists.
 
 #### `Destroy`
 
@@ -289,20 +289,30 @@ interface SetMetadata {
 
 ## Architecture
 
-### Actions and Reducers
+### Actions and Reducers Drawbacks
 
-There are several drawbacks to the actions/reducers approach. Namely the need for a commit method to
-reduce the actions and previous state into the next state. Another drawback is that the action
-sequence must be processed in such a way as to preserve commutativity, which is difficult for the
-use cases of a fungible token account manager. Users may submit actions which touch on the same
-state. Even if this was not a constraint, there is another constraint: operations involving the
-merkle root representing the accounts map must be atomic (cc @kantp). With all of this in mind, I'd
-imagine much of the following API will take shape off-chain. However, this API can serve as a north
-star for what we'd like to be able to express with ZK.
+There are several drawbacks to the actions/reducers approach.
 
-### Representing Mappings
+- There is a need for a commit method to reduce the actions and previous state into the next state.
+  This needs to be explicitly called. This cannot be committed in the same block as other actions of
+  the same `FungibleTokenbase`.
+- The action sequence must be processed in such a way as to preserve commutativity, which is
+  difficult for the use cases of a fungible token account manager. Users may submit actions which
+  touch on the same state.
+- Actions which alter the merkle root (in order to represent mappings) must be atomic (cc @kantp).
+  There is no way to commutatively sequence their application to state within the reducer.
 
-### Native Token Mechanism
+## Closing Note
+
+I'd imagine the majority of the `FungibleTokenbase` experience would take shape off-chain. The state
+could be lazily pushed to a contract on Mina, but much of the core behavior would be off-chain; it
+is uncertain whether that behavior could be modeled such that it is fully provable on-chain.
+However, **this API could serve as a north star for what we'd like to be able to express in the ZK
+context**. Moreover, it would offer a smooth DX to satisfy a critical ecosystem use case.
 
 [^tokenbase]: _Tokenbase_ is not a standard term, yet it seemed fitting for this system. That being
 said, alternative terminology might be better.
+
+[^admin_contracts]: _Admin Contracts_ are contracts which call into Fungible Tokenbases. They can
+layer the token's core functions with use-case-specific behavior, such as fine-grained
+authorization.
