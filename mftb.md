@@ -9,6 +9,33 @@ providing a common interface against which the community (namely wallets) can de
 of speccing this out led to critical questions about not only the possibility of implementation, but
 also the ultimate purpose of the specification itself.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+- [Purpose of Specification](#purpose-of-specification)
+  - [Long-term Consideration](#long-term-consideration)
+- [Near-term Recommendation](#near-term-recommendation)
+- [Design](#design)
+  - [Goals](#goals)
+  - [Non-goals](#non-goals)
+  - [Actions](#actions)
+    - [`Create`](#create)
+    - [`Destroy`](#destroy)
+    - [`SetAdmin`](#setadmin)
+    - [`Mint`](#mint)
+    - [`Burn`](#burn)
+    - [`Transfer`](#transfer)
+    - [`Allocate`](#allocate)
+    - [`Deallocate`](#deallocate)
+    - [`Freeze`](#freeze)
+    - [`Thaw`](#thaw)
+    - [`SetMetadata`](#setmetadata)
+- [Architecture](#architecture)
+  - [Actions and Reducers Drawbacks](#actions-and-reducers-drawbacks)
+- [Closing Note](#closing-note)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Purpose of Specification
 
 Typically a specification would describe all the constraints that affect how one integrates with the
