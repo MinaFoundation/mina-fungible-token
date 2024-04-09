@@ -1,10 +1,11 @@
-MYTKN
+mytkn
 alexa
 approvable
 deallocate
 deallocation
 devnet
 dprint
+eip
 esbenp
 harrysolovay
 kantp
@@ -16,8 +17,10 @@ mina
 mintable
 peaceiris
 qwadratic
+speccing
 struct
 tokenbase
+tokenbases
 typecheck
 yzhang
 zkapp
