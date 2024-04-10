@@ -69,7 +69,7 @@ solution, we could create and deploy a contract and corresponding service that s
 cases. Although not a "spec", this contract and service could provide common APIs with which
 developers could manage fungible tokens and administrate those tokens from their own,
 use-case-specific contracts. This solution could serve as a stopgap while we flesh out how the
-protocol itself can eventually satsify all implementation requirements (the current shortcomings of
+protocol itself can eventually satisfy all implementation requirements (the current shortcomings of
 which we touch on below). This could-be stopgap service will be the focus of the remainder of this
 document.
 

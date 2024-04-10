@@ -1,9 +1,9 @@
-mytkn
 alexa
 approvable
 deallocate
 deallocation
 devnet
+doctoc
 dprint
 eip
 esbenp
@@ -12,9 +12,11 @@ kantp
 keypair
 mdbook
 merkle
+mftb
 michaelfbryan
 mina
 mintable
+mytkn
 peaceiris
 qwadratic
 speccing
