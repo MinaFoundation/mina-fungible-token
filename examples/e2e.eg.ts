@@ -20,9 +20,9 @@ console.log("Deploying token contract.")
 const deployTx = await Mina.transaction({
   sender: deployer.publicKey,
   fee,
-}, () => {
+}, async () => {
   AccountUpdate.fundNewAccount(deployer.publicKey, 1)
-  token.deploy({
+  await token.deploy({
     owner: owner.publicKey,
     supply: UInt64.from(10_000_000_000_000),
     symbol: "abc",
@@ -35,7 +35,7 @@ const deployTxResult = await deployTx.send().then((v) => v.wait())
 console.log("Deploy tx result:", deployTxResult.toPretty())
 equal(deployTxResult.status, "included")
 
-const alexaBalanceBeforeMint = token.getBalanceOf(alexa.publicKey).toBigInt()
+const alexaBalanceBeforeMint = (await token.getBalanceOf(alexa.publicKey)).toBigInt()
 console.log("Alexa balance before mint:", alexaBalanceBeforeMint)
 equal(alexaBalanceBeforeMint, 0n)
 
@@ -43,9 +43,9 @@ console.log("Minting new tokens to Alexa.")
 const mintTx = await Mina.transaction({
   sender: owner.publicKey,
   fee,
-}, () => {
+}, async () => {
   AccountUpdate.fundNewAccount(owner.publicKey, 1)
-  token.mint(alexa.publicKey, new UInt64(2e9))
+  await token.mint(alexa.publicKey, new UInt64(2e9))
 })
 await mintTx.prove()
 mintTx.sign([owner.privateKey])
@@ -53,11 +53,11 @@ const mintTxResult = await mintTx.send().then((v) => v.wait())
 console.log("Mint tx result:", mintTxResult.toPretty())
 equal(mintTxResult.status, "included")
 
-const alexaBalanceAfterMint = token.getBalanceOf(alexa.publicKey).toBigInt()
+const alexaBalanceAfterMint = (await token.getBalanceOf(alexa.publicKey)).toBigInt()
 console.log("Alexa balance after mint:", alexaBalanceAfterMint)
 equal(alexaBalanceAfterMint, BigInt(2e9))
 
-const billyBalanceBeforeMint = token.getBalanceOf(billy.publicKey)
+const billyBalanceBeforeMint = await token.getBalanceOf(billy.publicKey)
 console.log("Billy balance before mint:", billyBalanceBeforeMint.toBigInt())
 equal(alexaBalanceBeforeMint, 0n)
 
@@ -65,9 +65,9 @@ console.log("Transferring tokens from Alexa to Billy")
 const transferTx = await Mina.transaction({
   sender: alexa.publicKey,
   fee,
-}, () => {
+}, async () => {
   AccountUpdate.fundNewAccount(billy.publicKey, 1)
-  token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
+  await token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
 })
 await transferTx.prove()
 transferTx.sign([alexa.privateKey, billy.privateKey])
@@ -75,11 +75,11 @@ const transferTxResult = await transferTx.send().then((v) => v.wait())
 console.log("Transfer tx result:", transferTxResult.toPretty())
 equal(transferTxResult.status, "included")
 
-const alexaBalanceAfterTransfer = token.getBalanceOf(alexa.publicKey).toBigInt()
+const alexaBalanceAfterTransfer = (await token.getBalanceOf(alexa.publicKey)).toBigInt()
 console.log("Alexa balance after transfer:", alexaBalanceAfterTransfer)
 equal(alexaBalanceAfterTransfer, BigInt(1e9))
 
-const billyBalanceAfterTransfer = token.getBalanceOf(billy.publicKey).toBigInt()
+const billyBalanceAfterTransfer = (await token.getBalanceOf(billy.publicKey)).toBigInt()
 console.log("Billy balance after transfer:", billyBalanceAfterTransfer)
 equal(billyBalanceAfterTransfer, BigInt(1e9))
 
@@ -87,8 +87,8 @@ console.log("Burning Billy's tokens")
 const burnTx = await Mina.transaction({
   sender: billy.publicKey,
   fee,
-}, () => {
-  token.burn(billy.publicKey, new UInt64(6e8))
+}, async () => {
+  await token.burn(billy.publicKey, new UInt64(6e8))
 })
 await burnTx.prove()
 burnTx.sign([billy.privateKey])
@@ -96,6 +96,6 @@ const burnTxResult = await burnTx.send().then((v) => v.wait())
 console.log("Burn tx result:", burnTxResult.toPretty())
 equal(burnTxResult.status, "included")
 
-const billyBalanceAfterBurn = token.getBalanceOf(billy.publicKey).toBigInt()
+const billyBalanceAfterBurn = (await token.getBalanceOf(billy.publicKey)).toBigInt()
 console.log("Billy balance after burn:", billyBalanceAfterBurn)
 equal(billyBalanceAfterBurn, BigInt(4e8))

@@ -12,7 +12,7 @@
     "build": "tsc"
   },
   "peerDependencies": {
-    "o1js": "^0.17.0"
+    "o1js": "^0.18.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
