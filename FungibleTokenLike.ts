@@ -16,7 +16,11 @@ export interface FungibleTokenLike {
    * @param to the public key of the account to which the tokens should be sent.
    * @param amount the amount of tokens to send.
    */
-  transfer(from: PublicKey | AccountUpdate, to: PublicKey | AccountUpdate, amount: UInt64): Promise<void>
+  transfer(
+    from: PublicKey | AccountUpdate,
+    to: PublicKey | AccountUpdate,
+    amount: UInt64,
+  ): Promise<void>
   /**
    * Make a specified amount of tokens forever inaccessible, thereby reducing the circulating supply.
    * @param from the public key of the account from which the tokens should be burned.

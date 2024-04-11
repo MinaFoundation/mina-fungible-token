@@ -27,9 +27,12 @@ export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined>
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
   decimals = UInt64.from(9)
 
-  @state(PublicKey) private owner = State<PublicKey>()
-  @state(UInt64) private supply = State<UInt64>()
-  @state(UInt64) private circulating = State<UInt64>()
+  @state(PublicKey)
+  private owner = State<PublicKey>()
+  @state(UInt64)
+  private supply = State<UInt64>()
+  @state(UInt64)
+  private circulating = State<UInt64>()
 
   readonly events = {
     SetOwner: PublicKey,
@@ -55,13 +58,15 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     return AccountUpdate.createSigned(owner)
   }
 
-  @method async setOwner(owner: PublicKey) {
+  @method
+  async setOwner(owner: PublicKey) {
     this.ensureOwnerSignature()
     this.owner.set(owner)
     this.emitEvent("SetOwner", owner)
   }
 
-  @method.returns(AccountUpdate) async mint(recipient: PublicKey, amount: UInt64) {
+  @method.returns(AccountUpdate)
+  async mint(recipient: PublicKey, amount: UInt64) {
     this.ensureOwnerSignature()
     const supply = this.supply.getAndRequireEquals()
     const circulating = this.circulating.getAndRequireEquals()
@@ -77,31 +82,36 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     return accountUpdate
   }
 
-  @method async setSupply(amount: UInt64): Promise<void> {
-    this.ensureOwnerSignature();
+  @method
+  async setSupply(amount: UInt64): Promise<void> {
+    this.ensureOwnerSignature()
     this.circulating.getAndRequireEquals().assertLessThanOrEqual(amount)
     this.supply.set(amount)
     this.emitEvent("SetSupply", amount)
   }
 
-  @method.returns(AccountUpdate) async burn(from: PublicKey, amount: UInt64) {
+  @method.returns(AccountUpdate)
+  async burn(from: PublicKey, amount: UInt64) {
     this.circulating.set(this.circulating.getAndRequireEquals().sub(amount))
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
     return accountUpdate
   }
 
-  @method async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
+  @method
+  async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
     await super.transfer(from, to, amount)
     this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
-  @method async approveBase(updates: AccountUpdateForest): Promise<void> {
+  @method
+  async approveBase(updates: AccountUpdateForest): Promise<void> {
     this.checkZeroBalanceChange(updates)
     // TODO: event emission here
   }
 
-  @method.returns(UInt64) async getBalanceOf(address: PublicKey): Promise<UInt64> {
+  @method.returns(UInt64)
+  async getBalanceOf(address: PublicKey): Promise<UInt64> {
     const account = Account(address, this.deriveTokenId())
     const balance = account.balance.get()
     account.balance.requireEquals(balance)
@@ -113,11 +123,13 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     return this.supply.getAndRequireEquals()
   }
 
-  @method.returns(UInt64) async getCirculating(): Promise<UInt64> {
+  @method.returns(UInt64)
+  async getCirculating(): Promise<UInt64> {
     return this.circulating.getAndRequireEquals()
   }
 
-  @method.returns(UInt64) async getDecimals() {
+  @method.returns(UInt64)
+  async getDecimals() {
     return this.decimals
   }
 }

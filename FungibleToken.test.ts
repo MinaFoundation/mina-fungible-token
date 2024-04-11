@@ -17,7 +17,7 @@ import {
 import { FungibleToken } from "./index.js"
 import { TestAccount, TestAccounts } from "./test_util.js"
 
-const proofsEnabled = false;
+const proofsEnabled = false
 
 const devnet = Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
@@ -58,7 +58,7 @@ describe("token integration", () => {
     thirdPartyB = PrivateKey.randomKeypair()
     thirdPartyBContract = new ThirdParty(thirdPartyB.publicKey)
 
-    if(proofsEnabled) {
+    if (proofsEnabled) {
       await FungibleToken.compile()
       await ThirdParty.compile()
     }
@@ -197,7 +197,7 @@ describe("token integration", () => {
     })
 
     it("should refuse to set total supply to be less than circulating supply", async () => {
-      await rejects(async () => 
+      await rejects(async () =>
         await Mina.transaction({
           sender: sender.publicKey,
           fee: 1e8,
@@ -364,7 +364,6 @@ describe("token integration", () => {
     })
   })
 
-
   describe("third party", () => {
     const depositAmount = UInt64.from(100)
 
@@ -473,13 +472,15 @@ export default class ThirdParty extends SmartContract {
     this.ownerAddress.set(args.ownerAddress)
   }
 
-  @method.returns(AccountUpdate) public async deposit(amount: UInt64) {
+  @method.returns(AccountUpdate)
+  public async deposit(amount: UInt64) {
     const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId())
     accountUpdate.balanceChange = Int64.fromUnsigned(amount)
     return accountUpdate
   }
 
-  @method.returns(AccountUpdate) public async withdraw(amount: UInt64) {
+  @method.returns(AccountUpdate)
+  public async withdraw(amount: UInt64) {
     const accountUpdate = AccountUpdate.create(this.address, this.tokenOwner.deriveTokenId())
     accountUpdate.balanceChange = Int64.fromUnsigned(amount).neg()
     accountUpdate.requireSignature()

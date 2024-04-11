@@ -15,8 +15,10 @@ import { TestAccounts } from "test_util.js"
 import { FungibleToken } from "../index.js"
 
 export class TokenEscrow extends SmartContract {
-  @state(PublicKey) tokenAddress = State<PublicKey>()
-  @state(UInt64) total = State<UInt64>()
+  @state(PublicKey)
+  tokenAddress = State<PublicKey>()
+  @state(UInt64)
+  total = State<UInt64>()
 
   async deploy(args: DeployArgs & { tokenAddress: PublicKey }) {
     await super.deploy(args)
@@ -25,14 +27,16 @@ export class TokenEscrow extends SmartContract {
     this.total.set(UInt64.zero)
   }
 
-  @method async deposit(from: PublicKey, amount: UInt64) {
+  @method
+  async deposit(from: PublicKey, amount: UInt64) {
     const token = new FungibleToken(this.tokenAddress.getAndRequireEquals())
     await token.transfer(from, this.address, amount)
     const total = this.total.getAndRequireEquals()
     this.total.set(total.add(amount))
   }
 
-  @method async withdraw(to: PublicKey, amount: UInt64) {
+  @method
+  async withdraw(to: PublicKey, amount: UInt64) {
     const token = new FungibleToken(this.tokenAddress.getAndRequireEquals())
     const total = this.total.getAndRequireEquals()
     total.greaterThanOrEqual(amount)
