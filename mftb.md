@@ -81,7 +81,9 @@ document.
   without needing to dynamically import 3rd party contract code.
 - **Forgo Deployment**: it should be possible to create custom token types without the deployment of
   a custom fungible token contract. Token types are just data after all; token-type-specific
-  contracts––at least for would-be "standard" functionality––are unnecessary.
+  contracts––at least for would-be "standard" functionality––are unnecessary. By cutting out the
+  unnecessary contract deployment step, we spare the developer of needing to generate and fund a new
+  account for the contract.
 - **Extensible**: the `FungibleTokenbase` contract should offer all functionality necessary for a
   3rd-party contract to become the admin and craft use-case-specific functionality.
 - **Scalability**: the contract should support concurrent transactions at scale.
