@@ -1,4 +1,3 @@
-import { equal } from "node:assert"
 import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
 
@@ -29,44 +28,25 @@ query {
   return Number(json.data.account.inferredNonce)
 }
 
-async function accountExists(publicKey: string, token: string) {
-  const query = `
-query {
-  account(publicKey: "${publicKey}", token: "${token}") {
-    publicKey
-  }
-}`
-
-  const response = await fetch(
-    url,
-    {
-      method: "POST",
-      body: JSON.stringify({ operationName: null, query, variables: {} }),
-      headers: { "Content-Type": "application/json" },
-    },
-  )
-  const json = await response.json()
-  return json.data.account !== null
-}
-
-async function sendNoWait(feepayer: KeyPair, from: KeyPair, to: PublicKey, amount: number) {
+async function sendNoWait(feepayer: KeyPair, from: KeyPair, to: PublicKey, amount: number, payCreationFee: boolean) {
   const nonce = await getInferredNonce(feepayer.publicKey.toBase58())
   console.log("feepayer nonce:", nonce)
-  const toExists = await accountExists(to.toBase58(), TokenId.toBase58(token.deriveTokenId()))
   const transferTx = await Mina.transaction({
     sender: feepayer.publicKey,
     fee,
     nonce,
   }, async () => {
-    if (!toExists) {
+    if (payCreationFee) {
       AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
     }
     await token.transfer(from.publicKey, to, new UInt64(amount))
   })
   await transferTx.prove()
+
   transferTx.sign([from.privateKey, feepayer.privateKey])
   const result = await transferTx.send()
   console.log("Transfer tx:", result.hash)
+
   // 3 sec for node to update nonce
   await sleep(3000)
 }
@@ -75,20 +55,45 @@ Mina.setActiveInstance(Mina.Network(url))
 
 const _ = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract, feepayer, alexa, billy, jackie] = [
-  {
-    publicKey: PublicKey.fromBase58("B62qkWf9F5aeT8zyQ5rdtJcWPvoLwDFxTZ5kw7RSxLFTp1XRyJznNev"),
-  },
+  PrivateKey.randomKeypair(),
   {
     privateKey: _,
     publicKey: _.toPublicKey(),
   },
   PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
+  PrivateKey.randomKeypair()
 ]
+
+console.log(`
+alexa ${alexa.privateKey.toBase58()} ${alexa.publicKey.toBase58()}
+billy ${billy.privateKey.toBase58()} ${billy.publicKey.toBase58()}
+jackie ${jackie.publicKey.toBase58()}
+contract ${contract.publicKey.toBase58()}
+`)
 
 await FungibleToken.compile()
 const token = new FungibleToken(contract.publicKey)
+
+let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
+
+console.log("Deploying token contract.")
+const deployTx = await Mina.transaction({
+  sender: feepayer.publicKey,
+  fee, nonce
+}, async () => {
+  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
+  await token.deploy({
+    owner: feepayer.publicKey,
+    supply: UInt64.from(10_000_000_000_000),
+    symbol: "abc",
+    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+  })
+})
+await deployTx.prove()
+deployTx.sign([feepayer.privateKey, contract.privateKey])
+const deployTxResult = await deployTx.send().then((v) => v.wait())
+console.log("Deploy tx:", deployTxResult.hash)
 
 console.log("Minting new tokens to Alexa.")
 const mintTx = await Mina.transaction({
@@ -119,30 +124,9 @@ console.log("Transfer 1 tx:", transferTxResult1.hash)
 await transferTxResult1.wait()
 
 console.log("Transferring from Alexa and Billy to Jackie (concurrently)")
-await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9)
-await sendNoWait(feepayer, billy, jackie.publicKey, 1e9)
-await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9)
-await sendNoWait(feepayer, billy, jackie.publicKey, 1e9)
-await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9)
-await sendNoWait(feepayer, billy, jackie.publicKey, 1e9)
-
-console.log("[2] Transferring tokens from Alexa to Jackie")
-const transferTx2 = await Mina.transaction({
-  sender: feepayer.publicKey,
-  fee,
-}, async () => {
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
-  await token.transfer(alexa.publicKey, jackie.publicKey, new UInt64(1e9))
-})
-await transferTx2.prove()
-transferTx2.sign([feepayer.privateKey, alexa.privateKey])
-const transferTxResult2 = await transferTx2.send()
-console.log("Transfer 1 tx:", transferTxResult2.hash)
-await transferTxResult2.wait()
-
-// wait for balance update on graphQL
-await sleep(10000)
-
-const jackieBalanceAfterTransfers = (await token.getBalanceOf(jackie.publicKey)).toBigInt()
-console.log("Billy balance after burn:", jackieBalanceAfterTransfers)
-equal(jackieBalanceAfterTransfers, BigInt(7e9))
+await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, true)
+await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)
+await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, false)
+await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)
+await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, false)
+await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)

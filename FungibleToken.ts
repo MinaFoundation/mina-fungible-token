@@ -100,7 +100,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
-    await super.transfer(from, to, amount)
+    this.internal.send({from, to, amount})
     this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
