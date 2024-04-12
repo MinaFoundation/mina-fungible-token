@@ -28,7 +28,13 @@ query {
   return Number(json.data.account.inferredNonce)
 }
 
-async function sendNoWait(feepayer: KeyPair, from: KeyPair, to: PublicKey, amount: number, payCreationFee: boolean) {
+async function sendNoWait(
+  feepayer: KeyPair,
+  from: KeyPair,
+  to: PublicKey,
+  amount: number,
+  payCreationFee: boolean,
+) {
   const nonce = await getInferredNonce(feepayer.publicKey.toBase58())
   console.log("feepayer nonce:", nonce)
   const transferTx = await Mina.transaction({
@@ -62,7 +68,7 @@ const [contract, feepayer, alexa, billy, jackie] = [
   },
   PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair()
+  PrivateKey.randomKeypair(),
 ]
 
 console.log(`
@@ -80,7 +86,8 @@ let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 console.log("Deploying token contract.")
 const deployTx = await Mina.transaction({
   sender: feepayer.publicKey,
-  fee, nonce
+  fee,
+  nonce,
 }, async () => {
   AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
   await token.deploy({
