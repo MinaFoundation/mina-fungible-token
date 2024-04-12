@@ -16,15 +16,14 @@ query {
   }
 }`
 
-  const response = await fetch(
+  const json = await fetch(
     url,
     {
       method: "POST",
       body: JSON.stringify({ operationName: null, query, variables: {} }),
       headers: { "Content-Type": "application/json" },
     },
-  )
-  const json = await response.json()
+  ).then((v) => v.json())
   return Number(json.data.account.inferredNonce)
 }
 
