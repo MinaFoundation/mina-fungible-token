@@ -58,12 +58,12 @@ async function sendNoWait(
 
 Mina.setActiveInstance(Mina.Network(url))
 
-const feepayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
+const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract, feepayer, alexa, billy, jackie] = [
   PrivateKey.randomKeypair(),
   {
-    privateKey: feepayerKey,
-    publicKey: feepayerKey.toPublicKey(),
+    privateKey: feePayerKey,
+    publicKey: feePayerKey.toPublicKey(),
   },
   PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
