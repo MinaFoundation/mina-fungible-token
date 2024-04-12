@@ -4,6 +4,7 @@ approvable
 devnet
 dprint
 esbenp
+feepayer
 harrysolovay
 kantp
 keypair

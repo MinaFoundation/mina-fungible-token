@@ -66,11 +66,11 @@ const transferTx = await Mina.transaction({
   sender: alexa.publicKey,
   fee,
 }, async () => {
-  AccountUpdate.fundNewAccount(billy.publicKey, 1)
+  AccountUpdate.fundNewAccount(alexa.publicKey, 1)
   await token.transfer(alexa.publicKey, billy.publicKey, new UInt64(1e9))
 })
 await transferTx.prove()
-transferTx.sign([alexa.privateKey, billy.privateKey])
+transferTx.sign([alexa.privateKey])
 const transferTxResult = await transferTx.send().then((v) => v.wait())
 console.log("Transfer tx result:", transferTxResult.toPretty())
 equal(transferTxResult.status, "included")
