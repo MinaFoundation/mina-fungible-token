@@ -2,9 +2,15 @@ import {
   Account,
   AccountUpdate,
   AccountUpdateForest,
+  Bool,
   DeployArgs,
+  Field,
+  Int64,
   method,
+  Provable,
   PublicKey,
+  Reducer,
+  Signature,
   State,
   state,
   Struct,
@@ -24,6 +30,12 @@ export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined>
   src: string
 }
 
+class MintOrBurnAction extends Struct({
+  isMint: Bool,
+  publicKey: PublicKey,
+  amount: UInt64,
+}) {}
+
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
   decimals = UInt64.from(9)
 
@@ -33,6 +45,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   private supply = State<UInt64>()
   @state(UInt64)
   private circulating = State<UInt64>()
+  @state(Field)
+  private actionState = State<Field>()
 
   readonly events = {
     SetOwner: PublicKey,
@@ -40,6 +54,85 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     SetSupply: UInt64,
     Burn: BurnEvent,
     Transfer: TransferEvent,
+  }
+
+  reducer = Reducer({ actionType: MintOrBurnAction })
+
+  @method
+  async dispatchBurn(from: PublicKey, amount: UInt64, signature: Signature) {
+    signature.verify(
+      from,
+      this.sender.self.account.nonce.getAndRequireEquals().toFields().concat(amount.toFields()),
+    )
+    this.reducer.dispatch(
+      new MintOrBurnAction({
+        isMint: Bool(false),
+        publicKey: from,
+        amount,
+      }),
+    )
+  }
+
+  @method
+  async dispatchMint(from: PublicKey, amount: UInt64) {
+    this.ensureOwnerSignature()
+    this.reducer.dispatch(
+      new MintOrBurnAction({
+        isMint: Bool(true),
+        publicKey: from,
+        amount,
+      }),
+    )
+  }
+
+  @method
+  async reduceActions() {
+    const circulating = await this.getCirculating()
+    const supply = await this.getSupply()
+    const actionState = this.actionState.getAndRequireEquals()
+
+    let pendingActions = this.reducer.getActions({
+      fromActionState: actionState,
+    })
+
+    let { state: newCirculating, actionState: newActionState } = this.reducer.reduce(
+      pendingActions,
+      UInt64,
+      (state: UInt64, action: MintOrBurnAction) => {
+        const newState = Provable.if(
+          action.isMint.not(),
+          UInt64,
+          state.sub(action.amount),
+          Provable.if(
+            state.add(action.amount).lessThanOrEqual(supply),
+            UInt64,
+            state.add(action.amount),
+            state,
+          ),
+        )
+
+        // here I need to proceed with creating an account update
+        // ONLY IF newState is not equal the state
+        // otherwise, skip this step and return state that didn't changed
+        const au = AccountUpdate.defaultAccountUpdate(action.publicKey, this.deriveTokenId())
+        this.approve(au)
+
+        au.balanceChange = Provable.if(
+          action.isMint,
+          Int64,
+          au.balanceChange.add(action.amount),
+          au.balanceChange.add(action.amount).neg(),
+        )
+
+        return newState
+      },
+      { state: circulating, actionState },
+      { maxTransactionsWithActions: 5 },
+    )
+
+    // update on-chain state
+    this.circulating.set(newCirculating)
+    this.actionState.set(newActionState)
   }
 
   async deploy(props: FungibleTokenDeployProps) {
