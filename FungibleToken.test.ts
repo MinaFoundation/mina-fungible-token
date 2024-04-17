@@ -17,7 +17,7 @@ import {
 import { FungibleToken } from "./index.js"
 import { TestAccount, TestAccounts } from "./test_util.js"
 
-const proofsEnabled = false
+const proofsEnabled = true
 
 const devnet = Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
@@ -238,6 +238,48 @@ describe("token integration", () => {
       tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()
       await rejects(() => tx3.send())
+    })
+  })
+
+  describe("actions/reducers", () => {
+    it("should succesfully mint with actions/reducer", async () => {
+      const mintAmount = UInt64.from(100e8)
+      const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
+        .toBigInt()
+
+      const tx1 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+      })
+      tx1.sign([sender.privateKey, tokenAdmin.privateKey])
+      await tx1.prove()
+      await tx1.send()
+
+      const tx2 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+      })
+      tx2.sign([sender.privateKey, tokenAdmin.privateKey])
+      await tx2.prove()
+      await tx2.send()
+      
+      const tx3 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        tokenAContract.reduceActions()
+      })
+      tx3.sign([sender.privateKey])
+      await tx3.prove()
+      await tx3.send()
+      equal(
+        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        initialBalance + mintAmount.toBigInt() + mintAmount.toBigInt(),
+      )
     })
   })
 
