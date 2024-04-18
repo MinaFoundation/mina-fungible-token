@@ -247,7 +247,7 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
         .toBigInt()
-      console.log(initialBalanceSender, initialBalanceReceiver)
+
       const tx1 = await Mina.transaction({
         sender: newTokenAdmin.publicKey,
         fee: 1e8,
