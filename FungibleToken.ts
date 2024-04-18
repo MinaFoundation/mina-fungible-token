@@ -92,8 +92,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async reduceActions() {
-    const circulating = await this.getCirculating()
-    const supply = await this.getSupply()
+    const circulating = this.circulating.getAndRequireEquals()
+    const supply = this.supply.getAndRequireEquals()
     const actionState = this.actionState.getAndRequireEquals()
 
     let pendingActions = this.reducer.getActions({
