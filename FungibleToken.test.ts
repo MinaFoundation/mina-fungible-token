@@ -4,6 +4,7 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
+  fetchAccount,
   Int64,
   method,
   Mina,
@@ -241,8 +242,8 @@ describe("token integration", () => {
 
   describe("actions/reducers", () => {
     it("should succesfully mint, burn and skip incorrect mint with actions/reducer", async () => {
-      const mintAmount = UInt64.from(100e8)
-      const burnAmount = UInt64.from(10e8)
+      const mintAmount = UInt64.from(100)
+      const burnAmount = UInt64.from(10)
       const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
@@ -267,7 +268,7 @@ describe("token integration", () => {
       tx2.sign([newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
-
+      
       const tx3 = await Mina.transaction({
         sender: newTokenAdmin.publicKey,
         fee: 1e8,
@@ -279,15 +280,16 @@ describe("token integration", () => {
       await tx3.send()
 
       const tx4 = await Mina.transaction({
-        sender: receiver.publicKey,
+        sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.dispatchBurn(burnAmount)
+        await tokenAContract.dispatchBurn(sender.publicKey, burnAmount)
       })
-      tx4.sign([receiver.privateKey])
+      tx4.sign([sender.privateKey])
       await tx4.prove()
       await tx4.send()
 
+      
       const tx5 = await Mina.transaction({
         sender: sender.publicKey,
         fee: 1e8,
@@ -301,12 +303,12 @@ describe("token integration", () => {
 
       equal(
         (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
-        initialBalanceSender + mintAmount.toBigInt(),
+        initialBalanceSender + mintAmount.toBigInt() - burnAmount.toBigInt(),
       )
 
       equal(
         (await tokenAContract.getBalanceOf(receiver.publicKey)).toBigInt(),
-        initialBalanceReceiver + mintAmount.toBigInt() - burnAmount.toBigInt(),
+        initialBalanceReceiver + mintAmount.toBigInt(),
       )
     })
   })
@@ -324,7 +326,6 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
         await tokenAContract.transfer(
           sender.publicKey,
           receiver.publicKey,

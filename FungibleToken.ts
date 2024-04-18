@@ -58,11 +58,12 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   reducer = Reducer({ actionType: MintOrBurnAction })
 
   @method
-  async dispatchBurn(amount: UInt64) {
+  async dispatchBurn(from: PublicKey, amount: UInt64) {
+    this.internal.burn({address: from, amount})
     this.reducer.dispatch(
       new MintOrBurnAction({
         isMint: Bool(false),
-        publicKey: this.sender.getAndRequireSignature(),
+        publicKey: from,
         amount,
       }),
     )
@@ -108,18 +109,14 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
         const newState = UInt64.Unsafe.fromField(newStateField)
         UInt64.check(newState)
 
-        // ensure that the account update is a "dummy" if there was no circulating supply change
+        // ensure that the account update is a "dummy" if
+        //   - there was no circulating supply change
+        //   - or there was a burn (because we do a burn account update in the dispatch method)
         // => dummies are filtered out before creating the final transaction
-        const shouldSkip = newState.equals(state)
+        const shouldSkip = newState.lessThanOrEqual(state)
         const publicKey = Provable.if(shouldSkip, PublicKey.empty(), action.publicKey)
         const au = AccountUpdate.create(publicKey, this.deriveTokenId())
-
-        au.balanceChange = Provable.if(
-          action.isMint,
-          Int64,
-          au.balanceChange.add(action.amount),
-          au.balanceChange.add(action.amount).neg(),
-        )
+        au.balance.addInPlace(action.amount)
 
         return newState
       },
