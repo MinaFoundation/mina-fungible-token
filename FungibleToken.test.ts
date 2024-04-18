@@ -242,7 +242,6 @@ describe("token integration", () => {
   })
 
   describe("actions/reducers", () => {
-    let tokenAdmin = newTokenAdmin;
     it("should succesfully mint with actions/reducer", async () => {
       const mintAmount = UInt64.from(100e8)
       const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
@@ -254,7 +253,7 @@ describe("token integration", () => {
       }, async () => {
         await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
       })
-      tx1.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx1.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx1.prove()
       await tx1.send()
 
@@ -264,7 +263,7 @@ describe("token integration", () => {
       }, async () => {
         await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
       })
-      tx2.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
       
