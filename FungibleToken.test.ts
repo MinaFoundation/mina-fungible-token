@@ -4,11 +4,13 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
+  fetchAccount,
   Int64,
   method,
   Mina,
   PrivateKey,
   PublicKey,
+  Signature,
   SmartContract,
   State,
   state,
@@ -242,43 +244,72 @@ describe("token integration", () => {
   })
 
   describe("actions/reducers", () => {
-    it("should succesfully mint with actions/reducer", async () => {
+    it("should succesfully mint, burn and skip incorrect mint with actions/reducer", async () => {
       const mintAmount = UInt64.from(100e8)
-      const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
+      const burnAmount = UInt64.from(10e8)
+      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
+        .toBigInt()
+      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
         .toBigInt()
 
       const tx1 = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: newTokenAdmin.publicKey,
         fee: 1e8,
       }, async () => {
         await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
       })
-      tx1.sign([sender.privateKey, newTokenAdmin.privateKey])
+      tx1.sign([newTokenAdmin.privateKey])
       await tx1.prove()
       await tx1.send()
 
       const tx2 = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: newTokenAdmin.publicKey,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+        await tokenAContract.dispatchMint(receiver.publicKey, mintAmount)
       })
-      tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
+      tx2.sign([newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
       
       const tx3 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(sender.publicKey, await tokenAContract.getSupply())
+      })
+      tx3.sign([newTokenAdmin.privateKey])
+      await tx3.prove()
+      await tx3.send()
+
+      const tx4 = await Mina.transaction({
+        sender: receiver.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchBurn(burnAmount)
+      })
+      tx4.sign([receiver.privateKey])
+      await tx4.prove()
+      await tx4.send()
+
+      const tx5 = await Mina.transaction({
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
         await tokenAContract.reduceActions()
       })
-      tx3.sign([sender.privateKey])
-      await tx3.prove()
-      await tx3.send()
+      tx5.sign([sender.privateKey])
+      await tx5.prove()
+      await tx5.send()
+
       equal(
         (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
-        initialBalance + mintAmount.toBigInt() + mintAmount.toBigInt(),
+        initialBalanceSender + mintAmount.toBigInt(),
+      )
+
+      equal(
+        (await tokenAContract.getBalanceOf(receiver.publicKey)).toBigInt(),
+        initialBalanceReceiver + mintAmount.toBigInt() - burnAmount.toBigInt(),
       )
     })
   })

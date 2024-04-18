@@ -58,21 +58,12 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   reducer = Reducer({ actionType: MintOrBurnAction })
 
-  init() {
-    super.init();
-    this.actionState.set(Reducer.initialActionState)
-  }
-
   @method
-  async dispatchBurn(from: PublicKey, amount: UInt64, signature: Signature) {
-    signature.verify(
-      from,
-      this.sender.self.account.nonce.getAndRequireEquals().toFields().concat(amount.toFields()),
-    )
+  async dispatchBurn(amount: UInt64) {
     this.reducer.dispatch(
       new MintOrBurnAction({
         isMint: Bool(false),
-        publicKey: from,
+        publicKey: this.sender.getAndRequireSignature(),
         amount,
       }),
     )
@@ -151,6 +142,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
+    this.actionState.set(Reducer.initialActionState)
   }
 
   private ensureOwnerSignature() {
