@@ -58,6 +58,11 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   reducer = Reducer({ actionType: MintOrBurnAction })
 
+  init() {
+    super.init();
+    this.actionState.set(Reducer.initialActionState)
+  }
+
   @method
   async dispatchBurn(from: PublicKey, amount: UInt64, signature: Signature) {
     signature.verify(
@@ -99,17 +104,19 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
       pendingActions,
       UInt64,
       (state: UInt64, action: MintOrBurnAction) => {
-        const newState = Provable.if(
+        const newStateField = Provable.if(
           action.isMint.not(),
-          UInt64,
-          state.sub(action.amount),
+          Field,
+          state.value.sub(action.amount.value),
           Provable.if(
             state.add(action.amount).lessThanOrEqual(supply),
             UInt64,
             state.add(action.amount),
             state,
-          ),
+          ).value,
         )
+        let newState = UInt64.Unsafe.fromField(newStateField)
+        UInt64.check(newState)
 
         // here I need to proceed with creating an account update
         // ONLY IF newState is not equal the state

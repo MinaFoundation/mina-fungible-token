@@ -212,7 +212,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setOwner(newTokenAdmin.publicKey)
+        await tokenAContract.setOwner(newTokenAdmin.publicKey)
       })
       tx.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx.prove()
@@ -223,7 +223,7 @@ describe("token integration", () => {
         fee: 1e8,
       }, async () => {
         AccountUpdate.fundNewAccount(sender.publicKey, 1)
-        tokenAContract.setSupply(totalSupply)
+        await tokenAContract.setSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx2.prove()
@@ -233,7 +233,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setSupply(totalSupply)
+        await tokenAContract.setSupply(totalSupply)
       })
       tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()
@@ -242,6 +242,7 @@ describe("token integration", () => {
   })
 
   describe("actions/reducers", () => {
+    let tokenAdmin = newTokenAdmin;
     it("should succesfully mint with actions/reducer", async () => {
       const mintAmount = UInt64.from(100e8)
       const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
@@ -251,7 +252,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+        await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
       })
       tx1.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx1.prove()
@@ -261,7 +262,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+        await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
       })
       tx2.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx2.prove()
@@ -271,7 +272,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.reduceActions()
+        await tokenAContract.reduceActions()
       })
       tx3.sign([sender.privateKey])
       await tx3.prove()
