@@ -10,7 +10,6 @@ import {
   Provable,
   PublicKey,
   Reducer,
-  Signature,
   State,
   state,
   Struct,
@@ -111,9 +110,9 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
         // ensure that the account update is a "dummy" if there was no circulating supply change
         // => dummies are filtered out before creating the final transaction
-        const shouldSkip = newState.equals(state);
-        const publicKey = Provable.if(shouldSkip, PublicKey.empty(), action.publicKey);
-        const au = AccountUpdate.create(publicKey, this.deriveTokenId());
+        const shouldSkip = newState.equals(state)
+        const publicKey = Provable.if(shouldSkip, PublicKey.empty(), action.publicKey)
+        const au = AccountUpdate.create(publicKey, this.deriveTokenId())
 
         au.balanceChange = Provable.if(
           action.isMint,
@@ -218,6 +217,11 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @method.returns(UInt64)
   async getCirculating(): Promise<UInt64> {
     return this.circulating.getAndRequireEquals()
+  }
+
+  @method.returns(PublicKey)
+  async getOwner(): Promise<PublicKey> {
+    return this.owner.getAndRequireEquals()
   }
 
   @method.returns(UInt64)

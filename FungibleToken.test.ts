@@ -4,13 +4,11 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
-  fetchAccount,
   Int64,
   method,
   Mina,
   PrivateKey,
   PublicKey,
-  Signature,
   SmartContract,
   State,
   state,
@@ -19,7 +17,7 @@ import {
 import { FungibleToken } from "./index.js"
 import { TestAccount, TestAccounts } from "./test_util.js"
 
-const proofsEnabled = true
+const proofsEnabled = false
 
 const devnet = Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
@@ -43,10 +41,9 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    ;[deployer, sender, receiver] = devnet.testAccounts as TestAccounts
+    ;[deployer, sender, receiver, newTokenAdmin] = devnet.testAccounts as TestAccounts
 
     tokenAdmin = PrivateKey.randomKeypair()
-    newTokenAdmin = PrivateKey.randomKeypair()
 
     tokenA = PrivateKey.randomKeypair()
     tokenAContract = new FungibleToken(tokenA.publicKey)
@@ -224,7 +221,6 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
         await tokenAContract.setSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
@@ -251,7 +247,7 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
         .toBigInt()
-
+      console.log(initialBalanceSender, initialBalanceReceiver)
       const tx1 = await Mina.transaction({
         sender: newTokenAdmin.publicKey,
         fee: 1e8,
@@ -271,7 +267,7 @@ describe("token integration", () => {
       tx2.sign([newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
-      
+
       const tx3 = await Mina.transaction({
         sender: newTokenAdmin.publicKey,
         fee: 1e8,
@@ -296,6 +292,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
+        AccountUpdate.fundNewAccount(sender.publicKey, 1)
         await tokenAContract.reduceActions()
       })
       tx5.sign([sender.privateKey])

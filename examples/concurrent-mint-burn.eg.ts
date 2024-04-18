@@ -31,7 +31,7 @@ query {
 async function mintNoWait(
   feepayer: KeyPair,
   to: PublicKey,
-  amount: number
+  amount: number,
 ) {
   const nonce = await getInferredNonce(feepayer.publicKey.toBase58())
   console.log("feepayer nonce:", nonce)
@@ -52,7 +52,7 @@ async function mintNoWait(
   await sleep(3000)
 }
 
-Mina.setActiveInstance(Mina.Network({mina: url, archive}))
+Mina.setActiveInstance(Mina.Network({ mina: url, archive }))
 
 const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract1, feepayer, alexa, billy, jackie] = [
@@ -67,7 +67,7 @@ const [contract1, feepayer, alexa, billy, jackie] = [
 ]
 
 const contract = {
-  publicKey: PublicKey.fromBase58("B62qkNUzrxRj9AdtjN7nnbhaxuqvc5kt26SxZky9Lff2jqAwPQeY4i2")
+  publicKey: PublicKey.fromBase58("B62qkNUzrxRj9AdtjN7nnbhaxuqvc5kt26SxZky9Lff2jqAwPQeY4i2"),
 }
 
 console.log(`
@@ -101,11 +101,9 @@ let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 // const deployTxResult = await deployTx.send().then((v) => v.wait())
 // console.log("Deploy tx:", deployTxResult.hash)
 
-
 // await mintNoWait(feepayer, alexa.publicKey, 10e9)
 // await mintNoWait(feepayer, billy.publicKey, 10e9)
 // await mintNoWait(feepayer, jackie.publicKey, 10e9)
-
 
 // nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 
