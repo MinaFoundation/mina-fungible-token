@@ -115,14 +115,14 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
             state,
           ).value,
         )
-        let newState = UInt64.Unsafe.fromField(newStateField)
+        const newState = UInt64.Unsafe.fromField(newStateField)
         UInt64.check(newState)
 
-        // here I need to proceed with creating an account update
-        // ONLY IF newState is not equal the state
-        // otherwise, skip this step and return state that didn't changed
-        const au = AccountUpdate.defaultAccountUpdate(action.publicKey, this.deriveTokenId())
-        this.approve(au)
+        // ensure that the account update is a "dummy" if there was no circulating supply change
+        // => dummies are filtered out before creating the final transaction
+        const shouldSkip = newState.equals(state);
+        const publicKey = Provable.if(shouldSkip, PublicKey.empty(), action.publicKey);
+        const au = AccountUpdate.create(publicKey, this.deriveTokenId());
 
         au.balanceChange = Provable.if(
           action.isMint,
