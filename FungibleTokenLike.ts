@@ -10,6 +10,8 @@ export interface FungibleTokenLike {
   getCirculating(): Promise<UInt64>
   /** Get the number of decimals used in representing the current token. */
   getDecimals(): Promise<UInt64>
+  /** Get the public key of the token admin */
+  getOwner(): Promise<PublicKey>
   /**
    * Move a specified amount of tokens between two accounts.
    * @param from the public key of the account from which the tokens should be sent.

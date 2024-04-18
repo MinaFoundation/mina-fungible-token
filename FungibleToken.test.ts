@@ -244,10 +244,21 @@ describe("token integration", () => {
     it("should succesfully mint, burn and skip incorrect mint with actions/reducer", async () => {
       const mintAmount = UInt64.from(100)
       const burnAmount = UInt64.from(10)
+      const initialBalanceTokenAdmin = (await tokenAContract.getBalanceOf(tokenAdmin.publicKey)).toBigInt()
       const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
         .toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(tokenAdmin.publicKey, mintAmount)
+      })
+      tx.sign([newTokenAdmin.privateKey])
+      await tx.prove()
+      await tx.send()
 
       const tx1 = await Mina.transaction({
         sender: newTokenAdmin.publicKey,
@@ -294,12 +305,17 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        AccountUpdate.fundNewAccount(sender.publicKey, 2)
         await tokenAContract.reduceActions()
       })
       tx5.sign([sender.privateKey])
       await tx5.prove()
       await tx5.send()
+
+      equal(
+        (await tokenAContract.getBalanceOf(tokenAdmin.publicKey)).toBigInt(),
+        initialBalanceTokenAdmin + mintAmount.toBigInt(),
+      )
 
       equal(
         (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),

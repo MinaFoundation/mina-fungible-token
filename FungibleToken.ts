@@ -5,7 +5,6 @@ import {
   Bool,
   DeployArgs,
   Field,
-  Int64,
   method,
   Provable,
   PublicKey,
@@ -35,6 +34,8 @@ class MintOrBurnAction extends Struct({
   amount: UInt64,
 }) {}
 
+export const MAX_ACCOUNT_UPDATES_PER_TX = 5
+
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
   decimals = UInt64.from(9)
 
@@ -59,6 +60,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async dispatchBurn(from: PublicKey, amount: UInt64) {
+    // signature check and actual burning is done by `this.internal.burn`
+    // state update is done in a separate `this.reduceActions` transaction
     this.internal.burn({address: from, amount})
     this.reducer.dispatch(
       new MintOrBurnAction({
@@ -86,7 +89,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     const circulating = this.circulating.getAndRequireEquals()
     const supply = this.supply.getAndRequireEquals()
     const actionState = this.actionState.getAndRequireEquals()
-
+    Provable.asProver(() => console.log(actionState.toBigInt()))
     let pendingActions = this.reducer.getActions({
       fromActionState: actionState,
     })
@@ -121,12 +124,13 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
         return newState
       },
       { state: circulating, actionState },
-      { maxTransactionsWithActions: 5 },
+      { maxTransactionsWithActions: MAX_ACCOUNT_UPDATES_PER_TX },
     )
 
     // update on-chain state
     this.circulating.set(newCirculating)
     this.actionState.set(newActionState)
+    Provable.asProver(() => console.log(newActionState.toBigInt()))
   }
 
   async deploy(props: FungibleTokenDeployProps) {
