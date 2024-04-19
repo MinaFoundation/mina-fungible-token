@@ -4,6 +4,7 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
+  fetchAccount,
   Int64,
   method,
   Mina,
@@ -41,10 +42,9 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    ;[deployer, sender, receiver] = devnet.testAccounts as TestAccounts
+    ;[deployer, sender, receiver, newTokenAdmin] = devnet.testAccounts as TestAccounts
 
     tokenAdmin = PrivateKey.randomKeypair()
-    newTokenAdmin = PrivateKey.randomKeypair()
 
     tokenA = PrivateKey.randomKeypair()
     tokenAContract = new FungibleToken(tokenA.publicKey)
@@ -212,7 +212,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setOwner(newTokenAdmin.publicKey)
+        await tokenAContract.setOwner(newTokenAdmin.publicKey)
       })
       tx.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx.prove()
@@ -222,8 +222,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
-        tokenAContract.setSupply(totalSupply)
+        await tokenAContract.setSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx2.prove()
@@ -233,11 +232,141 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setSupply(totalSupply)
+        await tokenAContract.setSupply(totalSupply)
       })
       tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()
       await rejects(() => tx3.send())
+    })
+  })
+
+  describe("actions/reducers", () => {
+    it("should succesfully mint, burn and skip incorrect mint with actions/reducer", async () => {
+      const mintAmount = UInt64.from(100)
+      const burnAmount = UInt64.from(10)
+      const initialBalanceTokenAdmin = (await tokenAContract.getBalanceOf(tokenAdmin.publicKey))
+        .toBigInt()
+      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
+        .toBigInt()
+      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
+        .toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(tokenAdmin.publicKey, mintAmount)
+      })
+      tx.sign([newTokenAdmin.privateKey])
+      await tx.prove()
+      await tx.send()
+
+      const tx1 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+      })
+      tx1.sign([newTokenAdmin.privateKey])
+      await tx1.prove()
+      await tx1.send()
+
+      const tx2 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(receiver.publicKey, mintAmount)
+      })
+      tx2.sign([newTokenAdmin.privateKey])
+      await tx2.prove()
+      await tx2.send()
+
+      const tx3 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(sender.publicKey, await tokenAContract.getSupply())
+      })
+      tx3.sign([newTokenAdmin.privateKey])
+      await tx3.prove()
+      await tx3.send()
+
+      const tx4 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchBurn(sender.publicKey, burnAmount)
+      })
+      tx4.sign([sender.privateKey])
+      await tx4.prove()
+      await tx4.send()
+
+      const tx5 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        AccountUpdate.fundNewAccount(sender.publicKey, 2)
+        await tokenAContract.reduceActions()
+      })
+      tx5.sign([sender.privateKey])
+      await tx5.prove()
+      await tx5.send()
+
+      equal(
+        (await tokenAContract.getBalanceOf(tokenAdmin.publicKey)).toBigInt(),
+        initialBalanceTokenAdmin + mintAmount.toBigInt(),
+      )
+
+      equal(
+        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        initialBalanceSender + mintAmount.toBigInt() - burnAmount.toBigInt(),
+      )
+
+      equal(
+        (await tokenAContract.getBalanceOf(receiver.publicKey)).toBigInt(),
+        initialBalanceReceiver + mintAmount.toBigInt(),
+      )
+
+      const tx6 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(tokenAdmin.publicKey, mintAmount)
+      })
+      tx6.sign([newTokenAdmin.privateKey])
+      await tx6.prove()
+      await tx6.send()
+
+      const tx7 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+      })
+      tx7.sign([newTokenAdmin.privateKey])
+      await tx7.prove()
+      await tx7.send()
+
+      const tx8 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.reduceActions()
+      })
+      tx8.sign([sender.privateKey])
+      await tx8.prove()
+      await tx8.send()
+
+      equal(
+        (await tokenAContract.getBalanceOf(tokenAdmin.publicKey)).toBigInt(),
+        initialBalanceTokenAdmin + mintAmount.toBigInt() + mintAmount.toBigInt(),
+      )
+
+      equal(
+        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        initialBalanceSender + mintAmount.toBigInt() + mintAmount.toBigInt()
+          - burnAmount.toBigInt(),
+      )
     })
   })
 
@@ -254,7 +383,6 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
         await tokenAContract.transfer(
           sender.publicKey,
           receiver.publicKey,

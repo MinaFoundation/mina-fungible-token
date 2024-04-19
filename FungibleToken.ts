@@ -2,9 +2,13 @@ import {
   Account,
   AccountUpdate,
   AccountUpdateForest,
+  Bool,
   DeployArgs,
+  Field,
   method,
+  Provable,
   PublicKey,
+  Reducer,
   State,
   state,
   Struct,
@@ -24,6 +28,14 @@ export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined>
   src: string
 }
 
+class MintOrBurnAction extends Struct({
+  isMint: Bool,
+  publicKey: PublicKey,
+  amount: UInt64,
+}) {}
+
+export const MAX_ACCOUNT_UPDATES_PER_TX = 5
+
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
   decimals = UInt64.from(9)
 
@@ -33,6 +45,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   private supply = State<UInt64>()
   @state(UInt64)
   private circulating = State<UInt64>()
+  @state(Field)
+  actionState = State<Field>()
 
   readonly events = {
     SetOwner: PublicKey,
@@ -40,6 +54,83 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     SetSupply: UInt64,
     Burn: BurnEvent,
     Transfer: TransferEvent,
+  }
+
+  reducer = Reducer({ actionType: MintOrBurnAction })
+
+  @method
+  async dispatchBurn(from: PublicKey, amount: UInt64) {
+    // signature check and actual burning is done by `this.internal.burn`
+    // state update is done in a separate `this.reduceActions` transaction
+    this.internal.burn({ address: from, amount })
+    this.reducer.dispatch(
+      new MintOrBurnAction({
+        isMint: Bool(false),
+        publicKey: from,
+        amount,
+      }),
+    )
+  }
+
+  @method
+  async dispatchMint(from: PublicKey, amount: UInt64) {
+    this.ensureOwnerSignature()
+    this.reducer.dispatch(
+      new MintOrBurnAction({
+        isMint: Bool(true),
+        publicKey: from,
+        amount,
+      }),
+    )
+  }
+
+  @method
+  async reduceActions() {
+    const circulating = this.circulating.getAndRequireEquals()
+    const supply = this.supply.getAndRequireEquals()
+    const actionState = this.actionState.getAndRequireEquals()
+    Provable.asProver(() => console.log(actionState.toBigInt()))
+    let pendingActions = this.reducer.getActions({
+      fromActionState: actionState,
+    })
+
+    let { state: newCirculating, actionState: newActionState } = this.reducer.reduce(
+      pendingActions,
+      UInt64,
+      (state: UInt64, action: MintOrBurnAction) => {
+        const newStateField = Provable.if(
+          action.isMint.not(),
+          Field,
+          state.value.sub(action.amount.value),
+          Provable.if(
+            state.add(action.amount).lessThanOrEqual(supply),
+            UInt64,
+            state.add(action.amount),
+            state,
+          ).value,
+        )
+        const newState = UInt64.Unsafe.fromField(newStateField)
+        UInt64.check(newState)
+
+        // ensure that the account update is a "dummy" if
+        //   - there was no circulating supply change
+        //   - or there was a burn (because we do a burn account update in the dispatch method)
+        // => dummies are filtered out before creating the final transaction
+        const shouldSkip = newState.lessThanOrEqual(state)
+        const publicKey = Provable.if(shouldSkip, PublicKey.empty(), action.publicKey)
+        const au = AccountUpdate.create(publicKey, this.deriveTokenId())
+        au.balance.addInPlace(action.amount)
+
+        return newState
+      },
+      { state: circulating, actionState },
+      { maxTransactionsWithActions: MAX_ACCOUNT_UPDATES_PER_TX },
+    )
+
+    // update on-chain state
+    this.circulating.set(newCirculating)
+    this.actionState.set(newActionState)
+    Provable.asProver(() => console.log(newActionState.toBigInt()))
   }
 
   async deploy(props: FungibleTokenDeployProps) {
@@ -51,6 +142,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
+    this.actionState.set(Reducer.initialActionState)
   }
 
   private ensureOwnerSignature() {
@@ -126,6 +218,11 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @method.returns(UInt64)
   async getCirculating(): Promise<UInt64> {
     return this.circulating.getAndRequireEquals()
+  }
+
+  @method.returns(PublicKey)
+  async getOwner(): Promise<PublicKey> {
+    return this.owner.getAndRequireEquals()
   }
 
   @method.returns(UInt64)
