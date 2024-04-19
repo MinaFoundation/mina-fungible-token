@@ -244,7 +244,8 @@ describe("token integration", () => {
     it("should succesfully mint, burn and skip incorrect mint with actions/reducer", async () => {
       const mintAmount = UInt64.from(100)
       const burnAmount = UInt64.from(10)
-      const initialBalanceTokenAdmin = (await tokenAContract.getBalanceOf(tokenAdmin.publicKey)).toBigInt()
+      const initialBalanceTokenAdmin = (await tokenAContract.getBalanceOf(tokenAdmin.publicKey))
+        .toBigInt()
       const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
@@ -279,7 +280,7 @@ describe("token integration", () => {
       tx2.sign([newTokenAdmin.privateKey])
       await tx2.prove()
       await tx2.send()
-      
+
       const tx3 = await Mina.transaction({
         sender: newTokenAdmin.publicKey,
         fee: 1e8,
@@ -300,7 +301,6 @@ describe("token integration", () => {
       await tx4.prove()
       await tx4.send()
 
-      
       const tx5 = await Mina.transaction({
         sender: sender.publicKey,
         fee: 1e8,
@@ -325,6 +325,47 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(receiver.publicKey)).toBigInt(),
         initialBalanceReceiver + mintAmount.toBigInt(),
+      )
+
+      const tx6 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(tokenAdmin.publicKey, mintAmount)
+      })
+      tx6.sign([newTokenAdmin.privateKey])
+      await tx6.prove()
+      await tx6.send()
+
+      const tx7 = await Mina.transaction({
+        sender: newTokenAdmin.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.dispatchMint(sender.publicKey, mintAmount)
+      })
+      tx7.sign([newTokenAdmin.privateKey])
+      await tx7.prove()
+      await tx7.send()
+
+      const tx8 = await Mina.transaction({
+        sender: sender.publicKey,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.reduceActions()
+      })
+      tx8.sign([sender.privateKey])
+      await tx8.prove()
+      await tx8.send()
+
+      equal(
+        (await tokenAContract.getBalanceOf(tokenAdmin.publicKey)).toBigInt(),
+        initialBalanceTokenAdmin + mintAmount.toBigInt() + mintAmount.toBigInt(),
+      )
+
+      equal(
+        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        initialBalanceSender + mintAmount.toBigInt() + mintAmount.toBigInt()
+          - burnAmount.toBigInt(),
       )
     })
   })

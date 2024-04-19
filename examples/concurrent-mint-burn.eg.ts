@@ -1,5 +1,5 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64, fetchAccount } from "o1js"
+import { AccountUpdate, fetchAccount, Mina, PrivateKey, PublicKey, TokenId, UInt64 } from "o1js"
 import { FungibleToken } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
@@ -31,9 +31,11 @@ query {
 
 async function waitBlock() {
   const height = await getCurrentHeight()
-  while (true)
-    if ((await getCurrentHeight()) > height)
+  while (true) {
+    if ((await getCurrentHeight()) > height) {
       break
+    }
+  }
 }
 
 async function getInferredNonce(publicKey: string) {
@@ -117,10 +119,6 @@ const [contract, feepayer, alexa, billy, jackie] = [
   PrivateKey.randomKeypair(),
 ]
 
-// const contract = {
-//   publicKey: PublicKey.fromBase58("B62qkNUzrxRj9AdtjN7nnbhaxuqvc5kt26SxZky9Lff2jqAwPQeY4i2"),
-// }
-
 console.log(`
 alexa ${alexa.privateKey.toBase58()} ${alexa.publicKey.toBase58()}
 billy ${billy.privateKey.toBase58()} ${billy.publicKey.toBase58()}
@@ -129,36 +127,36 @@ contract ${contract.publicKey.toBase58()}
 `)
 
 await FungibleToken.compile()
-const token = new FungibleToken(contract.publicKey)
+const token = new FungibleToken(
+  PublicKey.fromBase58("B62qqzUqqEuUZxFffTTjRcT2pYRJgUaL5uGhirkD52HsdduoXZhpkjf"),
+)
 
 let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 
-console.log("Deploying token contract.")
-const deployTx = await Mina.transaction({
-  sender: feepayer.publicKey,
-  fee,
-  nonce,
-}, async () => {
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
-  await token.deploy({
-    owner: feepayer.publicKey,
-    supply: UInt64.from(10_000_000_000_000),
-    symbol: "abc",
-    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
-  })
-})
-await deployTx.prove()
-deployTx.sign([feepayer.privateKey, contract.privateKey])
-const deployTxResult = await deployTx.send().then((v) => v.wait())
-console.log("Deploy tx:", deployTxResult.hash)
-
+// console.log("Deploying token contract.")
+// const deployTx = await Mina.transaction({
+//   sender: feepayer.publicKey,
+//   fee,
+//   nonce,
+// }, async () => {
+//   AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
+//   await token.deploy({
+//     owner: feepayer.publicKey,
+//     supply: UInt64.from(10_000_000_000_000),
+//     symbol: "abc",
+//     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+//   })
+// })
+// await deployTx.prove()
+// deployTx.sign([feepayer.privateKey, contract.privateKey])
+// const deployTxResult = await deployTx.send().then((v) => v.wait())
+// console.log("Deploy tx:", deployTxResult.hash)
 
 console.log("Doing batch mint to 3 addresses and waiting a block")
 await mintNoWait(feepayer, alexa.publicKey, 100e9)
 await mintNoWait(feepayer, billy.publicKey, 10e9)
 await mintNoWait(feepayer, jackie.publicKey, 5e9)
 await waitBlock()
-
 
 console.log("Reduce mints and wait")
 nonce = await getInferredNonce(feepayer.publicKey.toBase58())
@@ -177,7 +175,6 @@ const reduceTxResult1 = await reduceTx1.send()
 console.log("Reduce tx:", reduceTxResult1.hash)
 await reduceTxResult1.wait()
 
-
 console.log("Doing a batch with mints, burns and erroring mint + waiting a block")
 await mintNoWait(feepayer, alexa.publicKey, 1e9)
 await mintNoWait(feepayer, jackie.publicKey, 3e9)
@@ -194,21 +191,26 @@ const reduceTx2 = await Mina.transaction({
   fee,
   nonce,
 }, async () => {
-  // TODO: dynamically infer the number of new accounts created
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
   await token.reduceActions()
 })
 await reduceTx2.prove()
 reduceTx2.sign([feepayer.privateKey])
 const reduceTxResult2 = await reduceTx2.send()
-console.log("Deploy tx:", reduceTxResult2.hash)
+console.log("Reduce tx:", reduceTxResult2.hash)
 await reduceTxResult2.wait()
 
+// wait
+await sleep(10000)
 
-await fetchAccount({publicKey: alexa.publicKey, tokenId: token.deriveTokenId()})
-await fetchAccount({publicKey: billy.publicKey, tokenId: token.deriveTokenId()})
-await fetchAccount({publicKey: jackie.publicKey, tokenId: token.deriveTokenId()})
+await fetchAccount({ publicKey: alexa.publicKey, tokenId: token.deriveTokenId() })
+await fetchAccount({ publicKey: billy.publicKey, tokenId: token.deriveTokenId() })
+await fetchAccount({ publicKey: jackie.publicKey, tokenId: token.deriveTokenId() })
 
-equal((await token.getBalanceOf(alexa.publicKey)).toBigInt(), BigInt(101e9))
-equal((await token.getBalanceOf(billy.publicKey)).toBigInt(), BigInt(7e9))
-equal((await token.getBalanceOf(jackie.publicKey)).toBigInt(), BigInt(8e9))
+const alexaBalance = (await token.getBalanceOf(alexa.publicKey)).toBigInt()
+const billyBalance = (await token.getBalanceOf(billy.publicKey)).toBigInt()
+const jackieBalance = (await token.getBalanceOf(jackie.publicKey)).toBigInt()
+
+console.log("alexa billy jackie balance:", alexaBalance, billyBalance, jackieBalance)
+equal(alexaBalance, BigInt(101e9))
+equal(billyBalance, BigInt(7e9))
+equal(jackieBalance, BigInt(8e9))

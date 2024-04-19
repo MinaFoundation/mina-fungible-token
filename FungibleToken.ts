@@ -46,7 +46,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @state(UInt64)
   private circulating = State<UInt64>()
   @state(Field)
-  private actionState = State<Field>()
+  actionState = State<Field>()
 
   readonly events = {
     SetOwner: PublicKey,
@@ -62,7 +62,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   async dispatchBurn(from: PublicKey, amount: UInt64) {
     // signature check and actual burning is done by `this.internal.burn`
     // state update is done in a separate `this.reduceActions` transaction
-    this.internal.burn({address: from, amount})
+    this.internal.burn({ address: from, amount })
     this.reducer.dispatch(
       new MintOrBurnAction({
         isMint: Bool(false),
