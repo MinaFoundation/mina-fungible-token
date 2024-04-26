@@ -14,7 +14,7 @@ import {
   state,
   UInt64,
 } from "o1js"
-import { FungibleToken } from "./index.js"
+import { FungibleToken, FungibleTokenAdmin } from "./index.js"
 import { TestAccount, TestAccounts } from "./test_util.js"
 
 const proofsEnabled = false
@@ -31,6 +31,8 @@ describe("token integration", () => {
   let receiver: TestAccount
   let tokenAdmin: TestAccount
   let newTokenAdmin: TestAccount
+  let tokenAdminKeypair: TestAccount
+  let tokenAdminContract: FungibleTokenAdmin
   let tokenA: TestAccount
   let tokenAContract: FungibleToken
   let tokenB: TestAccount
@@ -45,6 +47,9 @@ describe("token integration", () => {
 
     tokenAdmin = PrivateKey.randomKeypair()
     newTokenAdmin = PrivateKey.randomKeypair()
+
+    tokenAdminKeypair = PrivateKey.randomKeypair()
+    tokenAdminContract = new FungibleTokenAdmin(tokenAdminKeypair.publicKey)
 
     tokenA = PrivateKey.randomKeypair()
     tokenAContract = new FungibleToken(tokenA.publicKey)
@@ -72,8 +77,12 @@ describe("token integration", () => {
         sender: deployer.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+        AccountUpdate.fundNewAccount(deployer.publicKey, 2)
+        await tokenAdminContract.deploy({
+          adminPublicKey: tokenAdminKeypair.publicKey,
+        })
         await tokenAContract.deploy({
+          admin: tokenAdminKeypair.publicKey,
           owner: tokenAdmin.publicKey,
           supply: totalSupply,
           symbol: "tokA",
@@ -81,7 +90,7 @@ describe("token integration", () => {
         })
       })
 
-      tx.sign([deployer.privateKey, tokenA.privateKey])
+      tx.sign([deployer.privateKey, tokenA.privateKey, tokenAdminKeypair.privateKey])
 
       await tx.prove()
       await tx.send()
@@ -94,6 +103,7 @@ describe("token integration", () => {
       }, async () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 1)
         tokenBContract.deploy({
+          admin: tokenAdminKeypair.publicKey,
           owner: tokenAdmin.publicKey,
           supply: totalSupply,
           symbol: "tokB",

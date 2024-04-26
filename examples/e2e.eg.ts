@@ -1,6 +1,6 @@
 import { equal } from "node:assert"
 import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
-import { FungibleToken } from "../index.js"
+import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 import { TestAccounts } from "../test_util.js"
 
 const devnet = Mina.LocalBlockchain({
@@ -13,16 +13,20 @@ const fee = 1e8
 
 const [deployer, owner, alexa, billy] = devnet.testAccounts as TestAccounts
 const contract = PrivateKey.randomKeypair()
+const admin = PrivateKey.randomKeypair()
 
 const token = new FungibleToken(contract.publicKey)
+const adminContract = new FungibleTokenAdmin(admin.publicKey)
 
 console.log("Deploying token contract.")
 const deployTx = await Mina.transaction({
   sender: deployer.publicKey,
   fee,
 }, async () => {
-  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+  AccountUpdate.fundNewAccount(deployer.publicKey, 2)
+  await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
+    admin: admin.publicKey,
     owner: owner.publicKey,
     supply: UInt64.from(10_000_000_000_000),
     symbol: "abc",
@@ -30,7 +34,7 @@ const deployTx = await Mina.transaction({
   })
 })
 await deployTx.prove()
-deployTx.sign([deployer.privateKey, contract.privateKey])
+deployTx.sign([deployer.privateKey, contract.privateKey, admin.privateKey])
 const deployTxResult = await deployTx.send().then((v) => v.wait())
 console.log("Deploy tx result:", deployTxResult.toPretty())
 equal(deployTxResult.status, "included")
