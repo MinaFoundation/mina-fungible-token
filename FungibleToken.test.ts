@@ -30,10 +30,9 @@ describe("token integration", () => {
   let sender: TestAccount
   let receiver: TestAccount
   let tokenAdmin: TestAccount
+  let tokenAdminContract: FungibleTokenAdmin
   let newTokenAdmin: TestAccount
   let newTokenAdminContract: FungibleTokenAdmin
-  let tokenAdminKeypair: TestAccount
-  let tokenAdminContract: FungibleTokenAdmin
   let tokenA: TestAccount
   let tokenAContract: FungibleToken
   let tokenB: TestAccount
@@ -47,11 +46,10 @@ describe("token integration", () => {
     ;[deployer, sender, receiver] = devnet.testAccounts as TestAccounts
 
     tokenAdmin = PrivateKey.randomKeypair()
+    tokenAdminContract = new FungibleTokenAdmin(tokenAdmin.publicKey)
+
     newTokenAdmin = PrivateKey.randomKeypair()
     newTokenAdminContract = new FungibleTokenAdmin(newTokenAdmin.publicKey)
-
-    tokenAdminKeypair = PrivateKey.randomKeypair()
-    tokenAdminContract = new FungibleTokenAdmin(tokenAdminKeypair.publicKey)
 
     tokenA = PrivateKey.randomKeypair()
     tokenAContract = new FungibleToken(tokenA.publicKey)
@@ -82,11 +80,10 @@ describe("token integration", () => {
       }, async () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 2)
         await tokenAdminContract.deploy({
-          adminPublicKey: tokenAdminKeypair.publicKey,
+          adminPublicKey: tokenAdmin.publicKey,
         })
         await tokenAContract.deploy({
-          admin: tokenAdminKeypair.publicKey,
-          owner: tokenAdmin.publicKey,
+          admin: tokenAdmin.publicKey,
           supply: totalSupply,
           symbol: "tokA",
           src: "",
@@ -96,7 +93,7 @@ describe("token integration", () => {
       tx.sign([
         deployer.privateKey,
         tokenA.privateKey,
-        tokenAdminKeypair.privateKey,
+        tokenAdmin.privateKey,
       ])
 
       await tx.prove()
@@ -110,8 +107,7 @@ describe("token integration", () => {
       }, async () => {
         AccountUpdate.fundNewAccount(deployer.publicKey, 1)
         tokenBContract.deploy({
-          admin: tokenAdminKeypair.publicKey,
-          owner: tokenAdmin.publicKey,
+          admin: tokenAdmin.publicKey,
           supply: totalSupply,
           symbol: "tokB",
           src: "",
@@ -157,7 +153,7 @@ describe("token integration", () => {
         await tokenAContract.mint(sender.publicKey, mintAmount)
       })
 
-      tx.sign([sender.privateKey, tokenAdminKeypair.privateKey])
+      tx.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx.prove()
       await tx.send()
 
@@ -235,7 +231,7 @@ describe("token integration", () => {
         })
         await tokenAContract.setAdmin(newTokenAdmin.publicKey)
       })
-      tx.sign([sender.privateKey, tokenAdminKeypair.privateKey, newTokenAdmin.privateKey])
+      tx.sign([sender.privateKey, tokenAdmin.privateKey, newTokenAdmin.privateKey])
       await tx.prove()
       await tx.send()
 
@@ -255,7 +251,7 @@ describe("token integration", () => {
       }, async () => {
         await tokenAContract.setSupply(totalSupply)
       })
-      tx3.sign([sender.privateKey, tokenAdminKeypair.privateKey])
+      tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()
       await rejects(() => tx3.send())
     })

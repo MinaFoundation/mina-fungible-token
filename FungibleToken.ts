@@ -18,8 +18,6 @@ import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** Address of the contract controlling permissions for administrative actions */
   admin: PublicKey
-  /** The initial administrator of the token contract. */
-  owner: PublicKey
   /** The max supply of the token. */
   supply: UInt64
   /** The token symbol. */
@@ -33,8 +31,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @state(PublicKey)
   private admin = State<PublicKey>()
-  @state(PublicKey)
-  private owner = State<PublicKey>()
   @state(UInt64)
   private supply = State<UInt64>()
   @state(UInt64)
@@ -52,7 +48,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     await super.deploy(props)
 
     this.admin.set(props.admin)
-    this.owner.set(props.owner)
     this.supply.set(props.supply)
     this.circulating.set(UInt64.from(0))
 

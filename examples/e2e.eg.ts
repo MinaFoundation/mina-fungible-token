@@ -27,7 +27,6 @@ const deployTx = await Mina.transaction({
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
     admin: admin.publicKey,
-    owner: owner.publicKey,
     supply: UInt64.from(10_000_000_000_000),
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
