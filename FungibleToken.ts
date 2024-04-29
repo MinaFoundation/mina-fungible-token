@@ -41,7 +41,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   private circulating = State<UInt64>()
 
   readonly events = {
-    SetOwner: PublicKey,
+    SetAdmin: PublicKey,
     Mint: MintEvent,
     SetSupply: UInt64,
     Burn: BurnEvent,
@@ -64,16 +64,11 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     return (new FungibleTokenAdmin(this.admin.getAndRequireEquals()))
   }
 
-  private ensureOwnerSignature() {
-    const owner = this.owner.getAndRequireEquals()
-    return AccountUpdate.createSigned(owner)
-  }
-
   @method
-  async setOwner(owner: PublicKey) {
-    this.ensureOwnerSignature()
-    this.owner.set(owner)
-    this.emitEvent("SetOwner", owner)
+  async setAdmin(admin: PublicKey) {
+    await this.getAdminContract().canAdmin(AdminAction.fromType(AdminAction.types.setAdmin))
+    this.admin.set(admin)
+    this.emitEvent("SetAdmin", admin)
   }
 
   @method.returns(AccountUpdate)
@@ -97,7 +92,9 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async setSupply(amount: UInt64): Promise<void> {
-    this.ensureOwnerSignature()
+    const canAdmin = await this.getAdminContract()
+      .canAdmin(AdminAction.fromType(AdminAction.types.setTotalSupply))
+    canAdmin.assertTrue()
     this.circulating.getAndRequireEquals().assertLessThanOrEqual(amount)
     this.supply.set(amount)
     this.emitEvent("SetSupply", amount)

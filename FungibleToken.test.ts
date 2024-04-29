@@ -31,6 +31,7 @@ describe("token integration", () => {
   let receiver: TestAccount
   let tokenAdmin: TestAccount
   let newTokenAdmin: TestAccount
+  let newTokenAdminContract: FungibleTokenAdmin
   let tokenAdminKeypair: TestAccount
   let tokenAdminContract: FungibleTokenAdmin
   let tokenA: TestAccount
@@ -47,6 +48,7 @@ describe("token integration", () => {
 
     tokenAdmin = PrivateKey.randomKeypair()
     newTokenAdmin = PrivateKey.randomKeypair()
+    newTokenAdminContract = new FungibleTokenAdmin(newTokenAdmin.publicKey)
 
     tokenAdminKeypair = PrivateKey.randomKeypair()
     tokenAdminContract = new FungibleTokenAdmin(tokenAdminKeypair.publicKey)
@@ -91,7 +93,11 @@ describe("token integration", () => {
         })
       })
 
-      tx.sign([deployer.privateKey, tokenA.privateKey, tokenAdminKeypair.privateKey])
+      tx.sign([
+        deployer.privateKey,
+        tokenA.privateKey,
+        tokenAdminKeypair.privateKey,
+      ])
 
       await tx.prove()
       await tx.send()
@@ -218,15 +224,18 @@ describe("token integration", () => {
       )
     })
 
-    it("correctly changes the adminAccount", async () => {
+    it("correctly changes the admin contract", async () => {
       const tx = await Mina.transaction({
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
         AccountUpdate.fundNewAccount(sender.publicKey, 1)
-        await tokenAContract.setOwner(newTokenAdmin.publicKey)
+        await newTokenAdminContract.deploy({
+          adminPublicKey: newTokenAdmin.publicKey,
+        })
+        await tokenAContract.setAdmin(newTokenAdmin.publicKey)
       })
-      tx.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx.sign([sender.privateKey, tokenAdminKeypair.privateKey, newTokenAdmin.privateKey])
       await tx.prove()
       await tx.send()
 
@@ -234,7 +243,6 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
         await tokenAContract.setSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
@@ -247,7 +255,7 @@ describe("token integration", () => {
       }, async () => {
         await tokenAContract.setSupply(totalSupply)
       })
-      tx3.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx3.sign([sender.privateKey, tokenAdminKeypair.privateKey])
       await tx3.prove()
       await rejects(() => tx3.send())
     })
