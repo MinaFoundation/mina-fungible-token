@@ -6,10 +6,9 @@ export class AdminAction extends Struct({
 }) {
   public static types = {
     mint: 0,
-    burn: 1,
-    setTotalSupply: 2,
-    setPaused: 3,
-    setAdmin: 4,
+    setTotalSupply: 1,
+    setPaused: 2,
+    setAdmin: 3,
   }
 
   public static fromType(type: number): AdminAction {
