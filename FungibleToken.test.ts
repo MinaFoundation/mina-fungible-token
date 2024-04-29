@@ -66,6 +66,7 @@ describe("token integration", () => {
     if (proofsEnabled) {
       await FungibleToken.compile()
       await ThirdParty.compile()
+      await FungibleTokenAdmin.compile()
     }
   })
 
@@ -146,11 +147,11 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 2)
-        tokenAContract.mint(sender.publicKey, mintAmount)
+        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        await tokenAContract.mint(sender.publicKey, mintAmount)
       })
 
-      tx.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx.sign([sender.privateKey, tokenAdminKeypair.privateKey])
       await tx.prove()
       await tx.send()
 
@@ -168,7 +169,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.burn(sender.publicKey, burnAmount)
+        await tokenAContract.burn(sender.publicKey, burnAmount)
       })
 
       tx.sign([sender.privateKey])
@@ -186,7 +187,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.mint(sender.publicKey, mintAmount)
+        await tokenAContract.mint(sender.publicKey, mintAmount)
       })
 
       tx.sign([sender.privateKey])
@@ -199,7 +200,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.burn(sender.publicKey, burnAmount)
+        await tokenAContract.burn(sender.publicKey, burnAmount)
       })
 
       await tx.prove()
@@ -222,7 +223,8 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setOwner(newTokenAdmin.publicKey)
+        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        await tokenAContract.setOwner(newTokenAdmin.publicKey)
       })
       tx.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx.prove()
@@ -233,7 +235,7 @@ describe("token integration", () => {
         fee: 1e8,
       }, async () => {
         AccountUpdate.fundNewAccount(sender.publicKey, 1)
-        tokenAContract.setSupply(totalSupply)
+        await tokenAContract.setSupply(totalSupply)
       })
       tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
       await tx2.prove()
@@ -243,7 +245,7 @@ describe("token integration", () => {
         sender: sender.publicKey,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setSupply(totalSupply)
+        await tokenAContract.setSupply(totalSupply)
       })
       tx3.sign([sender.privateKey, tokenAdmin.privateKey])
       await tx3.prove()

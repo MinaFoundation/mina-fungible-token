@@ -60,6 +60,10 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.account.zkappUri.set(props.src)
   }
 
+  public getAdminContract(): FungibleTokenAdmin {
+    return (new FungibleTokenAdmin(this.admin.getAndRequireEquals()))
+  }
+
   private ensureOwnerSignature() {
     const owner = this.owner.getAndRequireEquals()
     return AccountUpdate.createSigned(owner)
@@ -74,7 +78,9 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
-    this.ensureOwnerSignature()
+    const canAdmin = await this.getAdminContract()
+      .canAdmin(AdminAction.fromType(AdminAction.types.mint))
+    canAdmin.assertTrue()
     const supply = this.supply.getAndRequireEquals()
     const circulating = this.circulating.getAndRequireEquals()
     const nextCirculating = circulating.add(amount)
