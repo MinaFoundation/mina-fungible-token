@@ -3,15 +3,15 @@ import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
 import { TestPublicKeys } from "test_util.js"
 import { FungibleToken } from "../index.js"
 
-const devnet = await Mina.LocalBlockchain({
+const localChain = await Mina.LocalBlockchain({
   proofsEnabled: false,
   enforceTransactionLimits: false,
 })
-Mina.setActiveInstance(devnet)
+Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy] = devnet.testAccounts as TestPublicKeys
+const [deployer, owner, alexa, billy] = localChain.testAccounts as TestPublicKeys
 const contract = PrivateKey.randomKeypair()
 
 const token = new FungibleToken(contract.publicKey)

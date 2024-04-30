@@ -20,11 +20,11 @@ import { TestAccount } from "./test_util.js"
 
 const proofsEnabled = false
 
-const devnet = await Mina.LocalBlockchain({
+const localChain = await Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
   enforceTransactionLimits: false,
 })
-Mina.setActiveInstance(devnet)
+Mina.setActiveInstance(localChain)
 
 describe("token integration", () => {
   let deployer: TestPublicKey
@@ -42,7 +42,7 @@ describe("token integration", () => {
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    ;[deployer, sender, receiver] = devnet.testAccounts
+    ;[deployer, sender, receiver] = localChain.testAccounts
 
     tokenAdmin = PrivateKey.randomKeypair()
     newTokenAdmin = PrivateKey.randomKeypair()

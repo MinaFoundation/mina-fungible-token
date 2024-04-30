@@ -45,15 +45,15 @@ export class TokenEscrow extends SmartContract {
   }
 }
 
-const devnet = await Mina.LocalBlockchain({
+const localChain = await Mina.LocalBlockchain({
   proofsEnabled: false,
   enforceTransactionLimits: false,
 })
-Mina.setActiveInstance(devnet)
+Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy, jackie] = devnet.testAccounts as TestPublicKeys
+const [deployer, owner, alexa, billy, jackie] = localChain.testAccounts as TestPublicKeys
 const tokenContract = PrivateKey.randomKeypair()
 const escrowContract = PrivateKey.randomKeypair()
 console.log(`
