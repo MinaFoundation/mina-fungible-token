@@ -14,49 +14,50 @@ import {
   state,
   UInt64,
 } from "o1js"
+import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
 import { FungibleToken } from "./index.js"
-import { TestAccount, TestAccounts } from "./test_util.js"
+import { newTestPublicKey } from "./test_util.js"
 
 const proofsEnabled = false
 
-const devnet = Mina.LocalBlockchain({
+const localChain = await Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
   enforceTransactionLimits: false,
 })
-Mina.setActiveInstance(devnet)
+Mina.setActiveInstance(localChain)
 
 describe("token integration", () => {
-  let deployer: TestAccount
-  let sender: TestAccount
-  let receiver: TestAccount
-  let tokenAdmin: TestAccount
-  let newTokenAdmin: TestAccount
-  let tokenA: TestAccount
+  let deployer: TestPublicKey
+  let sender: TestPublicKey
+  let receiver: TestPublicKey
+  let tokenAdmin: TestPublicKey
+  let newTokenAdmin: TestPublicKey
+  let tokenA: TestPublicKey
   let tokenAContract: FungibleToken
-  let tokenB: TestAccount
+  let tokenB: TestPublicKey
   let tokenBContract: FungibleToken
-  let thirdPartyA: TestAccount
+  let thirdPartyA: TestPublicKey
   let thirdPartyAContract: ThirdParty
-  let thirdPartyB: TestAccount
+  let thirdPartyB: TestPublicKey
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    ;[deployer, sender, receiver] = devnet.testAccounts as TestAccounts
+    ;[deployer, sender, receiver] = localChain.testAccounts
 
-    tokenAdmin = PrivateKey.randomKeypair()
-    newTokenAdmin = PrivateKey.randomKeypair()
+    tokenAdmin = newTestPublicKey()
+    newTokenAdmin = newTestPublicKey()
 
-    tokenA = PrivateKey.randomKeypair()
-    tokenAContract = new FungibleToken(tokenA.publicKey)
+    tokenA = newTestPublicKey()
+    tokenAContract = new FungibleToken(tokenA)
 
-    tokenB = PrivateKey.randomKeypair()
-    tokenBContract = new FungibleToken(tokenB.publicKey)
+    tokenB = newTestPublicKey()
+    tokenBContract = new FungibleToken(tokenB)
 
-    thirdPartyA = PrivateKey.randomKeypair()
-    thirdPartyAContract = new ThirdParty(thirdPartyA.publicKey)
+    thirdPartyA = newTestPublicKey()
+    thirdPartyAContract = new ThirdParty(thirdPartyA)
 
-    thirdPartyB = PrivateKey.randomKeypair()
-    thirdPartyBContract = new ThirdParty(thirdPartyB.publicKey)
+    thirdPartyB = newTestPublicKey()
+    thirdPartyBContract = new ThirdParty(thirdPartyB)
 
     if (proofsEnabled) {
       await FungibleToken.compile()
@@ -69,19 +70,19 @@ describe("token integration", () => {
   describe("deploy", () => {
     it("should deploy token contract A", async () => {
       const tx = await Mina.transaction({
-        sender: deployer.publicKey,
+        sender: deployer,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+        AccountUpdate.fundNewAccount(deployer, 1)
         await tokenAContract.deploy({
-          owner: tokenAdmin.publicKey,
+          owner: tokenAdmin,
           supply: totalSupply,
           symbol: "tokA",
           src: "",
         })
       })
 
-      tx.sign([deployer.privateKey, tokenA.privateKey])
+      tx.sign([deployer.key, tokenA.key])
 
       await tx.prove()
       await tx.send()
@@ -89,19 +90,19 @@ describe("token integration", () => {
 
     it("should deploy token contract B", async () => {
       const tx = await Mina.transaction({
-        sender: deployer.publicKey,
+        sender: deployer,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer.publicKey, 1)
+        AccountUpdate.fundNewAccount(deployer, 1)
         tokenBContract.deploy({
-          owner: tokenAdmin.publicKey,
+          owner: tokenAdmin,
           supply: totalSupply,
           symbol: "tokB",
           src: "",
         })
       })
 
-      tx.sign([deployer.privateKey, tokenB.privateKey])
+      tx.sign([deployer.key, tokenB.key])
 
       await tx.prove()
       await tx.send()
@@ -109,15 +110,15 @@ describe("token integration", () => {
 
     it("should deploy a third party contract", async () => {
       const tx = await Mina.transaction({
-        sender: deployer.publicKey,
+        sender: deployer,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer.publicKey, 2)
-        await thirdPartyAContract.deploy({ ownerAddress: tokenA.publicKey })
-        await thirdPartyBContract.deploy({ ownerAddress: tokenA.publicKey })
+        AccountUpdate.fundNewAccount(deployer, 2)
+        await thirdPartyAContract.deploy({ ownerAddress: tokenA })
+        await thirdPartyBContract.deploy({ ownerAddress: tokenA })
       })
 
-      tx.sign([deployer.privateKey, thirdPartyA.privateKey, thirdPartyB.privateKey])
+      tx.sign([deployer.key, thirdPartyA.key, thirdPartyB.key])
 
       await tx.prove()
       await tx.send()
@@ -129,67 +130,67 @@ describe("token integration", () => {
     const burnAmount = UInt64.from(100)
 
     it("should mint for the sender account", async () => {
-      const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
+      const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
 
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 2)
-        tokenAContract.mint(sender.publicKey, mintAmount)
+        AccountUpdate.fundNewAccount(sender, 2)
+        tokenAContract.mint(sender, mintAmount)
       })
 
-      tx.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx.sign([sender.key, tokenAdmin.key])
       await tx.prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
     })
 
     it("should burn tokens for the sender account", async () => {
-      const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
+      const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
 
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        tokenAContract.burn(sender.publicKey, burnAmount)
+        tokenAContract.burn(sender, burnAmount)
       })
 
-      tx.sign([sender.privateKey])
+      tx.sign([sender.key])
       await tx.prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance - burnAmount.toBigInt(),
       )
     })
 
     it("should refuse to mint tokens without signature from the token admin", async () => {
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        tokenAContract.mint(sender.publicKey, mintAmount)
+        tokenAContract.mint(sender, mintAmount)
       })
 
-      tx.sign([sender.privateKey])
+      tx.sign([sender.key])
       await tx.prove()
       await rejects(() => tx.send())
     })
 
     it("should refuse to burn tokens without signature from the token holder", async () => {
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        tokenAContract.burn(sender.publicKey, burnAmount)
+        tokenAContract.burn(sender, burnAmount)
       })
 
       await tx.prove()
@@ -199,7 +200,7 @@ describe("token integration", () => {
     it("should refuse to set total supply to be less than circulating supply", async () => {
       await rejects(async () =>
         await Mina.transaction({
-          sender: sender.publicKey,
+          sender: sender,
           fee: 1e8,
         }, async () => {
           await tokenAContract.setSupply(UInt64.from(1))
@@ -209,33 +210,33 @@ describe("token integration", () => {
 
     it("correctly changes the adminAccount", async () => {
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setOwner(newTokenAdmin.publicKey)
+        tokenAContract.setOwner(newTokenAdmin)
       })
-      tx.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx.sign([sender.key, tokenAdmin.key])
       await tx.prove()
       await tx.send()
 
       const tx2 = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        AccountUpdate.fundNewAccount(sender, 1)
         tokenAContract.setSupply(totalSupply)
       })
-      tx2.sign([sender.privateKey, newTokenAdmin.privateKey])
+      tx2.sign([sender.key, newTokenAdmin.key])
       await tx2.prove()
       await tx2.send()
 
       const tx3 = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
         tokenAContract.setSupply(totalSupply)
       })
-      tx3.sign([sender.privateKey, tokenAdmin.privateKey])
+      tx3.sign([sender.key, tokenAdmin.key])
       await tx3.prove()
       await rejects(() => tx3.send())
     })
@@ -245,96 +246,96 @@ describe("token integration", () => {
     const sendAmount = UInt64.from(1)
 
     it("should do a transfer initiated by the token contract", async () => {
-      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
+      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
-      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
+      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
         .toBigInt()
 
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        AccountUpdate.fundNewAccount(sender, 1)
         await tokenAContract.transfer(
-          sender.publicKey,
-          receiver.publicKey,
+          sender,
+          receiver,
           sendAmount,
         )
       })
 
-      tx.sign([sender.privateKey])
+      tx.sign([sender.key])
       await tx.prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalanceSender - sendAmount.toBigInt(),
       )
       equal(
-        (await tokenAContract.getBalanceOf(receiver.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
       )
     })
 
     it("should reject a transaction not signed by the token holder", async () => {
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.transfer(sender.publicKey, receiver.publicKey, sendAmount)
+        await tokenAContract.transfer(sender, receiver, sendAmount)
       })
       await tx.prove()
       await rejects(() => tx.send())
     })
 
     it("should do a transaction constructed manually, approved by the token contract", async () => {
-      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender.publicKey))
+      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
-      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver.publicKey))
+      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
         .toBigInt()
       const updateSend = AccountUpdate.createSigned(
-        sender.publicKey,
+        sender,
         tokenAContract.deriveTokenId(),
       )
       updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg()
       const updateReceive = AccountUpdate.create(
-        receiver.publicKey,
+        receiver,
         tokenAContract.deriveTokenId(),
       )
       updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
 
       const tx = await Mina.transaction({
-        sender: deployer.publicKey,
+        sender: deployer,
         fee: 1e8,
       }, async () => {
         await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
       })
-      await tx.sign([sender.privateKey, deployer.privateKey]).prove()
+      await tx.sign([sender.key, deployer.key]).prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalanceSender - sendAmount.toBigInt(),
       )
       equal(
-        (await tokenAContract.getBalanceOf(receiver.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
       )
     })
 
     it("should reject unbalanced transactions", async () => {
       const updateSend = AccountUpdate.createSigned(
-        sender.publicKey,
+        sender,
         tokenAContract.deriveTokenId(),
       )
       updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg()
       const updateReceive = AccountUpdate.create(
-        receiver.publicKey,
+        receiver,
         tokenAContract.deriveTokenId(),
       )
       updateReceive.balanceChange = Int64.fromUnsigned(sendAmount).mul(2)
       await rejects(() =>
-        Mina.transaction(deployer.publicKey, async () => {
+        Mina.transaction(deployer, async () => {
           await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
         })
       )
@@ -342,21 +343,21 @@ describe("token integration", () => {
 
     it("rejects transactions with mismatched tokens", async () => {
       const updateSend = AccountUpdate.createSigned(
-        sender.publicKey,
+        sender,
         tokenAContract.deriveTokenId(),
       )
       updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg()
       const updateReceive = AccountUpdate.create(
-        receiver.publicKey,
+        receiver,
         tokenBContract.deriveTokenId(),
       )
       updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
       await rejects(() => (
         Mina.transaction({
-          sender: deployer.publicKey,
+          sender: deployer,
           fee: 1e8,
         }, async () => {
-          AccountUpdate.fundNewAccount(sender.publicKey, 1)
+          AccountUpdate.fundNewAccount(sender, 1)
           await tokenAContract.approveAccountUpdates([updateSend])
           await tokenBContract.approveAccountUpdates([updateReceive])
         })
@@ -368,71 +369,71 @@ describe("token integration", () => {
     const depositAmount = UInt64.from(100)
 
     it("should deposit from the user to the token account of the third party", async () => {
-      const initialBalance = (await tokenAContract.getBalanceOf(sender.publicKey))
+      const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
 
       const tokenId = tokenAContract.deriveTokenId()
 
-      const updateWithdraw = AccountUpdate.createSigned(sender.publicKey, tokenId)
+      const updateWithdraw = AccountUpdate.createSigned(sender, tokenId)
       updateWithdraw.balanceChange = Int64.fromUnsigned(depositAmount).neg()
 
       const updateDeposit = await thirdPartyAContract.deposit(depositAmount)
       updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent
 
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        AccountUpdate.fundNewAccount(sender, 1)
         await tokenAContract.approveBase(AccountUpdateForest.fromFlatArray([
           updateWithdraw,
           updateDeposit,
         ]))
       })
 
-      tx.sign([sender.privateKey])
+      tx.sign([sender.key])
 
       await tx.prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(thirdPartyA.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(thirdPartyA)).toBigInt(),
         depositAmount.toBigInt(),
       )
       equal(
-        (await tokenAContract.getBalanceOf(sender.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance - depositAmount.toBigInt(),
       )
     })
 
     it("should send tokens from one contract to another", async () => {
-      const initialBalance = (await tokenAContract.getBalanceOf(thirdPartyA.publicKey))
+      const initialBalance = (await tokenAContract.getBalanceOf(thirdPartyA))
         .toBigInt()
-      const initialBalance2 = (await tokenAContract.getBalanceOf(thirdPartyB.publicKey))
+      const initialBalance2 = (await tokenAContract.getBalanceOf(thirdPartyB))
         .toBigInt()
       const transferAmount = UInt64.from(1)
       const updateWithdraw = await thirdPartyAContract.withdraw(transferAmount)
       const updateDeposit = await thirdPartyBContract.deposit(transferAmount)
       updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent
       const tx = await Mina.transaction({
-        sender: sender.publicKey,
+        sender: sender,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender.publicKey, 1)
+        AccountUpdate.fundNewAccount(sender, 1)
         await tokenAContract.approveBase(AccountUpdateForest.fromFlatArray([
           updateWithdraw,
           updateDeposit,
         ]))
       })
-      await tx.sign([sender.privateKey, thirdPartyA.privateKey]).prove()
+      await tx.sign([sender.key, thirdPartyA.key]).prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(thirdPartyA.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(thirdPartyA)).toBigInt(),
         initialBalance - transferAmount.toBigInt(),
       )
       equal(
-        (await tokenAContract.getBalanceOf(thirdPartyB.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(thirdPartyB)).toBigInt(),
         initialBalance2 + transferAmount.toBigInt(),
       )
     })
@@ -445,10 +446,10 @@ describe("token integration", () => {
       updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent
       await rejects(() =>
         Mina.transaction({
-          sender: sender.publicKey,
+          sender: sender,
           fee: 1e8,
         }, async () => {
-          AccountUpdate.fundNewAccount(sender.publicKey, 1)
+          AccountUpdate.fundNewAccount(sender, 1)
           await tokenAContract.approveBase(AccountUpdateForest.fromFlatArray([
             updateWithdraw,
             updateDeposit,
