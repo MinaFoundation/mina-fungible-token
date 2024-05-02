@@ -542,7 +542,16 @@ describe("token integration", () => {
       )
     })
 
-    it.todo("should not allow changing the total supply")
+    it("should not allow changing the total supply for token B", async () => {
+      await rejects(async () =>
+        await Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          await tokenBContract.setSupply(mintAmount)
+        })
+      )
+    })
   })
 })
 
