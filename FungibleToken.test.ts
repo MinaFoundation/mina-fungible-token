@@ -7,7 +7,6 @@ import {
   Int64,
   method,
   Mina,
-  PrivateKey,
   PublicKey,
   SmartContract,
   State,

@@ -7,8 +7,8 @@ import {
   SmartContract,
   State,
   state,
+  UInt64,
 } from "o1js"
-import { AdminAction } from "./AdminAction.js"
 
 export interface FungibleTokenAdminDeployProps extends Exclude<DeployArgs, undefined> {
   adminPublicKey: PublicKey
@@ -31,12 +31,26 @@ export class FungibleTokenAdmin extends SmartContract {
     this.adminPublicKey.set(props.adminPublicKey)
   }
 
-  @method.returns(Bool)
-  public async canAdmin(action: AdminAction): Promise<Bool> {
-    // require signature from the admin
+  private ensureAdminSignature() {
     const admin = this.adminPublicKey.getAndRequireEquals()
-    AccountUpdate.createSigned(admin)
-    // if you want to further restrict certain actions, do so below
-    return (Bool(true))
+    return AccountUpdate.createSigned(admin)
+  }
+
+  @method.returns(Bool)
+  public async canMint(accountUpdate: AccountUpdate) {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canChangeAdmin(admin: PublicKey) {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canSetSupply(supply: UInt64) {
+    this.ensureAdminSignature()
+    return Bool(true)
   }
 }

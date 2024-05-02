@@ -1,5 +1,4 @@
 import {
-  Account,
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
@@ -11,7 +10,6 @@ import {
   TokenContract,
   UInt64,
 } from "o1js"
-import { AdminAction } from "./AdminAction.js"
 import { FungibleTokenAdmin } from "./FungibleTokenAdmin.js"
 import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
@@ -61,16 +59,14 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async setAdmin(admin: PublicKey) {
-    await this.getAdminContract().canAdmin(AdminAction.fromType(AdminAction.types.setAdmin))
+    const canChangeAdmin = await this.getAdminContract().canChangeAdmin(admin)
+    canChangeAdmin.assertTrue()
     this.admin.set(admin)
     this.emitEvent("SetAdmin", admin)
   }
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
-    const canAdmin = await this.getAdminContract()
-      .canAdmin(AdminAction.fromType(AdminAction.types.mint))
-    canAdmin.assertTrue()
     const supply = this.supply.getAndRequireEquals()
     const circulating = this.circulating.getAndRequireEquals()
     const nextCirculating = circulating.add(amount)
@@ -81,18 +77,22 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     )
     this.circulating.set(nextCirculating)
     const accountUpdate = this.internal.mint({ address: recipient, amount })
+    const canMint = await this.getAdminContract()
+      .canMint(accountUpdate)
+    canMint.assertTrue()
+    this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
     return accountUpdate
   }
 
   @method
-  async setSupply(amount: UInt64): Promise<void> {
-    const canAdmin = await this.getAdminContract()
-      .canAdmin(AdminAction.fromType(AdminAction.types.setTotalSupply))
-    canAdmin.assertTrue()
-    this.circulating.getAndRequireEquals().assertLessThanOrEqual(amount)
-    this.supply.set(amount)
-    this.emitEvent("SetSupply", amount)
+  async setSupply(supply: UInt64): Promise<void> {
+    const canSetSupply = await this.getAdminContract()
+      .canSetSupply(supply)
+    canSetSupply.assertTrue()
+    this.circulating.getAndRequireEquals().assertLessThanOrEqual(supply)
+    this.supply.set(supply)
+    this.emitEvent("SetSupply", supply)
   }
 
   @method.returns(AccountUpdate)
