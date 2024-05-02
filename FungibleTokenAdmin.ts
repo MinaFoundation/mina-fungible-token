@@ -43,19 +43,19 @@ export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAd
   }
 
   @method.returns(Bool)
-  public async canMint(accountUpdate: AccountUpdate) {
+  public async canMint(_accountUpdate: AccountUpdate) {
     this.ensureAdminSignature()
     return Bool(true)
   }
 
   @method.returns(Bool)
-  public async canChangeAdmin(admin: PublicKey) {
+  public async canChangeAdmin(_admin: PublicKey) {
     this.ensureAdminSignature()
     return Bool(true)
   }
 
   @method.returns(Bool)
-  public async canSetSupply(supply: UInt64) {
+  public async canSetSupply(_supply: UInt64) {
     this.ensureAdminSignature()
     return Bool(true)
   }
