@@ -16,7 +16,7 @@ import {
 } from "o1js"
 import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
 import { FungibleToken } from "./index.js"
-import { TestAccount } from "./test_util.js"
+import { newTestPublicKey } from "./test_util.js"
 
 const proofsEnabled = false
 
@@ -30,34 +30,34 @@ describe("token integration", () => {
   let deployer: TestPublicKey
   let sender: TestPublicKey
   let receiver: TestPublicKey
-  let tokenAdmin: TestAccount
-  let newTokenAdmin: TestAccount
-  let tokenA: TestAccount
+  let tokenAdmin: TestPublicKey
+  let newTokenAdmin: TestPublicKey
+  let tokenA: TestPublicKey
   let tokenAContract: FungibleToken
-  let tokenB: TestAccount
+  let tokenB: TestPublicKey
   let tokenBContract: FungibleToken
-  let thirdPartyA: TestAccount
+  let thirdPartyA: TestPublicKey
   let thirdPartyAContract: ThirdParty
-  let thirdPartyB: TestAccount
+  let thirdPartyB: TestPublicKey
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
     ;[deployer, sender, receiver] = localChain.testAccounts
 
-    tokenAdmin = PrivateKey.randomKeypair()
-    newTokenAdmin = PrivateKey.randomKeypair()
+    tokenAdmin = newTestPublicKey()
+    newTokenAdmin = newTestPublicKey()
 
-    tokenA = PrivateKey.randomKeypair()
-    tokenAContract = new FungibleToken(tokenA.publicKey)
+    tokenA = newTestPublicKey()
+    tokenAContract = new FungibleToken(tokenA)
 
-    tokenB = PrivateKey.randomKeypair()
-    tokenBContract = new FungibleToken(tokenB.publicKey)
+    tokenB = newTestPublicKey()
+    tokenBContract = new FungibleToken(tokenB)
 
-    thirdPartyA = PrivateKey.randomKeypair()
-    thirdPartyAContract = new ThirdParty(thirdPartyA.publicKey)
+    thirdPartyA = newTestPublicKey()
+    thirdPartyAContract = new ThirdParty(thirdPartyA)
 
-    thirdPartyB = PrivateKey.randomKeypair()
-    thirdPartyBContract = new ThirdParty(thirdPartyB.publicKey)
+    thirdPartyB = newTestPublicKey()
+    thirdPartyBContract = new ThirdParty(thirdPartyB)
 
     if (proofsEnabled) {
       await FungibleToken.compile()
@@ -75,14 +75,14 @@ describe("token integration", () => {
       }, async () => {
         AccountUpdate.fundNewAccount(deployer, 1)
         await tokenAContract.deploy({
-          owner: tokenAdmin.publicKey,
+          owner: tokenAdmin,
           supply: totalSupply,
           symbol: "tokA",
           src: "",
         })
       })
 
-      tx.sign([deployer.key, tokenA.privateKey])
+      tx.sign([deployer.key, tokenA.key])
 
       await tx.prove()
       await tx.send()
@@ -95,14 +95,14 @@ describe("token integration", () => {
       }, async () => {
         AccountUpdate.fundNewAccount(deployer, 1)
         tokenBContract.deploy({
-          owner: tokenAdmin.publicKey,
+          owner: tokenAdmin,
           supply: totalSupply,
           symbol: "tokB",
           src: "",
         })
       })
 
-      tx.sign([deployer.key, tokenB.privateKey])
+      tx.sign([deployer.key, tokenB.key])
 
       await tx.prove()
       await tx.send()
@@ -114,11 +114,11 @@ describe("token integration", () => {
         fee: 1e8,
       }, async () => {
         AccountUpdate.fundNewAccount(deployer, 2)
-        await thirdPartyAContract.deploy({ ownerAddress: tokenA.publicKey })
-        await thirdPartyBContract.deploy({ ownerAddress: tokenA.publicKey })
+        await thirdPartyAContract.deploy({ ownerAddress: tokenA })
+        await thirdPartyBContract.deploy({ ownerAddress: tokenA })
       })
 
-      tx.sign([deployer.key, thirdPartyA.privateKey, thirdPartyB.privateKey])
+      tx.sign([deployer.key, thirdPartyA.key, thirdPartyB.key])
 
       await tx.prove()
       await tx.send()
@@ -141,7 +141,7 @@ describe("token integration", () => {
         tokenAContract.mint(sender, mintAmount)
       })
 
-      tx.sign([sender.key, tokenAdmin.privateKey])
+      tx.sign([sender.key, tokenAdmin.key])
       await tx.prove()
       await tx.send()
 
@@ -213,9 +213,9 @@ describe("token integration", () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        tokenAContract.setOwner(newTokenAdmin.publicKey)
+        tokenAContract.setOwner(newTokenAdmin)
       })
-      tx.sign([sender.key, tokenAdmin.privateKey])
+      tx.sign([sender.key, tokenAdmin.key])
       await tx.prove()
       await tx.send()
 
@@ -226,7 +226,7 @@ describe("token integration", () => {
         AccountUpdate.fundNewAccount(sender, 1)
         tokenAContract.setSupply(totalSupply)
       })
-      tx2.sign([sender.key, newTokenAdmin.privateKey])
+      tx2.sign([sender.key, newTokenAdmin.key])
       await tx2.prove()
       await tx2.send()
 
@@ -236,7 +236,7 @@ describe("token integration", () => {
       }, async () => {
         tokenAContract.setSupply(totalSupply)
       })
-      tx3.sign([sender.key, tokenAdmin.privateKey])
+      tx3.sign([sender.key, tokenAdmin.key])
       await tx3.prove()
       await rejects(() => tx3.send())
     })
@@ -397,7 +397,7 @@ describe("token integration", () => {
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(thirdPartyA.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(thirdPartyA)).toBigInt(),
         depositAmount.toBigInt(),
       )
       equal(
@@ -407,9 +407,9 @@ describe("token integration", () => {
     })
 
     it("should send tokens from one contract to another", async () => {
-      const initialBalance = (await tokenAContract.getBalanceOf(thirdPartyA.publicKey))
+      const initialBalance = (await tokenAContract.getBalanceOf(thirdPartyA))
         .toBigInt()
-      const initialBalance2 = (await tokenAContract.getBalanceOf(thirdPartyB.publicKey))
+      const initialBalance2 = (await tokenAContract.getBalanceOf(thirdPartyB))
         .toBigInt()
       const transferAmount = UInt64.from(1)
       const updateWithdraw = await thirdPartyAContract.withdraw(transferAmount)
@@ -425,15 +425,15 @@ describe("token integration", () => {
           updateDeposit,
         ]))
       })
-      await tx.sign([sender.key, thirdPartyA.privateKey]).prove()
+      await tx.sign([sender.key, thirdPartyA.key]).prove()
       await tx.send()
 
       equal(
-        (await tokenAContract.getBalanceOf(thirdPartyA.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(thirdPartyA)).toBigInt(),
         initialBalance - transferAmount.toBigInt(),
       )
       equal(
-        (await tokenAContract.getBalanceOf(thirdPartyB.publicKey)).toBigInt(),
+        (await tokenAContract.getBalanceOf(thirdPartyB)).toBigInt(),
         initialBalance2 + transferAmount.toBigInt(),
       )
     })
