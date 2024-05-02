@@ -117,7 +117,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(UInt64)
   async getBalanceOf(address: PublicKey): Promise<UInt64> {
-    const account = Account(address, this.deriveTokenId())
+    const account = AccountUpdate.create(address, this.deriveTokenId()).account
     const balance = account.balance.get()
     account.balance.requireEquals(balance)
     return balance
