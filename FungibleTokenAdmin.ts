@@ -10,6 +10,12 @@ import {
   UInt64,
 } from "o1js"
 
+export type FungibleTokenAdminBase = SmartContract & {
+  canMint(accountUpdate: AccountUpdate): Promise<Bool>
+  canChangeAdmin(admin: PublicKey): Promise<Bool>
+  canSetSupply(supply: UInt64): Promise<Bool>
+}
+
 export interface FungibleTokenAdminDeployProps extends Exclude<DeployArgs, undefined> {
   adminPublicKey: PublicKey
 }
@@ -22,7 +28,7 @@ export interface FungibleTokenAdminDeployProps extends Exclude<DeployArgs, undef
  * The advantage is that third party applications that only use the token in a non-privileged way
  * can integrate against the unchanged token contract.
  */
-export class FungibleTokenAdmin extends SmartContract {
+export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
   @state(PublicKey)
   private adminPublicKey = State<PublicKey>()
 

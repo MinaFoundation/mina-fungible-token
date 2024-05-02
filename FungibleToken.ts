@@ -10,7 +10,7 @@ import {
   TokenContract,
   UInt64,
 } from "o1js"
-import { FungibleTokenAdmin } from "./FungibleTokenAdmin.js"
+import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
@@ -53,7 +53,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.account.zkappUri.set(props.src)
   }
 
-  public getAdminContract(): FungibleTokenAdmin {
+  public getAdminContract(): FungibleTokenAdminBase {
     return (new FungibleTokenAdmin(this.admin.getAndRequireEquals()))
   }
 
