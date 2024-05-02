@@ -28,7 +28,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   decimals = UInt64.from(9)
 
   @state(PublicKey)
-  private admin = State<PublicKey>()
+  admin = State<PublicKey>()
   @state(UInt64)
   private supply = State<UInt64>()
   @state(UInt64)

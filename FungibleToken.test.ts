@@ -3,6 +3,7 @@ import { before, describe, it } from "node:test"
 import {
   AccountUpdate,
   AccountUpdateForest,
+  Bool,
   DeployArgs,
   Int64,
   method,
@@ -14,7 +15,7 @@ import {
   UInt64,
 } from "o1js"
 import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
-import { FungibleToken, FungibleTokenAdmin } from "./index.js"
+import { FungibleToken, FungibleTokenAdmin, FungibleTokenAdminBase } from "./index.js"
 import { newTestPublicKey } from "./test_util.js"
 
 const proofsEnabled = false
@@ -35,6 +36,8 @@ describe("token integration", () => {
   let newTokenAdminContract: FungibleTokenAdmin
   let tokenA: TestPublicKey
   let tokenAContract: FungibleToken
+  let tokenBAdmin: TestPublicKey
+  let tokenBAdminContract: TokenAdminB
   let tokenB: TestPublicKey
   let tokenBContract: FungibleToken
   let thirdPartyA: TestPublicKey
@@ -53,8 +56,10 @@ describe("token integration", () => {
     tokenA = newTestPublicKey()
     tokenAContract = new FungibleToken(tokenA)
 
+    tokenBAdmin = newTestPublicKey()
+    tokenBAdminContract = new TokenAdminB(tokenBAdmin)
     tokenB = newTestPublicKey()
-    tokenBContract = new FungibleToken(tokenB)
+    tokenBContract = new FungibleTokenB(tokenB)
 
     thirdPartyA = newTestPublicKey()
     thirdPartyAContract = new ThirdParty(thirdPartyA)
@@ -66,6 +71,8 @@ describe("token integration", () => {
       await FungibleToken.compile()
       await ThirdParty.compile()
       await FungibleTokenAdmin.compile()
+      await FungibleTokenB.compile()
+      await TokenAdminB.compile()
     }
   })
 
@@ -104,16 +111,19 @@ describe("token integration", () => {
         sender: deployer,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer, 1)
-        tokenBContract.deploy({
-          admin: tokenAdmin,
+        AccountUpdate.fundNewAccount(deployer, 2)
+        await tokenBAdminContract.deploy({
+          adminPublicKey: tokenBAdmin,
+        })
+        await tokenBContract.deploy({
+          admin: tokenBAdmin,
           supply: totalSupply,
           symbol: "tokB",
           src: "",
         })
       })
 
-      tx.sign([deployer.key, tokenB.key])
+      tx.sign([deployer.key, tokenB.key, tokenBAdmin.key])
 
       await tx.prove()
       await tx.send()
@@ -472,7 +482,82 @@ describe("token integration", () => {
       )
     })
   })
+
+  describe("Custom Admin Contract", () => {
+    const mintAmount = UInt64.from(500)
+    const sendAmount = UInt64.from(100)
+
+    it("should mint with a custom admin contract", async () => {
+      const initialBalance = (await tokenBContract.getBalanceOf(sender))
+        .toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        AccountUpdate.fundNewAccount(sender, 1)
+        await tokenBContract.mint(sender, mintAmount)
+      })
+
+      tx.sign([sender.key, tokenBAdmin.key])
+      await tx.prove()
+      await tx.send()
+
+      equal(
+        (await tokenBContract.getBalanceOf(sender)).toBigInt(),
+        initialBalance + mintAmount.toBigInt(),
+      )
+    })
+
+    it("should send tokens without having the custom admin contract", async () => {
+      const vanillaContract = new FungibleToken(tokenB)
+      const initialBalanceSender = (await vanillaContract.getBalanceOf(sender))
+        .toBigInt()
+      const initialBalanceReceiver = (await vanillaContract.getBalanceOf(receiver))
+        .toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        AccountUpdate.fundNewAccount(sender, 1)
+        await vanillaContract.transfer(
+          sender,
+          receiver,
+          sendAmount,
+        )
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await tx.send()
+
+      equal(
+        (await vanillaContract.getBalanceOf(sender)).toBigInt(),
+        initialBalanceSender - sendAmount.toBigInt(),
+      )
+      equal(
+        (await vanillaContract.getBalanceOf(receiver)).toBigInt(),
+        initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+    })
+
+    it.todo("should not allow changing the total supply")
+  })
 })
+
+class TokenAdminB extends FungibleTokenAdmin {
+  @method.returns(Bool)
+  public async canSetSupply(_supply: UInt64) {
+    return new Bool(false)
+  }
+}
+
+class FungibleTokenB extends FungibleToken {
+  public getAdminContract(): FungibleTokenAdminBase {
+    return (new TokenAdminB(this.admin.getAndRequireEquals()))
+  }
+}
 
 export default class ThirdParty extends SmartContract {
   @state(PublicKey)
