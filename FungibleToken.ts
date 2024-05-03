@@ -1,5 +1,4 @@
 import {
-  Account,
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
@@ -11,11 +10,12 @@ import {
   TokenContract,
   UInt64,
 } from "o1js"
+import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
-  /** The initial administrator of the token contract. */
-  owner: PublicKey
+  /** Address of the contract controlling permissions for administrative actions */
+  admin: PublicKey
   /** The max supply of the token. */
   supply: UInt64
   /** The token symbol. */
@@ -28,14 +28,14 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   decimals = UInt64.from(9)
 
   @state(PublicKey)
-  private owner = State<PublicKey>()
+  admin = State<PublicKey>()
   @state(UInt64)
   private supply = State<UInt64>()
   @state(UInt64)
   private circulating = State<UInt64>()
 
   readonly events = {
-    SetOwner: PublicKey,
+    SetAdmin: PublicKey,
     Mint: MintEvent,
     SetSupply: UInt64,
     Burn: BurnEvent,
@@ -45,7 +45,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   async deploy(props: FungibleTokenDeployProps) {
     await super.deploy(props)
 
-    this.owner.set(props.owner)
+    this.admin.set(props.admin)
     this.supply.set(props.supply)
     this.circulating.set(UInt64.from(0))
 
@@ -53,21 +53,20 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.account.zkappUri.set(props.src)
   }
 
-  private ensureOwnerSignature() {
-    const owner = this.owner.getAndRequireEquals()
-    return AccountUpdate.createSigned(owner)
+  public getAdminContract(): FungibleTokenAdminBase {
+    return (new FungibleTokenAdmin(this.admin.getAndRequireEquals()))
   }
 
   @method
-  async setOwner(owner: PublicKey) {
-    this.ensureOwnerSignature()
-    this.owner.set(owner)
-    this.emitEvent("SetOwner", owner)
+  async setAdmin(admin: PublicKey) {
+    const canChangeAdmin = await this.getAdminContract().canChangeAdmin(admin)
+    canChangeAdmin.assertTrue()
+    this.admin.set(admin)
+    this.emitEvent("SetAdmin", admin)
   }
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
-    this.ensureOwnerSignature()
     const supply = this.supply.getAndRequireEquals()
     const circulating = this.circulating.getAndRequireEquals()
     const nextCirculating = circulating.add(amount)
@@ -78,16 +77,22 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     )
     this.circulating.set(nextCirculating)
     const accountUpdate = this.internal.mint({ address: recipient, amount })
+    const canMint = await this.getAdminContract()
+      .canMint(accountUpdate)
+    canMint.assertTrue()
+    this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
     return accountUpdate
   }
 
   @method
-  async setSupply(amount: UInt64): Promise<void> {
-    this.ensureOwnerSignature()
-    this.circulating.getAndRequireEquals().assertLessThanOrEqual(amount)
-    this.supply.set(amount)
-    this.emitEvent("SetSupply", amount)
+  async setSupply(supply: UInt64): Promise<void> {
+    const canSetSupply = await this.getAdminContract()
+      .canSetSupply(supply)
+    canSetSupply.assertTrue()
+    this.circulating.getAndRequireEquals().assertLessThanOrEqual(supply)
+    this.supply.set(supply)
+    this.emitEvent("SetSupply", supply)
   }
 
   @method.returns(AccountUpdate)

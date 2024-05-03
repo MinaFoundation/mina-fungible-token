@@ -12,7 +12,7 @@ import {
   UInt64,
 } from "o1js"
 import { TestPublicKeys } from "test_util.js"
-import { FungibleToken } from "../index.js"
+import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 export class TokenEscrow extends SmartContract {
   @state(PublicKey)
@@ -56,6 +56,7 @@ const fee = 1e8
 const [deployer, owner, alexa, billy, jackie] = localChain.testAccounts as TestPublicKeys
 const tokenContract = PrivateKey.randomKeypair()
 const escrowContract = PrivateKey.randomKeypair()
+const admin = PrivateKey.randomKeypair()
 console.log(`
   deployer ${deployer.toBase58()}
   owner ${owner.toBase58()}
@@ -65,25 +66,28 @@ console.log(`
 
   token ${tokenContract.publicKey.toBase58()}
   escrow ${escrowContract.publicKey.toBase58()}
+  admin ${admin.publicKey.toBase58()}
 `)
 const token = new FungibleToken(tokenContract.publicKey)
 const escrow = new TokenEscrow(escrowContract.publicKey)
+const adminContract = new FungibleTokenAdmin(admin.publicKey)
 
 console.log("Deploying token contract.")
 const deployTokenTx = await Mina.transaction({
   sender: deployer,
   fee,
 }, async () => {
-  AccountUpdate.fundNewAccount(deployer, 1)
+  AccountUpdate.fundNewAccount(deployer, 2)
+  await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
-    owner: owner,
+    admin: admin.publicKey,
     supply: UInt64.from(10_000_000_000_000),
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts",
   })
 })
 await deployTokenTx.prove()
-deployTokenTx.sign([deployer.key, tokenContract.privateKey])
+deployTokenTx.sign([deployer.key, tokenContract.privateKey, admin.privateKey])
 const deployTokenTxResult = await deployTokenTx.send().then((v) => v.wait())
 console.log("Deploy tx result:", deployTokenTxResult.toPretty())
 equal(deployTokenTxResult.status, "included")

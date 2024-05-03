@@ -1,5 +1,5 @@
 import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64 } from "o1js"
-import { FungibleToken } from "../index.js"
+import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
 const fee = 1e8
@@ -59,12 +59,13 @@ async function sendNoWait(
 Mina.setActiveInstance(Mina.Network(url))
 
 const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
-const [contract, feepayer, alexa, billy, jackie] = [
+const [contract, feepayer, alexa, billy, jackie, admin] = [
   PrivateKey.randomKeypair(),
   {
     privateKey: feePayerKey,
     publicKey: feePayerKey.toPublicKey(),
   },
+  PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
   PrivateKey.randomKeypair(),
@@ -75,11 +76,13 @@ alexa ${alexa.privateKey.toBase58()} ${alexa.publicKey.toBase58()}
 billy ${billy.privateKey.toBase58()} ${billy.publicKey.toBase58()}
 jackie ${jackie.publicKey.toBase58()}
 contract ${contract.publicKey.toBase58()}
+admin ${admin.publicKey.toBase58()}
 `)
 
 await FungibleToken.compile()
+await FungibleTokenAdmin.compile()
 const token = new FungibleToken(contract.publicKey)
-
+const adminContract = new FungibleTokenAdmin(admin.publicKey)
 let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 
 console.log("Deploying token contract.")
@@ -88,16 +91,17 @@ const deployTx = await Mina.transaction({
   fee,
   nonce,
 }, async () => {
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
+  AccountUpdate.fundNewAccount(feepayer.publicKey, 2)
+  await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
-    owner: feepayer.publicKey,
+    admin: admin.publicKey,
     supply: UInt64.from(10_000_000_000_000),
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
   })
 })
 await deployTx.prove()
-deployTx.sign([feepayer.privateKey, contract.privateKey])
+deployTx.sign([feepayer.privateKey, contract.privateKey, admin.privateKey])
 const deployTxResult = await deployTx.send().then((v) => v.wait())
 console.log("Deploy tx:", deployTxResult.hash)
 
