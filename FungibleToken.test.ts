@@ -572,6 +572,7 @@ describe("token integration", () => {
   })
 })
 
+/** This is a faucet style admin contract, where anyone can mint */
 class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
   @state(PublicKey)
   private adminPublicKey = State<PublicKey>()
@@ -588,7 +589,6 @@ class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
 
   @method.returns(Bool)
   public async canMint(_accountUpdate: AccountUpdate) {
-    this.ensureAdminSignature()
     return Bool(true)
   }
 
