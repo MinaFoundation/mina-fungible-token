@@ -39,7 +39,7 @@ describe("token integration", () => {
   let tokenBAdmin: TestPublicKey
   let tokenBAdminContract: TokenAdminB
   let tokenB: TestPublicKey
-  let tokenBContract: FungibleToken
+  let tokenBContract: FungibleTokenB
   let thirdPartyA: TestPublicKey
   let thirdPartyAContract: ThirdParty
   let thirdPartyB: TestPublicKey
