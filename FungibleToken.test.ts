@@ -557,6 +557,18 @@ describe("token integration", () => {
         })
       )
     })
+    it("should not allow changing supply using the vanilla admin contract", async () => {
+      const vanillaContract = new FungibleToken(tokenB)
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await vanillaContract.setSupply(mintAmount)
+      })
+      tx.sign([tokenBAdmin.key])
+      await tx.prove()
+      await rejects(() => tx.send())
+    })
   })
 })
 
