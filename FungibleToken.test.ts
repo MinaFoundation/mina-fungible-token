@@ -18,7 +18,7 @@ import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
 import { FungibleToken, FungibleTokenAdmin, FungibleTokenAdminBase } from "./index.js"
 import { newTestPublicKey } from "./test_util.js"
 
-const proofsEnabled = false
+const proofsEnabled = true
 
 const localChain = await Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
