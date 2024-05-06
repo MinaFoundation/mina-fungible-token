@@ -15,10 +15,15 @@ import {
   UInt64,
 } from "o1js"
 import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
-import { FungibleToken, FungibleTokenAdmin, FungibleTokenAdminBase } from "./index.js"
+import {
+  FungibleToken,
+  FungibleTokenAdmin,
+  FungibleTokenAdminBase,
+  FungibleTokenAdminDeployProps,
+} from "./index.js"
 import { newTestPublicKey } from "./test_util.js"
 
-const proofsEnabled = false
+const proofsEnabled = true
 
 const localChain = await Mina.LocalBlockchain({
   proofsEnabled: proofsEnabled,
@@ -39,7 +44,7 @@ describe("token integration", () => {
   let tokenBAdmin: TestPublicKey
   let tokenBAdminContract: TokenAdminB
   let tokenB: TestPublicKey
-  let tokenBContract: FungibleToken
+  let tokenBContract: FungibleTokenB
   let thirdPartyA: TestPublicKey
   let thirdPartyAContract: ThirdParty
   let thirdPartyB: TestPublicKey
@@ -552,10 +557,47 @@ describe("token integration", () => {
         })
       )
     })
+    it("should not allow changing supply using the vanilla admin contract", async () => {
+      const vanillaContract = new FungibleToken(tokenB)
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await vanillaContract.setSupply(mintAmount)
+      })
+      tx.sign([tokenBAdmin.key])
+      await tx.prove()
+      await rejects(() => tx.send())
+    })
   })
 })
 
-class TokenAdminB extends FungibleTokenAdmin {
+class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
+  @state(PublicKey)
+  private adminPublicKey = State<PublicKey>()
+
+  async deploy(props: FungibleTokenAdminDeployProps) {
+    await super.deploy(props)
+    this.adminPublicKey.set(props.adminPublicKey)
+  }
+
+  private ensureAdminSignature() {
+    const admin = this.adminPublicKey.getAndRequireEquals()
+    return AccountUpdate.createSigned(admin)
+  }
+
+  @method.returns(Bool)
+  public async canMint(_accountUpdate: AccountUpdate) {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canChangeAdmin(_admin: PublicKey) {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
   @method.returns(Bool)
   public async canSetSupply(_supply: UInt64) {
     return new Bool(false)
