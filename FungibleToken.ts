@@ -34,6 +34,11 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @state(UInt64)
   private circulating = State<UInt64>()
 
+  // This defines the type of the contract that is used to control access to administrative actions.
+  // If you want to have a custom contract, overwrite this by setting FungibleToken.adminContract to
+  // your own implementation of FungibleTokenAdminBase.
+  static adminContract: new(...args: any) => FungibleTokenAdminBase = FungibleTokenAdmin
+
   readonly events = {
     SetAdmin: PublicKey,
     Mint: MintEvent,
@@ -54,7 +59,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   public getAdminContract(): FungibleTokenAdminBase {
-    return (new FungibleTokenAdmin(this.admin.getAndRequireEquals()))
+    return (new FungibleToken.adminContract(this.admin.getAndRequireEquals()))
   }
 
   @method

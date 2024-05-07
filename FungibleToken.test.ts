@@ -42,9 +42,9 @@ describe("token integration", () => {
   let tokenA: TestPublicKey
   let tokenAContract: FungibleToken
   let tokenBAdmin: TestPublicKey
-  let tokenBAdminContract: TokenAdminB
+  let tokenBAdminContract: CustomTokenAdmin
   let tokenB: TestPublicKey
-  let tokenBContract: FungibleTokenB
+  let tokenBContract: FungibleToken
   let thirdPartyA: TestPublicKey
   let thirdPartyAContract: ThirdParty
   let thirdPartyB: TestPublicKey
@@ -62,9 +62,9 @@ describe("token integration", () => {
     tokenAContract = new FungibleToken(tokenA)
 
     tokenBAdmin = newTestPublicKey()
-    tokenBAdminContract = new TokenAdminB(tokenBAdmin)
+    tokenBAdminContract = new CustomTokenAdmin(tokenBAdmin)
     tokenB = newTestPublicKey()
-    tokenBContract = new FungibleTokenB(tokenB)
+    tokenBContract = new FungibleToken(tokenB)
 
     thirdPartyA = newTestPublicKey()
     thirdPartyAContract = new ThirdParty(thirdPartyA)
@@ -76,8 +76,7 @@ describe("token integration", () => {
       await FungibleToken.compile()
       await ThirdParty.compile()
       await FungibleTokenAdmin.compile()
-      await FungibleTokenB.compile()
-      await TokenAdminB.compile()
+      await CustomTokenAdmin.compile()
     }
   })
 
@@ -493,6 +492,7 @@ describe("token integration", () => {
     const sendAmount = UInt64.from(100)
 
     it("should mint with a custom admin contract", async () => {
+      FungibleToken.adminContract = CustomTokenAdmin
       const initialBalance = (await tokenBContract.getBalanceOf(sender))
         .toBigInt()
 
@@ -512,13 +512,13 @@ describe("token integration", () => {
         (await tokenBContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
+      FungibleToken.adminContract = FungibleTokenAdmin
     })
 
     it("should send tokens without having the custom admin contract", async () => {
-      const vanillaContract = new FungibleToken(tokenB)
-      const initialBalanceSender = (await vanillaContract.getBalanceOf(sender))
+      const initialBalanceSender = (await tokenBContract.getBalanceOf(sender))
         .toBigInt()
-      const initialBalanceReceiver = (await vanillaContract.getBalanceOf(receiver))
+      const initialBalanceReceiver = (await tokenBContract.getBalanceOf(receiver))
         .toBigInt()
 
       const tx = await Mina.transaction({
@@ -526,7 +526,7 @@ describe("token integration", () => {
         fee: 1e8,
       }, async () => {
         AccountUpdate.fundNewAccount(sender, 1)
-        await vanillaContract.transfer(
+        await tokenBContract.transfer(
           sender,
           receiver,
           sendAmount,
@@ -538,16 +538,17 @@ describe("token integration", () => {
       await tx.send()
 
       equal(
-        (await vanillaContract.getBalanceOf(sender)).toBigInt(),
+        (await tokenBContract.getBalanceOf(sender)).toBigInt(),
         initialBalanceSender - sendAmount.toBigInt(),
       )
       equal(
-        (await vanillaContract.getBalanceOf(receiver)).toBigInt(),
+        (await tokenBContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
       )
     })
 
     it("should not allow changing the total supply for token B", async () => {
+      FungibleToken.adminContract = CustomTokenAdmin
       await rejects(async () =>
         await Mina.transaction({
           sender: sender,
@@ -556,14 +557,14 @@ describe("token integration", () => {
           await tokenBContract.setSupply(mintAmount)
         })
       )
+      FungibleToken.adminContract = FungibleTokenAdmin
     })
     it("should not allow changing supply using the vanilla admin contract", async () => {
-      const vanillaContract = new FungibleToken(tokenB)
       const tx = await Mina.transaction({
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await vanillaContract.setSupply(mintAmount)
+        await tokenBContract.setSupply(mintAmount)
       })
       tx.sign([tokenBAdmin.key])
       await tx.prove()
@@ -573,7 +574,7 @@ describe("token integration", () => {
 })
 
 /** This is a faucet style admin contract, where anyone can mint */
-class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
+class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
   @state(PublicKey)
   private adminPublicKey = State<PublicKey>()
 
@@ -601,12 +602,6 @@ class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
   @method.returns(Bool)
   public async canSetSupply(_supply: UInt64) {
     return new Bool(false)
-  }
-}
-
-class FungibleTokenB extends FungibleToken {
-  public getAdminContract(): FungibleTokenAdminBase {
-    return (new TokenAdminB(this.admin.getAndRequireEquals()))
   }
 }
 
