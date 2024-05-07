@@ -13,7 +13,6 @@ import {
 export type FungibleTokenAdminBase = SmartContract & {
   canMint(accountUpdate: AccountUpdate): Promise<Bool>
   canChangeAdmin(admin: PublicKey): Promise<Bool>
-  canSetSupply(supply: UInt64): Promise<Bool>
 }
 
 export interface FungibleTokenAdminDeployProps extends Exclude<DeployArgs, undefined> {
@@ -50,12 +49,6 @@ export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAd
 
   @method.returns(Bool)
   public async canChangeAdmin(_admin: PublicKey) {
-    this.ensureAdminSignature()
-    return Bool(true)
-  }
-
-  @method.returns(Bool)
-  public async canSetSupply(_supply: UInt64) {
     this.ensureAdminSignature()
     return Bool(true)
   }

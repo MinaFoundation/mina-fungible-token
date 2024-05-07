@@ -16,8 +16,6 @@ import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** Address of the contract controlling permissions for administrative actions */
   admin: PublicKey
-  /** The max supply of the token. */
-  supply: UInt64
   /** The token symbol. */
   symbol: string
   /** A source code reference, which is placed within the `zkappUri` of the contract account. */
@@ -30,8 +28,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @state(PublicKey)
   admin = State<PublicKey>()
   @state(UInt64)
-  private supply = State<UInt64>()
-  @state(UInt64)
   private circulating = State<UInt64>()
 
   // This defines the type of the contract that is used to control access to administrative actions.
@@ -42,7 +38,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   readonly events = {
     SetAdmin: PublicKey,
     Mint: MintEvent,
-    SetSupply: UInt64,
     Burn: BurnEvent,
     Transfer: TransferEvent,
   }
@@ -51,7 +46,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     await super.deploy(props)
 
     this.admin.set(props.admin)
-    this.supply.set(props.supply)
     this.circulating.set(UInt64.from(0))
 
     this.account.tokenSymbol.set(props.symbol)
@@ -72,14 +66,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
-    const supply = this.supply.getAndRequireEquals()
     const circulating = this.circulating.getAndRequireEquals()
     const nextCirculating = circulating.add(amount)
-    // TODO: is this where we'd use `Provable.if` and witness creation?
-    nextCirculating.assertLessThanOrEqual(
-      supply,
-      "Minting the provided amount would overflow the total supply.",
-    )
     this.circulating.set(nextCirculating)
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const canMint = await this.getAdminContract()
@@ -88,16 +76,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
     return accountUpdate
-  }
-
-  @method
-  async setSupply(supply: UInt64): Promise<void> {
-    const canSetSupply = await this.getAdminContract()
-      .canSetSupply(supply)
-    canSetSupply.assertTrue()
-    this.circulating.getAndRequireEquals().assertLessThanOrEqual(supply)
-    this.supply.set(supply)
-    this.emitEvent("SetSupply", supply)
   }
 
   @method.returns(AccountUpdate)
@@ -126,11 +104,6 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     const balance = account.balance.get()
     account.balance.requireEquals(balance)
     return balance
-  }
-
-  @method.returns(UInt64)
-  async getSupply() {
-    return this.supply.getAndRequireEquals()
   }
 
   @method.returns(UInt64)

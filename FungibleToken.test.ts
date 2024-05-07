@@ -80,8 +80,6 @@ describe("token integration", () => {
     }
   })
 
-  const totalSupply = UInt64.from(10_000_000_000_000)
-
   describe("deploy", () => {
     it("should deploy token contract A", async () => {
       const tx = await Mina.transaction({
@@ -94,7 +92,6 @@ describe("token integration", () => {
         })
         await tokenAContract.deploy({
           admin: tokenAdmin,
-          supply: totalSupply,
           symbol: "tokA",
           src: "",
         })
@@ -121,7 +118,6 @@ describe("token integration", () => {
         })
         await tokenBContract.deploy({
           admin: tokenBAdmin,
-          supply: totalSupply,
           symbol: "tokB",
           src: "",
         })
@@ -222,17 +218,6 @@ describe("token integration", () => {
       await rejects(() => tx.send())
     })
 
-    it("should refuse to set total supply to be less than circulating supply", async () => {
-      await rejects(async () =>
-        await Mina.transaction({
-          sender: sender,
-          fee: 1e8,
-        }, async () => {
-          await tokenAContract.setSupply(UInt64.from(1))
-        })
-      )
-    })
-
     it("correctly changes the admin contract", async () => {
       const tx = await Mina.transaction({
         sender: sender,
@@ -252,7 +237,7 @@ describe("token integration", () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.setSupply(totalSupply)
+        await tokenAContract.mint(sender, mintAmount)
       })
       tx2.sign([sender.key, newTokenAdmin.key])
       await tx2.prove()
@@ -262,7 +247,7 @@ describe("token integration", () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.setSupply(totalSupply)
+        await tokenAContract.mint(sender, mintAmount)
       })
       tx3.sign([sender.key, tokenAdmin.key])
       await tx3.prove()
@@ -489,6 +474,7 @@ describe("token integration", () => {
 
   describe("Custom Admin Contract", () => {
     const mintAmount = UInt64.from(500)
+    const illegalMintAmount = UInt64.from(1000)
     const sendAmount = UInt64.from(100)
 
     it("should mint with a custom admin contract", async () => {
@@ -504,7 +490,7 @@ describe("token integration", () => {
         await tokenBContract.mint(sender, mintAmount)
       })
 
-      tx.sign([sender.key, tokenBAdmin.key])
+      tx.sign([sender.key])
       await tx.prove()
       await tx.send()
 
@@ -547,33 +533,34 @@ describe("token integration", () => {
       )
     })
 
-    it("should not allow changing the total supply for token B", async () => {
+    it("should not mint too many B tokens", async () => {
       FungibleToken.adminContract = CustomTokenAdmin
       await rejects(async () =>
         await Mina.transaction({
           sender: sender,
           fee: 1e8,
         }, async () => {
-          await tokenBContract.setSupply(mintAmount)
+          await tokenBContract.mint(sender, illegalMintAmount)
         })
       )
       FungibleToken.adminContract = FungibleTokenAdmin
     })
-    it("should not allow changing supply using the vanilla admin contract", async () => {
+    it("should not mint too many B tokens using the vanilla admin contract", async () => {
       const tx = await Mina.transaction({
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenBContract.setSupply(mintAmount)
+        await tokenBContract.mint(sender, illegalMintAmount)
       })
-      tx.sign([tokenBAdmin.key])
+      tx.sign([sender.key, tokenBAdmin.key])
       await tx.prove()
       await rejects(() => tx.send())
     })
   })
 })
 
-/** This is a faucet style admin contract, where anyone can mint */
+/** This is a faucet style admin contract, where anyone can mint, but only up to 500 tokens in a
+ * single AccountUpdate */
 class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
   @state(PublicKey)
   private adminPublicKey = State<PublicKey>()
@@ -589,19 +576,14 @@ class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
   }
 
   @method.returns(Bool)
-  public async canMint(_accountUpdate: AccountUpdate) {
-    return Bool(true)
+  public async canMint(accountUpdate: AccountUpdate) {
+    return accountUpdate.body.balanceChange.magnitude.lessThanOrEqual(UInt64.from(500))
   }
 
   @method.returns(Bool)
   public async canChangeAdmin(_admin: PublicKey) {
     this.ensureAdminSignature()
     return Bool(true)
-  }
-
-  @method.returns(Bool)
-  public async canSetSupply(_supply: UInt64) {
-    return new Bool(false)
   }
 }
 
