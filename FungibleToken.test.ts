@@ -13,6 +13,7 @@ import {
   State,
   state,
   UInt64,
+  UInt8,
 } from "o1js"
 import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
 import {
@@ -94,6 +95,7 @@ describe("token integration", () => {
           admin: tokenAdmin,
           symbol: "tokA",
           src: "",
+          decimals: UInt8.from(9),
         })
       })
 
@@ -120,6 +122,7 @@ describe("token integration", () => {
           admin: tokenBAdmin,
           symbol: "tokB",
           src: "",
+          decimals: UInt8.from(9),
         })
       })
 
@@ -407,8 +410,8 @@ describe("token integration", () => {
         tokenBContract.deriveTokenId(),
       )
       updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
-      await rejects(() => (
-        Mina.transaction({
+      await rejects(async () => (
+        await Mina.transaction({
           sender: deployer,
           fee: 1e8,
         }, async () => {
@@ -417,6 +420,78 @@ describe("token integration", () => {
           await tokenBContract.approveAccountUpdates([updateReceive])
         })
       ))
+    })
+  })
+
+  describe("pausing/resuming", () => {
+    const sendAmount = UInt64.from(1)
+
+    it("can be paused by the admin", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.pause()
+      })
+      tx.sign([sender.key, newTokenAdmin.key])
+      await tx.prove()
+      await tx.send()
+    })
+    it("will block transactions while paused", async () => {
+      await rejects(() => (
+        Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          await tokenAContract.transfer(sender, receiver, sendAmount)
+        })
+      ))
+    })
+    it("can be resumed by the admin", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.resume()
+      })
+      tx.sign([sender.key, newTokenAdmin.key])
+      await tx.prove()
+      await tx.send()
+    })
+    it("will accept transactions after resume", async () => {
+      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender))
+        .toBigInt()
+      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
+        .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.transfer(
+          sender,
+          receiver,
+          sendAmount,
+        )
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await tx.send()
+
+      equal(
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
+        initialBalanceSender - sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
+        initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
     })
   })
 
@@ -647,6 +722,18 @@ class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
 
   @method.returns(Bool)
   public async canChangeAdmin(_admin: PublicKey) {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canPause(): Promise<Bool> {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canResume(): Promise<Bool> {
     this.ensureAdminSignature()
     return Bool(true)
   }

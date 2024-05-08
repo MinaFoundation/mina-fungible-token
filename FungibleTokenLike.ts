@@ -1,4 +1,11 @@
-import type { AccountUpdate, AccountUpdateForest, AccountUpdateTree, PublicKey, UInt64 } from "o1js"
+import type {
+  AccountUpdate,
+  AccountUpdateForest,
+  AccountUpdateTree,
+  PublicKey,
+  UInt64,
+  UInt8,
+} from "o1js"
 
 /** A collection of methods of methods which make an object _like_ a Mina fungible token. */
 export interface FungibleTokenLike {
@@ -7,7 +14,7 @@ export interface FungibleTokenLike {
   /** Get the amount circulating of the current token. */
   getCirculating(): Promise<UInt64>
   /** Get the number of decimals used in representing the current token. */
-  getDecimals(): Promise<UInt64>
+  getDecimals(): Promise<UInt8>
   /**
    * Move a specified amount of tokens between two accounts.
    * @param from the public key of the account from which the tokens should be sent.

@@ -1,4 +1,4 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
@@ -97,6 +97,7 @@ const deployTx = await Mina.transaction({
     admin: admin.publicKey,
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+    decimals: UInt8.from(9),
   })
 })
 await deployTx.prove()

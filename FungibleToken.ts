@@ -1,6 +1,7 @@
 import {
   AccountUpdate,
   AccountUpdateForest,
+  Bool,
   DeployArgs,
   Field,
   Int64,
@@ -13,6 +14,7 @@ import {
   Struct,
   TokenContract,
   UInt64,
+  UInt8,
 } from "o1js"
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 import type { FungibleTokenLike } from "./FungibleTokenLike.js"
@@ -24,17 +26,21 @@ export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined>
   symbol: string
   /** A source code reference, which is placed within the `zkappUri` of the contract account. */
   src: string
+  /** Number of decimals in a unit */
+  decimals: UInt8
 }
 
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
-  decimals = UInt64.from(9)
-
+  @state(UInt8)
+  decimals = State<UInt8>() // UInt64.from(9)
   @state(PublicKey)
   admin = State<PublicKey>()
   @state(UInt64)
   private circulating = State<UInt64>()
   @state(Field)
   actionState = State<Field>()
+  @state(Bool)
+  paused = State<Bool>()
 
   // This defines the type of the contract that is used to control access to administrative actions.
   // If you want to have a custom contract, overwrite this by setting FungibleToken.adminContract to
@@ -57,6 +63,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
     this.admin.set(props.admin)
     this.circulating.set(UInt64.from(0))
+    this.decimals.set(props.decimals)
+    this.paused.set(Bool(false))
 
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
@@ -78,6 +86,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
+    this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const canMint = await this.getAdminContract()
       .canMint(accountUpdate)
@@ -90,6 +99,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async burn(from: PublicKey, amount: UInt64) {
+    this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
     this.reducer.dispatch(Int64.fromUnsigned(amount).neg())
@@ -97,15 +107,30 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
+  async pause() {
+    const canPause = await this.getAdminContract().canPause()
+    canPause.assertTrue()
+    this.paused.set(Bool(true))
+  }
+
+  @method
+  async resume() {
+    const canResume = await this.getAdminContract().canResume()
+    canResume.assertTrue()
+    this.paused.set(Bool(false))
+  }
+
+  @method
   async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
+    this.paused.getAndRequireEquals().assertFalse()
     this.internal.send({ from, to, amount })
     this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
+    this.paused.getAndRequireEquals().assertFalse()
     this.checkZeroBalanceChange(updates)
-    // TODO: event emission here
   }
 
   @method.returns(UInt64)
@@ -160,9 +185,9 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.actionState.set(pendingActions.hash)
   }
 
-  @method.returns(UInt64)
+  @method.returns(UInt8)
   async getDecimals() {
-    return this.decimals
+    return this.decimals.getAndRequireEquals()
   }
 }
 

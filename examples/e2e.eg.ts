@@ -1,5 +1,5 @@
 import { equal } from "node:assert"
-import { AccountUpdate, Mina, PrivateKey, UInt64 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 import { TestPublicKeys } from "../test_util.js"
 
@@ -29,6 +29,7 @@ const deployTx = await Mina.transaction({
     admin: admin.publicKey,
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+    decimals: UInt8.from(9),
   })
 })
 await deployTx.prove()
