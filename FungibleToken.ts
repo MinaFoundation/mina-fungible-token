@@ -92,7 +92,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   async burn(from: PublicKey, amount: UInt64) {
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
-    this.reducer.dispatch(Int64.minusOne.mul(Int64.fromUnsigned(amount)))
+    this.reducer.dispatch(Int64.fromUnsigned(amount).neg())
     return accountUpdate
   }
 
@@ -128,7 +128,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
         return circulating.add(action)
       },
       Int64.from(oldCirculating),
-      { maxUpdatesWithActions: 10 },
+      { maxUpdatesWithActions: 500 },
     )
     newCirculating.isPositive().assertTrue()
     return newCirculating.magnitude
