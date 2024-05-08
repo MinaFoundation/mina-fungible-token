@@ -153,6 +153,7 @@ describe("token integration", () => {
     it("should mint for the sender account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -170,11 +171,16 @@ describe("token integration", () => {
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating + mintAmount.toBigInt(),
+      )
     })
 
     it("should burn tokens for the sender account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -190,6 +196,10 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance - burnAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating - burnAmount.toBigInt(),
       )
     })
 
@@ -263,6 +273,7 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -288,6 +299,10 @@ describe("token integration", () => {
         (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
       )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
     })
 
     it("should reject a transaction not signed by the token holder", async () => {
@@ -306,6 +321,8 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
       const updateSend = AccountUpdate.createSigned(
         sender,
         tokenAContract.deriveTokenId(),
@@ -333,6 +350,10 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
       )
     })
 
@@ -384,6 +405,7 @@ describe("token integration", () => {
     it("should deposit from the user to the token account of the third party", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tokenId = tokenAContract.deriveTokenId()
 
@@ -417,6 +439,10 @@ describe("token integration", () => {
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance - depositAmount.toBigInt(),
       )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
     })
 
     it("should send tokens from one contract to another", async () => {
@@ -424,6 +450,8 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalance2 = (await tokenAContract.getBalanceOf(thirdPartyB))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
       const transferAmount = UInt64.from(1)
       const updateWithdraw = await thirdPartyAContract.withdraw(transferAmount)
       const updateDeposit = await thirdPartyBContract.deposit(transferAmount)
@@ -448,6 +476,10 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(thirdPartyB)).toBigInt(),
         initialBalance2 + transferAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
       )
     })
 
@@ -481,6 +513,7 @@ describe("token integration", () => {
       FungibleToken.adminContract = CustomTokenAdmin
       const initialBalance = (await tokenBContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenBContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -498,6 +531,10 @@ describe("token integration", () => {
         (await tokenBContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
+      equal(
+        (await tokenBContract.getCirculating()).toBigInt(),
+        initialCirculating + mintAmount.toBigInt(),
+      )
       FungibleToken.adminContract = FungibleTokenAdmin
     })
 
@@ -506,6 +543,7 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenBContract.getBalanceOf(receiver))
         .toBigInt()
+      const initialCirculating = (await tokenBContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -530,6 +568,10 @@ describe("token integration", () => {
       equal(
         (await tokenBContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenBContract.getCirculating()).toBigInt(),
+        initialCirculating,
       )
     })
 
