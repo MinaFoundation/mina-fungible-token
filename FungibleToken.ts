@@ -2,8 +2,11 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
+  Field,
+  Int64,
   method,
   PublicKey,
+  Reducer,
   State,
   state,
   Struct,
@@ -29,6 +32,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   admin = State<PublicKey>()
   @state(UInt64)
   private circulating = State<UInt64>()
+  @state(Field)
+  actionState = State<Field>()
 
   // This defines the type of the contract that is used to control access to administrative actions.
   // If you want to have a custom contract, overwrite this by setting FungibleToken.adminContract to
@@ -42,6 +47,10 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     Transfer: TransferEvent,
   }
 
+  // We use actions and reducers for changing the circulating supply. That is to allow multiple mints/burns in a single block, which would not work if those would alter the contract state directly.
+  // Minting will emit an action with a positive number corresponding to the amount of tokens minted, burning will emit a negative value.
+  reducer = Reducer({ actionType: Int64 })
+
   async deploy(props: FungibleTokenDeployProps) {
     await super.deploy(props)
 
@@ -50,6 +59,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
+
+    this.actionState.set(Reducer.initialActionState)
   }
 
   public getAdminContract(): FungibleTokenAdminBase {
@@ -66,23 +77,21 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
-    const circulating = this.circulating.getAndRequireEquals()
-    const nextCirculating = circulating.add(amount)
-    this.circulating.set(nextCirculating)
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const canMint = await this.getAdminContract()
       .canMint(accountUpdate)
     canMint.assertTrue()
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
+    this.reducer.dispatch(Int64.fromUnsigned(amount))
     return accountUpdate
   }
 
   @method.returns(AccountUpdate)
   async burn(from: PublicKey, amount: UInt64) {
-    this.circulating.set(this.circulating.getAndRequireEquals().sub(amount))
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
+    this.reducer.dispatch(Int64.minusOne.mul(Int64.fromUnsigned(amount)))
     return accountUpdate
   }
 
@@ -108,7 +117,21 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(UInt64)
   async getCirculating(): Promise<UInt64> {
-    return this.circulating.getAndRequireEquals()
+    let oldCirculating = this.circulating.getAndRequireEquals()
+    let actionState = this.actionState.getAndRequireEquals()
+    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
+
+    let newCirculating: Int64 = this.reducer.reduce(
+      pendingActions,
+      Int64,
+      (circulating: Int64, action: Int64) => {
+        return circulating.add(action)
+      },
+      Int64.from(oldCirculating),
+      { maxUpdatesWithActions: 10 },
+    )
+    newCirculating.isPositive().assertTrue()
+    return newCirculating.magnitude
   }
 
   @method.returns(UInt64)
