@@ -177,6 +177,27 @@ describe("token integration", () => {
       )
     })
 
+    it("calling the reducer should not change the reported circulating supply", async () => {
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.updateCirculating()
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await tx.send()
+
+      localChain.incrementGlobalSlot(1)
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
+    })
+
     it("should burn tokens for the sender account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()

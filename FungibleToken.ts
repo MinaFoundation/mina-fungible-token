@@ -4,6 +4,7 @@ import {
   DeployArgs,
   Field,
   Int64,
+  MerkleList,
   method,
   PublicKey,
   Reducer,
@@ -115,12 +116,11 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     return balance
   }
 
-  @method.returns(UInt64)
-  async getCirculating(): Promise<UInt64> {
-    let oldCirculating = this.circulating.getAndRequireEquals()
-    let actionState = this.actionState.getAndRequireEquals()
-    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
-
+  /** This function is used to fold the actions from minting/burning */
+  private calculateCirculating(
+    oldCirculating: UInt64,
+    pendingActions: MerkleList<MerkleList<Int64>>,
+  ): UInt64 {
     let newCirculating: Int64 = this.reducer.reduce(
       pendingActions,
       Int64,
@@ -132,6 +132,32 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     )
     newCirculating.isPositive().assertTrue()
     return newCirculating.magnitude
+  }
+
+  /** Reports the current circulating supply
+   * This does take into account currently unreduced actions.
+   */
+  @method.returns(UInt64)
+  async getCirculating(): Promise<UInt64> {
+    let oldCirculating = this.circulating.getAndRequireEquals()
+    let actionState = this.actionState.getAndRequireEquals()
+    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
+
+    let newCirculating = this.calculateCirculating(oldCirculating, pendingActions)
+    return newCirculating
+  }
+
+  /** Aggregate actions from minting and burning to update the circulating supply */
+  @method
+  async updateCirculating() {
+    let oldCirculating = this.circulating.getAndRequireEquals()
+    let actionState = this.actionState.getAndRequireEquals()
+    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
+
+    let newCirculating = this.calculateCirculating(oldCirculating, pendingActions)
+
+    this.circulating.set(newCirculating)
+    this.actionState.set(pendingActions.hash)
   }
 
   @method.returns(UInt64)
