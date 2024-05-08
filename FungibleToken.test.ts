@@ -587,7 +587,9 @@ describe("token integration", () => {
       )
       FungibleToken.adminContract = FungibleTokenAdmin
     })
-    it("should not mint too many B tokens using the vanilla admin contract", async () => {
+    it("should not mint too many B tokens using the vanilla admin contract", {
+      skip: !proofsEnabled,
+    }, async () => {
       const tx = await Mina.transaction({
         sender: sender,
         fee: 1e8,
