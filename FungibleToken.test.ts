@@ -420,6 +420,78 @@ describe("token integration", () => {
     })
   })
 
+  describe("pausing/resuming", () => {
+    const sendAmount = UInt64.from(1)
+
+    it("can be paused by the admin", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.pause()
+      })
+      tx.sign([sender.key, newTokenAdmin.key])
+      await tx.prove()
+      await tx.send()
+    })
+    it("will block transactions while paused", async () => {
+      await rejects(() => (
+        Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          await tokenAContract.transfer(sender, receiver, sendAmount)
+        })
+      ))
+    })
+    it("can be resumed by the admin", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.resume()
+      })
+      tx.sign([sender.key, newTokenAdmin.key])
+      await tx.prove()
+      await tx.send()
+    })
+    it("will accept transactions after resume", async () => {
+      const initialBalanceSender = (await tokenAContract.getBalanceOf(sender))
+        .toBigInt()
+      const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
+        .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.transfer(
+          sender,
+          receiver,
+          sendAmount,
+        )
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await tx.send()
+
+      equal(
+        (await tokenAContract.getBalanceOf(sender)).toBigInt(),
+        initialBalanceSender - sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
+        initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
+    })
+  })
+
   describe("third party", () => {
     const depositAmount = UInt64.from(100)
 
@@ -647,6 +719,18 @@ class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
 
   @method.returns(Bool)
   public async canChangeAdmin(_admin: PublicKey) {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canPause(): Promise<Bool> {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canResume(): Promise<Bool> {
     this.ensureAdminSignature()
     return Bool(true)
   }

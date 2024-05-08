@@ -35,6 +35,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   private circulating = State<UInt64>()
   @state(Field)
   actionState = State<Field>()
+  @state(Bool)
+  paused = State<Bool>()
 
   // This defines the type of the contract that is used to control access to administrative actions.
   // If you want to have a custom contract, overwrite this by setting FungibleToken.adminContract to
@@ -57,6 +59,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
     this.admin.set(props.admin)
     this.circulating.set(UInt64.from(0))
+    this.paused.set(Bool(false))
 
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
@@ -78,6 +81,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
+    this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const canMint = await this.getAdminContract()
       .canMint(accountUpdate)
@@ -90,6 +94,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async burn(from: PublicKey, amount: UInt64) {
+    this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
     this.reducer.dispatch(Int64.fromUnsigned(amount).neg())
@@ -97,15 +102,30 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method
+  async pause() {
+    const canPause = await this.getAdminContract().canPause()
+    canPause.assertTrue()
+    this.paused.set(Bool(true))
+  }
+
+  @method
+  async resume() {
+    const canResume = await this.getAdminContract().canResume()
+    canResume.assertTrue()
+    this.paused.set(Bool(false))
+  }
+
+  @method
   async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
+    this.paused.getAndRequireEquals().assertFalse()
     this.internal.send({ from, to, amount })
     this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
+    this.paused.getAndRequireEquals().assertFalse()
     this.checkZeroBalanceChange(updates)
-    // TODO: event emission here
   }
 
   @method.returns(UInt64)
