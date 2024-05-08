@@ -2,8 +2,12 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   DeployArgs,
+  Field,
+  Int64,
+  MerkleList,
   method,
   PublicKey,
+  Reducer,
   State,
   state,
   Struct,
@@ -16,8 +20,6 @@ import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** Address of the contract controlling permissions for administrative actions */
   admin: PublicKey
-  /** The max supply of the token. */
-  supply: UInt64
   /** The token symbol. */
   symbol: string
   /** A source code reference, which is placed within the `zkappUri` of the contract account. */
@@ -30,31 +32,40 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @state(PublicKey)
   admin = State<PublicKey>()
   @state(UInt64)
-  private supply = State<UInt64>()
-  @state(UInt64)
   private circulating = State<UInt64>()
+  @state(Field)
+  actionState = State<Field>()
+
+  // This defines the type of the contract that is used to control access to administrative actions.
+  // If you want to have a custom contract, overwrite this by setting FungibleToken.adminContract to
+  // your own implementation of FungibleTokenAdminBase.
+  static adminContract: new(...args: any) => FungibleTokenAdminBase = FungibleTokenAdmin
 
   readonly events = {
     SetAdmin: PublicKey,
     Mint: MintEvent,
-    SetSupply: UInt64,
     Burn: BurnEvent,
     Transfer: TransferEvent,
   }
+
+  // We use actions and reducers for changing the circulating supply. That is to allow multiple mints/burns in a single block, which would not work if those would alter the contract state directly.
+  // Minting will emit an action with a positive number corresponding to the amount of tokens minted, burning will emit a negative value.
+  reducer = Reducer({ actionType: Int64 })
 
   async deploy(props: FungibleTokenDeployProps) {
     await super.deploy(props)
 
     this.admin.set(props.admin)
-    this.supply.set(props.supply)
     this.circulating.set(UInt64.from(0))
 
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
+
+    this.actionState.set(Reducer.initialActionState)
   }
 
   public getAdminContract(): FungibleTokenAdminBase {
-    return (new FungibleTokenAdmin(this.admin.getAndRequireEquals()))
+    return (new FungibleToken.adminContract(this.admin.getAndRequireEquals()))
   }
 
   @method
@@ -67,39 +78,21 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64) {
-    const supply = this.supply.getAndRequireEquals()
-    const circulating = this.circulating.getAndRequireEquals()
-    const nextCirculating = circulating.add(amount)
-    // TODO: is this where we'd use `Provable.if` and witness creation?
-    nextCirculating.assertLessThanOrEqual(
-      supply,
-      "Minting the provided amount would overflow the total supply.",
-    )
-    this.circulating.set(nextCirculating)
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const canMint = await this.getAdminContract()
       .canMint(accountUpdate)
     canMint.assertTrue()
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
+    this.reducer.dispatch(Int64.fromUnsigned(amount))
     return accountUpdate
-  }
-
-  @method
-  async setSupply(supply: UInt64): Promise<void> {
-    const canSetSupply = await this.getAdminContract()
-      .canSetSupply(supply)
-    canSetSupply.assertTrue()
-    this.circulating.getAndRequireEquals().assertLessThanOrEqual(supply)
-    this.supply.set(supply)
-    this.emitEvent("SetSupply", supply)
   }
 
   @method.returns(AccountUpdate)
   async burn(from: PublicKey, amount: UInt64) {
-    this.circulating.set(this.circulating.getAndRequireEquals().sub(amount))
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
+    this.reducer.dispatch(Int64.fromUnsigned(amount).neg())
     return accountUpdate
   }
 
@@ -123,14 +116,48 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     return balance
   }
 
-  @method.returns(UInt64)
-  async getSupply() {
-    return this.supply.getAndRequireEquals()
+  /** This function is used to fold the actions from minting/burning */
+  private calculateCirculating(
+    oldCirculating: UInt64,
+    pendingActions: MerkleList<MerkleList<Int64>>,
+  ): UInt64 {
+    let newCirculating: Int64 = this.reducer.reduce(
+      pendingActions,
+      Int64,
+      (circulating: Int64, action: Int64) => {
+        return circulating.add(action)
+      },
+      Int64.from(oldCirculating),
+      { maxUpdatesWithActions: 500 },
+    )
+    newCirculating.isPositive().assertTrue()
+    return newCirculating.magnitude
   }
 
+  /** Reports the current circulating supply
+   * This does take into account currently unreduced actions.
+   */
   @method.returns(UInt64)
   async getCirculating(): Promise<UInt64> {
-    return this.circulating.getAndRequireEquals()
+    let oldCirculating = this.circulating.getAndRequireEquals()
+    let actionState = this.actionState.getAndRequireEquals()
+    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
+
+    let newCirculating = this.calculateCirculating(oldCirculating, pendingActions)
+    return newCirculating
+  }
+
+  /** Aggregate actions from minting and burning to update the circulating supply */
+  @method
+  async updateCirculating() {
+    let oldCirculating = this.circulating.getAndRequireEquals()
+    let actionState = this.actionState.getAndRequireEquals()
+    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
+
+    let newCirculating = this.calculateCirculating(oldCirculating, pendingActions)
+
+    this.circulating.set(newCirculating)
+    this.actionState.set(pendingActions.hash)
   }
 
   @method.returns(UInt64)

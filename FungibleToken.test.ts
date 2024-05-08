@@ -42,9 +42,9 @@ describe("token integration", () => {
   let tokenA: TestPublicKey
   let tokenAContract: FungibleToken
   let tokenBAdmin: TestPublicKey
-  let tokenBAdminContract: TokenAdminB
+  let tokenBAdminContract: CustomTokenAdmin
   let tokenB: TestPublicKey
-  let tokenBContract: FungibleTokenB
+  let tokenBContract: FungibleToken
   let thirdPartyA: TestPublicKey
   let thirdPartyAContract: ThirdParty
   let thirdPartyB: TestPublicKey
@@ -62,9 +62,9 @@ describe("token integration", () => {
     tokenAContract = new FungibleToken(tokenA)
 
     tokenBAdmin = newTestPublicKey()
-    tokenBAdminContract = new TokenAdminB(tokenBAdmin)
+    tokenBAdminContract = new CustomTokenAdmin(tokenBAdmin)
     tokenB = newTestPublicKey()
-    tokenBContract = new FungibleTokenB(tokenB)
+    tokenBContract = new FungibleToken(tokenB)
 
     thirdPartyA = newTestPublicKey()
     thirdPartyAContract = new ThirdParty(thirdPartyA)
@@ -76,12 +76,9 @@ describe("token integration", () => {
       await FungibleToken.compile()
       await ThirdParty.compile()
       await FungibleTokenAdmin.compile()
-      await FungibleTokenB.compile()
-      await TokenAdminB.compile()
+      await CustomTokenAdmin.compile()
     }
   })
-
-  const totalSupply = UInt64.from(10_000_000_000_000)
 
   describe("deploy", () => {
     it("should deploy token contract A", async () => {
@@ -95,7 +92,6 @@ describe("token integration", () => {
         })
         await tokenAContract.deploy({
           admin: tokenAdmin,
-          supply: totalSupply,
           symbol: "tokA",
           src: "",
         })
@@ -122,7 +118,6 @@ describe("token integration", () => {
         })
         await tokenBContract.deploy({
           admin: tokenBAdmin,
-          supply: totalSupply,
           symbol: "tokB",
           src: "",
         })
@@ -158,6 +153,7 @@ describe("token integration", () => {
     it("should mint for the sender account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -175,11 +171,37 @@ describe("token integration", () => {
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating + mintAmount.toBigInt(),
+      )
+    })
+
+    it("calling the reducer should not change the reported circulating supply", async () => {
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.updateCirculating()
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await tx.send()
+
+      localChain.incrementGlobalSlot(1)
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
     })
 
     it("should burn tokens for the sender account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -195,6 +217,10 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance - burnAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating - burnAmount.toBigInt(),
       )
     })
 
@@ -223,17 +249,6 @@ describe("token integration", () => {
       await rejects(() => tx.send())
     })
 
-    it("should refuse to set total supply to be less than circulating supply", async () => {
-      await rejects(async () =>
-        await Mina.transaction({
-          sender: sender,
-          fee: 1e8,
-        }, async () => {
-          await tokenAContract.setSupply(UInt64.from(1))
-        })
-      )
-    })
-
     it("correctly changes the admin contract", async () => {
       const tx = await Mina.transaction({
         sender: sender,
@@ -253,7 +268,7 @@ describe("token integration", () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.setSupply(totalSupply)
+        await tokenAContract.mint(sender, mintAmount)
       })
       tx2.sign([sender.key, newTokenAdmin.key])
       await tx2.prove()
@@ -263,7 +278,7 @@ describe("token integration", () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.setSupply(totalSupply)
+        await tokenAContract.mint(sender, mintAmount)
       })
       tx3.sign([sender.key, tokenAdmin.key])
       await tx3.prove()
@@ -279,6 +294,7 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -304,6 +320,10 @@ describe("token integration", () => {
         (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
       )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
     })
 
     it("should reject a transaction not signed by the token holder", async () => {
@@ -322,6 +342,8 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalanceReceiver = (await tokenAContract.getBalanceOf(receiver))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
       const updateSend = AccountUpdate.createSigned(
         sender,
         tokenAContract.deriveTokenId(),
@@ -349,6 +371,10 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
       )
     })
 
@@ -400,6 +426,7 @@ describe("token integration", () => {
     it("should deposit from the user to the token account of the third party", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
 
       const tokenId = tokenAContract.deriveTokenId()
 
@@ -433,6 +460,10 @@ describe("token integration", () => {
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance - depositAmount.toBigInt(),
       )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
+      )
     })
 
     it("should send tokens from one contract to another", async () => {
@@ -440,6 +471,8 @@ describe("token integration", () => {
         .toBigInt()
       const initialBalance2 = (await tokenAContract.getBalanceOf(thirdPartyB))
         .toBigInt()
+      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
+
       const transferAmount = UInt64.from(1)
       const updateWithdraw = await thirdPartyAContract.withdraw(transferAmount)
       const updateDeposit = await thirdPartyBContract.deposit(transferAmount)
@@ -464,6 +497,10 @@ describe("token integration", () => {
       equal(
         (await tokenAContract.getBalanceOf(thirdPartyB)).toBigInt(),
         initialBalance2 + transferAmount.toBigInt(),
+      )
+      equal(
+        (await tokenAContract.getCirculating()).toBigInt(),
+        initialCirculating,
       )
     })
 
@@ -490,11 +527,14 @@ describe("token integration", () => {
 
   describe("Custom Admin Contract", () => {
     const mintAmount = UInt64.from(500)
+    const illegalMintAmount = UInt64.from(1000)
     const sendAmount = UInt64.from(100)
 
     it("should mint with a custom admin contract", async () => {
+      FungibleToken.adminContract = CustomTokenAdmin
       const initialBalance = (await tokenBContract.getBalanceOf(sender))
         .toBigInt()
+      const initialCirculating = (await tokenBContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
@@ -504,7 +544,7 @@ describe("token integration", () => {
         await tokenBContract.mint(sender, mintAmount)
       })
 
-      tx.sign([sender.key, tokenBAdmin.key])
+      tx.sign([sender.key])
       await tx.prove()
       await tx.send()
 
@@ -512,21 +552,26 @@ describe("token integration", () => {
         (await tokenBContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
+      equal(
+        (await tokenBContract.getCirculating()).toBigInt(),
+        initialCirculating + mintAmount.toBigInt(),
+      )
+      FungibleToken.adminContract = FungibleTokenAdmin
     })
 
     it("should send tokens without having the custom admin contract", async () => {
-      const vanillaContract = new FungibleToken(tokenB)
-      const initialBalanceSender = (await vanillaContract.getBalanceOf(sender))
+      const initialBalanceSender = (await tokenBContract.getBalanceOf(sender))
         .toBigInt()
-      const initialBalanceReceiver = (await vanillaContract.getBalanceOf(receiver))
+      const initialBalanceReceiver = (await tokenBContract.getBalanceOf(receiver))
         .toBigInt()
+      const initialCirculating = (await tokenBContract.getCirculating()).toBigInt()
 
       const tx = await Mina.transaction({
         sender: sender,
         fee: 1e8,
       }, async () => {
         AccountUpdate.fundNewAccount(sender, 1)
-        await vanillaContract.transfer(
+        await tokenBContract.transfer(
           sender,
           receiver,
           sendAmount,
@@ -538,41 +583,50 @@ describe("token integration", () => {
       await tx.send()
 
       equal(
-        (await vanillaContract.getBalanceOf(sender)).toBigInt(),
+        (await tokenBContract.getBalanceOf(sender)).toBigInt(),
         initialBalanceSender - sendAmount.toBigInt(),
       )
       equal(
-        (await vanillaContract.getBalanceOf(receiver)).toBigInt(),
+        (await tokenBContract.getBalanceOf(receiver)).toBigInt(),
         initialBalanceReceiver + sendAmount.toBigInt(),
+      )
+      equal(
+        (await tokenBContract.getCirculating()).toBigInt(),
+        initialCirculating,
       )
     })
 
-    it("should not allow changing the total supply for token B", async () => {
+    it("should not mint too many B tokens", async () => {
+      FungibleToken.adminContract = CustomTokenAdmin
       await rejects(async () =>
         await Mina.transaction({
           sender: sender,
           fee: 1e8,
         }, async () => {
-          await tokenBContract.setSupply(mintAmount)
+          await tokenBContract.mint(sender, illegalMintAmount)
         })
       )
+      FungibleToken.adminContract = FungibleTokenAdmin
     })
-    it("should not allow changing supply using the vanilla admin contract", async () => {
-      const vanillaContract = new FungibleToken(tokenB)
+    it("should not mint too many B tokens using the vanilla admin contract", {
+      skip: !proofsEnabled,
+    }, async () => {
       const tx = await Mina.transaction({
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await vanillaContract.setSupply(mintAmount)
+        await tokenBContract.mint(sender, illegalMintAmount)
       })
-      tx.sign([tokenBAdmin.key])
+      tx.sign([sender.key, tokenBAdmin.key])
       await tx.prove()
       await rejects(() => tx.send())
     })
   })
 })
 
-class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
+/** This is a faucet style admin contract, where anyone can mint, but only up to 500 tokens in a
+ * single AccountUpdate */
+class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
   @state(PublicKey)
   private adminPublicKey = State<PublicKey>()
 
@@ -587,26 +641,14 @@ class TokenAdminB extends SmartContract implements FungibleTokenAdminBase {
   }
 
   @method.returns(Bool)
-  public async canMint(_accountUpdate: AccountUpdate) {
-    this.ensureAdminSignature()
-    return Bool(true)
+  public async canMint(accountUpdate: AccountUpdate) {
+    return accountUpdate.body.balanceChange.magnitude.lessThanOrEqual(UInt64.from(500))
   }
 
   @method.returns(Bool)
   public async canChangeAdmin(_admin: PublicKey) {
     this.ensureAdminSignature()
     return Bool(true)
-  }
-
-  @method.returns(Bool)
-  public async canSetSupply(_supply: UInt64) {
-    return new Bool(false)
-  }
-}
-
-class FungibleTokenB extends FungibleToken {
-  public getAdminContract(): FungibleTokenAdminBase {
-    return (new TokenAdminB(this.admin.getAndRequireEquals()))
   }
 }
 
