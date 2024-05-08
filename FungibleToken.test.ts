@@ -13,6 +13,7 @@ import {
   State,
   state,
   UInt64,
+  UInt8,
 } from "o1js"
 import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
 import {
@@ -94,6 +95,7 @@ describe("token integration", () => {
           admin: tokenAdmin,
           symbol: "tokA",
           src: "",
+          decimals: UInt8.from(9),
         })
       })
 
@@ -120,6 +122,7 @@ describe("token integration", () => {
           admin: tokenBAdmin,
           symbol: "tokB",
           src: "",
+          decimals: UInt8.from(9),
         })
       })
 
@@ -407,8 +410,8 @@ describe("token integration", () => {
         tokenBContract.deriveTokenId(),
       )
       updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
-      await rejects(() => (
-        Mina.transaction({
+      await rejects(async () => (
+        await Mina.transaction({
           sender: deployer,
           fee: 1e8,
         }, async () => {

@@ -10,6 +10,7 @@ import {
   State,
   state,
   UInt64,
+  UInt8,
 } from "o1js"
 import { TestPublicKeys } from "test_util.js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
@@ -83,6 +84,7 @@ const deployTokenTx = await Mina.transaction({
     admin: admin.publicKey,
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts",
+    decimals: UInt8.from(9),
   })
 })
 await deployTokenTx.prove()

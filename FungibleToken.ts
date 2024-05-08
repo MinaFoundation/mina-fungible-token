@@ -1,6 +1,7 @@
 import {
   AccountUpdate,
   AccountUpdateForest,
+  Bool,
   DeployArgs,
   Field,
   Int64,
@@ -13,6 +14,7 @@ import {
   Struct,
   TokenContract,
   UInt64,
+  UInt8,
 } from "o1js"
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 import type { FungibleTokenLike } from "./FungibleTokenLike.js"
@@ -24,11 +26,13 @@ export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined>
   symbol: string
   /** A source code reference, which is placed within the `zkappUri` of the contract account. */
   src: string
+  /** Number of decimals in a unit */
+  decimals: UInt8
 }
 
 export class FungibleToken extends TokenContract implements FungibleTokenLike {
-  decimals = UInt64.from(9)
-
+  @state(UInt8)
+  decimals = State<UInt8>() // UInt64.from(9)
   @state(PublicKey)
   admin = State<PublicKey>()
   @state(UInt64)
@@ -59,6 +63,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
     this.admin.set(props.admin)
     this.circulating.set(UInt64.from(0))
+    this.decimals.set(props.decimals)
     this.paused.set(Bool(false))
 
     this.account.tokenSymbol.set(props.symbol)
@@ -180,9 +185,9 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.actionState.set(pendingActions.hash)
   }
 
-  @method.returns(UInt64)
+  @method.returns(UInt8)
   async getDecimals() {
-    return this.decimals
+    return this.decimals.getAndRequireEquals()
   }
 }
 
