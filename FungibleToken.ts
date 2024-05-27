@@ -1,18 +1,21 @@
 import {
   AccountUpdate,
   AccountUpdateForest,
+  assert,
   Bool,
   DeployArgs,
   Field,
   Int64,
   MerkleList,
   method,
+  Permissions,
   PublicKey,
   Reducer,
   State,
   state,
   Struct,
   TokenContract,
+  Types,
   UInt64,
   UInt8,
 } from "o1js"
@@ -127,10 +130,29 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
+  private permissionEquals(p1: Types.AuthRequired, p2: Types.AuthRequired) {
+    return p1.constant
+      .equals(p2.constant)
+      .and(p1.signatureNecessary.equals(p2.signatureNecessary))
+      .and(p1.signatureSufficient.equals(p2.signatureSufficient))
+  }
+
+  private checkPermissionsUpdate(update: AccountUpdate) {
+    let permissions = update.update.permissions
+
+    let { access, receive } = permissions.value
+    let accessIsNone = this.permissionEquals(access, Permissions.none())
+    let receiveIsNone = this.permissionEquals(receive, Permissions.none())
+    let updateAllowed = accessIsNone.and(receiveIsNone)
+
+    assert(updateAllowed.or(permissions.isSome.not()))
+  }
+
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
     this.paused.getAndRequireEquals().assertFalse()
     this.checkZeroBalanceChange(updates)
+    this.forEachUpdate(updates, (update, _usesToken) => this.checkPermissionsUpdate(update))
   }
 
   @method.returns(UInt64)
