@@ -8,6 +8,7 @@ import {
   Int64,
   method,
   Mina,
+  Permissions,
   PublicKey,
   SmartContract,
   State,
@@ -420,6 +421,26 @@ describe("token integration", () => {
           await tokenBContract.approveAccountUpdates([updateReceive])
         })
       ))
+    })
+  })
+
+  describe("account permissions", () => {
+    it("should reject a transaction that's changing the account permission for receive", async () => {
+      const permissions = localChain.getAccount(sender, tokenAContract.deriveTokenId()).permissions
+      permissions.receive = Permissions.impossible()
+      const updateSend = AccountUpdate.createSigned(
+        sender,
+        tokenAContract.deriveTokenId(),
+      )
+      updateSend.account.permissions.set(permissions)
+      await rejects(() =>
+        Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          await tokenAContract.approveBase(AccountUpdateForest.fromFlatArray([updateSend]))
+        })
+      )
     })
   })
 
