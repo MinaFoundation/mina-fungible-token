@@ -9,6 +9,7 @@ import {
   MerkleList,
   method,
   Permissions,
+  Provable,
   PublicKey,
   Reducer,
   State,
@@ -151,8 +152,12 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
     this.paused.getAndRequireEquals().assertFalse()
-    this.checkZeroBalanceChange(updates)
-    this.forEachUpdate(updates, (update, _usesToken) => this.checkPermissionsUpdate(update))
+    let totalBalance = Int64.from(0)
+    this.forEachUpdate(updates, (update, usesToken) => {
+      this.checkPermissionsUpdate(update)
+      totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
+    })
+    totalBalance.assertEquals(Int64.zero)
   }
 
   @method.returns(UInt64)
