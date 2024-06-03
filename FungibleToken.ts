@@ -21,7 +21,6 @@ import {
   UInt8,
 } from "o1js"
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
-import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
 export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** Address of the contract controlling permissions for administrative actions */
@@ -34,7 +33,7 @@ export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined>
   decimals: UInt8
 }
 
-export class FungibleToken extends TokenContract implements FungibleTokenLike {
+export class FungibleToken extends TokenContract {
   @state(UInt8)
   decimals = State<UInt8>() // UInt64.from(9)
   @state(PublicKey)
