@@ -1,9 +1,6 @@
 # `mina-fungible-token`
 
-> Note: This library is in early stages of development. The surface of this API will change.
-> Suggestions, bug reports and other issue submissions are greatly appreciated!
-
-A Mina fungible token reference implementation.
+Standard implementation of fungible tokens in Mina, as per [RFC14: Fungible Token Standard on Mina](https://github.com/o1-labs/rfcs/blob/main/0014-fungible-token-standard.md). Currently under review.
 
 ## Running [Examples](./examples)
 
