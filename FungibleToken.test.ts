@@ -16,7 +16,6 @@ import {
   UInt64,
   UInt8,
 } from "o1js"
-import { TestPublicKey } from "o1js/dist/node/lib/mina/local-blockchain.js"
 import {
   FungibleToken,
   FungibleTokenAdmin,
@@ -28,50 +27,32 @@ import { newTestPublicKey } from "./test_util.js"
 const proofsEnabled = true
 
 const localChain = await Mina.LocalBlockchain({
-  proofsEnabled: proofsEnabled,
+  proofsEnabled,
   enforceTransactionLimits: false,
 })
 Mina.setActiveInstance(localChain)
 
 describe("token integration", () => {
-  let deployer: TestPublicKey
-  let sender: TestPublicKey
-  let receiver: TestPublicKey
-  let tokenAdmin: TestPublicKey
-  let tokenAdminContract: FungibleTokenAdmin
-  let newTokenAdmin: TestPublicKey
-  let newTokenAdminContract: FungibleTokenAdmin
-  let tokenA: TestPublicKey
-  let tokenAContract: FungibleToken
-  let tokenBAdmin: TestPublicKey
+  let [deployer, sender, receiver] = localChain.testAccounts
+
+  let tokenAdmin = newTestPublicKey()
+  let tokenAdminContract = new FungibleTokenAdmin(tokenAdmin)
+  let newTokenAdmin = newTestPublicKey()
+  let newTokenAdminContract = new FungibleTokenAdmin(newTokenAdmin)
+  let tokenA = newTestPublicKey()
+  let tokenAContract = new FungibleToken(tokenA)
+  let tokenBAdmin = newTestPublicKey()
   let tokenBAdminContract: CustomTokenAdmin
-  let tokenB: TestPublicKey
-  let tokenBContract: FungibleToken
-  let thirdPartyA: TestPublicKey
+  let tokenB = newTestPublicKey()
+  let tokenBContract = new FungibleToken(tokenB)
+  let thirdPartyA = newTestPublicKey()
   let thirdPartyAContract: ThirdParty
-  let thirdPartyB: TestPublicKey
+  let thirdPartyB = newTestPublicKey()
   let thirdPartyBContract: ThirdParty
 
   before(async () => {
-    ;[deployer, sender, receiver] = localChain.testAccounts
-
-    tokenAdmin = newTestPublicKey()
-    tokenAdminContract = new FungibleTokenAdmin(tokenAdmin)
-    newTokenAdmin = newTestPublicKey()
-    newTokenAdminContract = new FungibleTokenAdmin(newTokenAdmin)
-
-    tokenA = newTestPublicKey()
-    tokenAContract = new FungibleToken(tokenA)
-
-    tokenBAdmin = newTestPublicKey()
     tokenBAdminContract = new CustomTokenAdmin(tokenBAdmin)
-    tokenB = newTestPublicKey()
-    tokenBContract = new FungibleToken(tokenB)
-
-    thirdPartyA = newTestPublicKey()
     thirdPartyAContract = new ThirdParty(thirdPartyA)
-
-    thirdPartyB = newTestPublicKey()
     thirdPartyBContract = new ThirdParty(thirdPartyB)
 
     if (proofsEnabled) {
