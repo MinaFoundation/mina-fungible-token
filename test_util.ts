@@ -9,3 +9,14 @@ export function newTestPublicKey(): Mina.TestPublicKey {
   pubKey.key = keyPair.privateKey
   return pubKey
 }
+
+export function newTestPublicKeys<N extends number>(n: N): ArrayOfLength<Mina.TestPublicKey, 10> {
+  return Array.from({ length: n }, () => newTestPublicKey()) as ArrayOfLength<
+    Mina.TestPublicKey,
+    10
+  >
+}
+
+type ArrayOfLength<T, L extends number, A extends T[] = []> = number extends L ? T[]
+  : L extends A["length"] ? A
+  : ArrayOfLength<T, L, [...A, T]>
