@@ -12,7 +12,6 @@ import {
   UInt64,
   UInt8,
 } from "o1js"
-import { TestPublicKeys } from "test_util.js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 export class TokenEscrow extends SmartContract {
@@ -54,7 +53,7 @@ Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy, jackie] = localChain.testAccounts as TestPublicKeys
+const [deployer, owner, alexa, billy, jackie] = localChain.testAccounts
 const tokenContract = PrivateKey.randomKeypair()
 const escrowContract = PrivateKey.randomKeypair()
 const admin = PrivateKey.randomKeypair()

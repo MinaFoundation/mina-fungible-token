@@ -1,7 +1,6 @@
 import { equal } from "node:assert"
 import { AccountUpdate, Mina, PrivateKey, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
-import { TestPublicKeys } from "../test_util.js"
 
 const localChain = await Mina.LocalBlockchain({
   proofsEnabled: false,
@@ -11,7 +10,7 @@ Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy] = localChain.testAccounts as TestPublicKeys
+const [deployer, owner, alexa, billy] = localChain.testAccounts
 const contract = PrivateKey.randomKeypair()
 const admin = PrivateKey.randomKeypair()
 
