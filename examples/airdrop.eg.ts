@@ -5,6 +5,7 @@ import {
   AccountUpdate,
   AccountUpdateForest,
   AccountUpdateTree,
+  Bool,
   Experimental,
   Field,
   method,
@@ -51,12 +52,13 @@ class Airdrop extends SmartContract {
     let account = this.sender.getUnconstrained()
 
     // ensure that the token account already exists and that the sender knows its private key
-    AccountUpdate.createSigned(account)
+    let au = AccountUpdate.createSigned(account, tokenId)
+    au.body.useFullCommitment = Bool(true) // ensures the signature attests to the entire transaction
 
     this.reducer.dispatch(new Claim({ account, amount }))
   }
 
-  @method
+  @method.returns(MerkleMap.provable)
   async settleClaims() {
     // fetch merkle map and assert that it matches the onchain root
     let root = this.eligibleRoot.getAndRequireEquals()
@@ -76,13 +78,11 @@ class Airdrop extends SmartContract {
         // check whether the claim is valid = exactly contained in the map
         let accountKey = key(claim.account)
         let amountOption = eligible.getOption(accountKey)
-        let amount = UInt64.Unsafe.fromField(amountOption.orElse(0n))
+        let amount = UInt64.Unsafe.fromField(amountOption.orElse(0n)) // not unsafe, because only uint64s can be claimed
         let isValid = amountOption.isSome.and(amount.equals(claim.amount))
 
         // if the claim is valid, set the amount in the map to zero
-        // (otherwise, set the 0 key to zero, which doesn't change the map)
-        let keyOrDummy = Provable.if(isValid, accountKey, Field(0n))
-        eligible.set(keyOrDummy, 0n)
+        eligible.setIf(isValid, accountKey, 0n)
 
         // if the claim is valid, add a token account update to our forest of approved updates
         let update = AccountUpdate.defaultAccountUpdate(claim.account, tokenId)
@@ -101,6 +101,9 @@ class Airdrop extends SmartContract {
     // update the onchain root and action state pointer
     this.eligibleRoot.set(eligible.root)
     this.actionState.set(actions.hash)
+
+    // return the updated eligible map
+    return eligible
   }
 }
 
