@@ -51,7 +51,7 @@ const mintTx = await Mina.transaction({
   await token.mint(alexa, new UInt64(2e9))
 })
 await mintTx.prove()
-mintTx.sign([owner.key])
+mintTx.sign([owner.key, admin.privateKey])
 const mintTxResult = await mintTx.send().then((v) => v.wait())
 console.log("Mint tx result:", mintTxResult.toPretty())
 equal(mintTxResult.status, "included")
