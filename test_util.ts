@@ -10,10 +10,10 @@ export function newTestPublicKey(): Mina.TestPublicKey {
   return pubKey
 }
 
-export function newTestPublicKeys<N extends number>(n: N): ArrayOfLength<Mina.TestPublicKey, 10> {
+export function newTestPublicKeys<N extends number>(n: N): ArrayOfLength<Mina.TestPublicKey, N> {
   return Array.from({ length: n }, () => newTestPublicKey()) as ArrayOfLength<
     Mina.TestPublicKey,
-    10
+    N
   >
 }
 
