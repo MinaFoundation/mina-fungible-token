@@ -12,7 +12,6 @@ import {
   Poseidon,
   Provable,
   PublicKey,
-  Reducer,
   SmartContract,
   State,
   state,
@@ -21,8 +20,9 @@ import {
 } from "o1js"
 import { newTestPublicKeys } from "test_util"
 import { token, tokenId } from "./token.eg"
+const { IndexedMerkleMap, BatchReducer } = Experimental
 
-class MerkleMap extends Experimental.IndexedMerkleMap(10) {}
+class MerkleMap extends IndexedMerkleMap(10) {}
 
 // a couple of test accounts
 const accounts = newTestPublicKeys(20)
@@ -36,7 +36,7 @@ const eligible = createEligibleMap(accounts)
 class Claim extends Struct({ account: PublicKey, amount: UInt64 }) {}
 
 // set up reducer
-let batchReducer = new Experimental.BatchReducer({ actionType: Claim, batchSize: 5 })
+let batchReducer = new BatchReducer({ actionType: Claim, batchSize: 5 })
 class ActionBatchProof extends batchReducer.Proof {}
 
 /**
@@ -47,7 +47,7 @@ class Airdrop extends SmartContract {
   eligibleRoot = State(eligible.root)
 
   @state(Field)
-  actionState = State(Reducer.initialActionState)
+  actionState = State(BatchReducer.initialActionState)
 
   @method
   async claim(amount: UInt64) {
@@ -81,7 +81,7 @@ class Airdrop extends SmartContract {
       eligible.setIf(isValid, accountKey, 0n)
 
       // if the claim is valid, add a token account update to our forest of approved updates
-      let update = AccountUpdate.defaultAccountUpdate(claim.account, tokenId)
+      let update = AccountUpdate.default(claim.account, tokenId)
       update.balance.addInPlace(amount)
       this.balance.subInPlace(amount) // this is 0 if the claim is invalid
       accountUpdates.pushIf(isValid, AccountUpdateTree.from(update))
