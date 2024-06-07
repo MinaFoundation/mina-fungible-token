@@ -70,12 +70,12 @@ class Airdrop extends SmartContract {
     let accountUpdates = AccountUpdateForest.empty()
 
     // process claims by reducing actions
-    batchReducer.processNextBatch(proof, (claim) => {
+    batchReducer.processNextBatch(proof, (claim, isDummy) => {
       // check whether the claim is valid = exactly contained in the map
       let accountKey = key(claim.account)
       let amountOption = eligible.getOption(accountKey)
       let amount = UInt64.Unsafe.fromField(amountOption.orElse(0n)) // not unsafe, because only uint64s can be claimed
-      let isValid = amountOption.isSome.and(amount.equals(claim.amount))
+      let isValid = amountOption.isSome.and(amount.equals(claim.amount)).and(isDummy.not())
 
       // if the claim is valid, set the amount in the map to zero
       eligible.setIf(isValid, accountKey, 0n)
