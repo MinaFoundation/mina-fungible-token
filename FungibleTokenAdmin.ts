@@ -1,13 +1,14 @@
 import {
   AccountUpdate,
+  assert,
   Bool,
   DeployArgs,
   method,
+  Provable,
   PublicKey,
   SmartContract,
   State,
   state,
-  UInt64,
 } from "o1js"
 
 export type FungibleTokenAdminBase = SmartContract & {
@@ -38,32 +39,37 @@ export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAd
     this.adminPublicKey.set(props.adminPublicKey)
   }
 
-  private ensureAdminSignature() {
-    const admin = this.adminPublicKey.getAndRequireEquals()
+  private async ensureAdminSignature() {
+    const admin = await Provable.witnessAsync(PublicKey, async () => {
+      let pk = await this.adminPublicKey.fetch()
+      assert(pk !== undefined, "could not fetch admin public key")
+      return pk
+    })
+    this.adminPublicKey.requireEquals(admin)
     return AccountUpdate.createSigned(admin)
   }
 
   @method.returns(Bool)
   public async canMint(_accountUpdate: AccountUpdate) {
-    this.ensureAdminSignature()
+    await this.ensureAdminSignature()
     return Bool(true)
   }
 
   @method.returns(Bool)
   public async canChangeAdmin(_admin: PublicKey) {
-    this.ensureAdminSignature()
+    await this.ensureAdminSignature()
     return Bool(true)
   }
 
   @method.returns(Bool)
   public async canPause(): Promise<Bool> {
-    this.ensureAdminSignature()
+    await this.ensureAdminSignature()
     return Bool(true)
   }
 
   @method.returns(Bool)
   public async canResume(): Promise<Bool> {
-    this.ensureAdminSignature()
+    await this.ensureAdminSignature()
     return Bool(true)
   }
 }
