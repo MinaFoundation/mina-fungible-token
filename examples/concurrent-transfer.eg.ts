@@ -1,4 +1,4 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64, UInt8 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
@@ -60,24 +60,18 @@ Mina.setActiveInstance(Mina.Network(url))
 
 const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract, feepayer, alexa, billy, jackie, admin] = [
-  PrivateKey.randomKeypair(),
+  keypair(),
   {
     privateKey: feePayerKey,
     publicKey: feePayerKey.toPublicKey(),
   },
-  PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
+  keypair(),
+  keypair(),
+  keypair(),
+  keypair(),
 ]
 
-console.log(`
-alexa ${alexa.privateKey.toBase58()} ${alexa.publicKey.toBase58()}
-billy ${billy.privateKey.toBase58()} ${billy.publicKey.toBase58()}
-jackie ${jackie.publicKey.toBase58()}
-contract ${contract.publicKey.toBase58()}
-admin ${admin.publicKey.toBase58()}
-`)
+printKeyPairs({ alexa, billy, jackie, contract, admin, feepayer })
 
 await FungibleToken.compile()
 await FungibleTokenAdmin.compile()
@@ -114,7 +108,7 @@ const mintTx = await Mina.transaction({
   await token.mint(alexa.publicKey, new UInt64(100e9))
 })
 await mintTx.prove()
-mintTx.sign([feepayer.privateKey])
+mintTx.sign([feepayer.privateKey, admin.privateKey])
 const mintTxResult = await mintTx.send()
 console.log("Mint tx:", mintTxResult.hash)
 await mintTxResult.wait()
@@ -140,3 +134,15 @@ await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, false)
 await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)
 await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, false)
 await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)
+
+function keypair(base58Key?: string): KeyPair {
+  base58Key ??= PrivateKey.random().toBase58()
+  let privateKey = PrivateKey.fromBase58(base58Key)
+  return { publicKey: privateKey.toPublicKey(), privateKey }
+}
+
+function printKeyPairs(keyPairs: Record<string, KeyPair>) {
+  for (let [name, keypair] of Object.entries(keyPairs)) {
+    console.log(`${name} ${keypair.publicKey.toBase58()} ${keypair.privateKey.toBase58()}`)
+  }
+}
