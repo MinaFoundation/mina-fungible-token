@@ -79,40 +79,40 @@ const token = new FungibleToken(contract.publicKey)
 const adminContract = new FungibleTokenAdmin(admin.publicKey)
 let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 
-// console.log("Deploying token contract.")
-// const deployTx = await Mina.transaction({
-//   sender: feepayer.publicKey,
-//   fee,
-//   nonce,
-// }, async () => {
-//   AccountUpdate.fundNewAccount(feepayer.publicKey, 2)
-//   await adminContract.deploy({ adminPublicKey: admin.publicKey })
-//   await token.deploy({
-//     admin: admin.publicKey,
-//     symbol: "abc",
-//     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
-//     decimals: UInt8.from(9),
-//   })
-// })
-// await deployTx.prove()
-// deployTx.sign([feepayer.privateKey, contract.privateKey, admin.privateKey])
-// const deployTxResult = await deployTx.send().then((v) => v.wait())
-// console.log("Deploy tx:", deployTxResult.hash)
+console.log("Deploying token contract.")
+const deployTx = await Mina.transaction({
+  sender: feepayer.publicKey,
+  fee,
+  nonce,
+}, async () => {
+  AccountUpdate.fundNewAccount(feepayer.publicKey, 2)
+  await adminContract.deploy({ adminPublicKey: admin.publicKey })
+  await token.deploy({
+    admin: admin.publicKey,
+    symbol: "abc",
+    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+    decimals: UInt8.from(9),
+  })
+})
+await deployTx.prove()
+deployTx.sign([feepayer.privateKey, contract.privateKey, admin.privateKey])
+const deployTxResult = await deployTx.send().then((v) => v.wait())
+console.log("Deploy tx:", deployTxResult.hash)
 
-// console.log("Minting new tokens to Alexa.")
-// await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
-// const mintTx = await Mina.transaction({
-//   sender: feepayer.publicKey,
-//   fee,
-// }, async () => {
-//   AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
-//   await token.mint(alexa.publicKey, new UInt64(100e9))
-// })
-// await mintTx.prove()
-// mintTx.sign([feepayer.privateKey, admin.privateKey])
-// const mintTxResult = await mintTx.send()
-// console.log("Mint tx:", mintTxResult.hash)
-// await mintTxResult.wait()
+console.log("Minting new tokens to Alexa.")
+await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
+const mintTx = await Mina.transaction({
+  sender: feepayer.publicKey,
+  fee,
+}, async () => {
+  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
+  await token.mint(alexa.publicKey, new UInt64(100e9))
+})
+await mintTx.prove()
+mintTx.sign([feepayer.privateKey, admin.privateKey])
+const mintTxResult = await mintTx.send()
+console.log("Mint tx:", mintTxResult.hash)
+await mintTxResult.wait()
 
 console.log("[1] Transferring tokens from Alexa to Billy")
 const transferTx1 = await Mina.transaction({
