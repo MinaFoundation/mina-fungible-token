@@ -71,14 +71,7 @@ const [contract, feepayer, alexa, billy, jackie, admin] = [
   keypair("EKEfnNMvDXL8NMNoWb2rJZdocwNHfh1RbbxWF3RuinFX242rGXxa"),
 ]
 
-console.log(`
-alexa ${alexa.publicKey.toBase58()} ${alexa.privateKey.toBase58()} 
-billy ${billy.publicKey.toBase58()} ${billy.privateKey.toBase58()} 
-jackie ${jackie.publicKey.toBase58()}
-contract ${contract.publicKey.toBase58()}
-admin ${admin.publicKey.toBase58()}
-feepayer ${feepayer.publicKey.toBase58()}
-`)
+printKeypairs({ alexa, billy, jackie, contract, admin, feepayer })
 
 await FungibleToken.compile()
 await FungibleTokenAdmin.compile()
@@ -86,40 +79,40 @@ const token = new FungibleToken(contract.publicKey)
 const adminContract = new FungibleTokenAdmin(admin.publicKey)
 let nonce = await getInferredNonce(feepayer.publicKey.toBase58())
 
-console.log("Deploying token contract.")
-const deployTx = await Mina.transaction({
-  sender: feepayer.publicKey,
-  fee,
-  nonce,
-}, async () => {
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 2)
-  await adminContract.deploy({ adminPublicKey: admin.publicKey })
-  await token.deploy({
-    admin: admin.publicKey,
-    symbol: "abc",
-    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
-    decimals: UInt8.from(9),
-  })
-})
-await deployTx.prove()
-deployTx.sign([feepayer.privateKey, contract.privateKey, admin.privateKey])
-const deployTxResult = await deployTx.send().then((v) => v.wait())
-console.log("Deploy tx:", deployTxResult.hash)
+// console.log("Deploying token contract.")
+// const deployTx = await Mina.transaction({
+//   sender: feepayer.publicKey,
+//   fee,
+//   nonce,
+// }, async () => {
+//   AccountUpdate.fundNewAccount(feepayer.publicKey, 2)
+//   await adminContract.deploy({ adminPublicKey: admin.publicKey })
+//   await token.deploy({
+//     admin: admin.publicKey,
+//     symbol: "abc",
+//     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
+//     decimals: UInt8.from(9),
+//   })
+// })
+// await deployTx.prove()
+// deployTx.sign([feepayer.privateKey, contract.privateKey, admin.privateKey])
+// const deployTxResult = await deployTx.send().then((v) => v.wait())
+// console.log("Deploy tx:", deployTxResult.hash)
 
-console.log("Minting new tokens to Alexa.")
-await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
-const mintTx = await Mina.transaction({
-  sender: feepayer.publicKey,
-  fee,
-}, async () => {
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
-  await token.mint(alexa.publicKey, new UInt64(100e9))
-})
-await mintTx.prove()
-mintTx.sign([feepayer.privateKey, admin.privateKey])
-const mintTxResult = await mintTx.send()
-console.log("Mint tx:", mintTxResult.hash)
-await mintTxResult.wait()
+// console.log("Minting new tokens to Alexa.")
+// await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
+// const mintTx = await Mina.transaction({
+//   sender: feepayer.publicKey,
+//   fee,
+// }, async () => {
+//   AccountUpdate.fundNewAccount(feepayer.publicKey, 1)
+//   await token.mint(alexa.publicKey, new UInt64(100e9))
+// })
+// await mintTx.prove()
+// mintTx.sign([feepayer.privateKey, admin.privateKey])
+// const mintTxResult = await mintTx.send()
+// console.log("Mint tx:", mintTxResult.hash)
+// await mintTxResult.wait()
 
 console.log("[1] Transferring tokens from Alexa to Billy")
 const transferTx1 = await Mina.transaction({
@@ -147,4 +140,10 @@ function keypair(base58Key?: string): KeyPair {
   base58Key ??= PrivateKey.random().toBase58()
   let privateKey = PrivateKey.fromBase58(base58Key)
   return { publicKey: privateKey.toPublicKey(), privateKey }
+}
+
+function printKeypairs(keypairs: Record<string, KeyPair>) {
+  for (let [name, keypair] of Object.entries(keypairs)) {
+    console.log(`${name} ${keypair.publicKey.toBase58()} ${keypair.privateKey.toBase58()}`)
+  }
 }
