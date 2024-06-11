@@ -60,15 +60,15 @@ Mina.setActiveInstance(Mina.Network(url))
 
 const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract, feepayer, alexa, billy, jackie, admin] = [
-  keypair("EKF5VLgGNU9Y3xA1q5mudiiwp47m7RZ8DGhU6JVg6e3fZdejUY5X"),
+  keypair(),
   {
     privateKey: feePayerKey,
     publicKey: feePayerKey.toPublicKey(),
   },
-  keypair("EKFQXBdCLBGQd1BPmvq9FTLdDEQtpMLUH2SdaAW6yyoDGQbStwPd"),
-  keypair("EKE8H3cNvgHAUQxRa2kxRQ5HqGYWaH5MCyBoAKXsWYVRiDhYNoB4"),
-  keypair("EKF4exFf35LpqPyom9ms35rv1xh7cUTugcXcdpwKd9LSvY9kYzrZ"),
-  keypair("EKEfnNMvDXL8NMNoWb2rJZdocwNHfh1RbbxWF3RuinFX242rGXxa"),
+  keypair(),
+  keypair(),
+  keypair(),
+  keypair(),
 ]
 
 printKeyPairs({ alexa, billy, jackie, contract, admin, feepayer })
