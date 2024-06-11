@@ -1,4 +1,4 @@
-import { AccountUpdate, fetchAccount, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
@@ -100,7 +100,6 @@ const deployTxResult = await deployTx.send().then((v) => v.wait())
 console.log("Deploy tx:", deployTxResult.hash)
 
 console.log("Minting new tokens to Alexa.")
-await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
 const mintTx = await Mina.transaction({
   sender: feepayer.publicKey,
   fee,

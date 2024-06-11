@@ -76,13 +76,20 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.actionState.set(Reducer.initialActionState)
   }
 
-  public getAdminContract(): FungibleTokenAdminBase {
-    return (new FungibleToken.adminContract(this.admin.getAndRequireEquals()))
+  public async getAdminContract(): Promise<FungibleTokenAdminBase> {
+    const admin = await Provable.witnessAsync(PublicKey, async () => {
+      let pk = await this.admin.fetch()
+      assert(pk !== undefined, "could not fetch admin contract key")
+      return pk
+    })
+    this.admin.requireEquals(admin)
+    return (new FungibleToken.adminContract(admin))
   }
 
   @method
   async setAdmin(admin: PublicKey) {
-    const canChangeAdmin = await this.getAdminContract().canChangeAdmin(admin)
+    const adminContract = await this.getAdminContract()
+    const canChangeAdmin = await adminContract.canChangeAdmin(admin)
     canChangeAdmin.assertTrue()
     this.admin.set(admin)
     this.emitEvent("SetAdmin", admin)
@@ -92,8 +99,8 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   async mint(recipient: PublicKey, amount: UInt64) {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.mint({ address: recipient, amount })
-    const canMint = await this.getAdminContract()
-      .canMint(accountUpdate)
+    const adminContract = await this.getAdminContract()
+    const canMint = await adminContract.canMint(accountUpdate)
     canMint.assertTrue()
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
@@ -112,14 +119,16 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async pause() {
-    const canPause = await this.getAdminContract().canPause()
+    const adminContract = await this.getAdminContract()
+    const canPause = await adminContract.canPause()
     canPause.assertTrue()
     this.paused.set(Bool(true))
   }
 
   @method
   async resume() {
-    const canResume = await this.getAdminContract().canResume()
+    const adminContract = await this.getAdminContract()
+    const canResume = await adminContract.canResume()
     canResume.assertTrue()
     this.paused.set(Bool(false))
   }
