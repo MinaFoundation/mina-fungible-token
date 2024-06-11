@@ -71,7 +71,7 @@ const [contract, feepayer, alexa, billy, jackie, admin] = [
   keypair("EKEfnNMvDXL8NMNoWb2rJZdocwNHfh1RbbxWF3RuinFX242rGXxa"),
 ]
 
-printKeypairs({ alexa, billy, jackie, contract, admin, feepayer })
+printKeyPairs({ alexa, billy, jackie, contract, admin, feepayer })
 
 await FungibleToken.compile()
 await FungibleTokenAdmin.compile()
@@ -142,8 +142,8 @@ function keypair(base58Key?: string): KeyPair {
   return { publicKey: privateKey.toPublicKey(), privateKey }
 }
 
-function printKeypairs(keypairs: Record<string, KeyPair>) {
-  for (let [name, keypair] of Object.entries(keypairs)) {
+function printKeyPairs(keyPairs: Record<string, KeyPair>) {
+  for (let [name, keypair] of Object.entries(keyPairs)) {
     console.log(`${name} ${keypair.publicKey.toBase58()} ${keypair.privateKey.toBase58()}`)
   }
 }
