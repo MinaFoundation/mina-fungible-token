@@ -1,4 +1,4 @@
-import { AccountUpdate, Mina, PrivateKey, PublicKey, TokenId, UInt64, UInt8 } from "o1js"
+import { AccountUpdate, fetchAccount, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
@@ -60,23 +60,24 @@ Mina.setActiveInstance(Mina.Network(url))
 
 const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract, feepayer, alexa, billy, jackie, admin] = [
-  PrivateKey.randomKeypair(),
+  keypair("EKF5VLgGNU9Y3xA1q5mudiiwp47m7RZ8DGhU6JVg6e3fZdejUY5X"),
   {
     privateKey: feePayerKey,
     publicKey: feePayerKey.toPublicKey(),
   },
-  PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
-  PrivateKey.randomKeypair(),
+  keypair("EKFQXBdCLBGQd1BPmvq9FTLdDEQtpMLUH2SdaAW6yyoDGQbStwPd"),
+  keypair("EKE8H3cNvgHAUQxRa2kxRQ5HqGYWaH5MCyBoAKXsWYVRiDhYNoB4"),
+  keypair("EKF4exFf35LpqPyom9ms35rv1xh7cUTugcXcdpwKd9LSvY9kYzrZ"),
+  keypair("EKEfnNMvDXL8NMNoWb2rJZdocwNHfh1RbbxWF3RuinFX242rGXxa"),
 ]
 
 console.log(`
-alexa ${alexa.privateKey.toBase58()} ${alexa.publicKey.toBase58()}
-billy ${billy.privateKey.toBase58()} ${billy.publicKey.toBase58()}
+alexa ${alexa.publicKey.toBase58()} ${alexa.privateKey.toBase58()} 
+billy ${billy.publicKey.toBase58()} ${billy.privateKey.toBase58()} 
 jackie ${jackie.publicKey.toBase58()}
 contract ${contract.publicKey.toBase58()}
 admin ${admin.publicKey.toBase58()}
+feepayer ${feepayer.publicKey.toBase58()}
 `)
 
 await FungibleToken.compile()
@@ -106,6 +107,7 @@ const deployTxResult = await deployTx.send().then((v) => v.wait())
 console.log("Deploy tx:", deployTxResult.hash)
 
 console.log("Minting new tokens to Alexa.")
+await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
 const mintTx = await Mina.transaction({
   sender: feepayer.publicKey,
   fee,
@@ -114,7 +116,7 @@ const mintTx = await Mina.transaction({
   await token.mint(alexa.publicKey, new UInt64(100e9))
 })
 await mintTx.prove()
-mintTx.sign([feepayer.privateKey])
+mintTx.sign([feepayer.privateKey, admin.privateKey])
 const mintTxResult = await mintTx.send()
 console.log("Mint tx:", mintTxResult.hash)
 await mintTxResult.wait()
@@ -140,3 +142,9 @@ await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, false)
 await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)
 await sendNoWait(feepayer, alexa, jackie.publicKey, 1e9, false)
 await sendNoWait(feepayer, billy, jackie.publicKey, 1e9, false)
+
+function keypair(base58Key?: string): KeyPair {
+  base58Key ??= PrivateKey.random().toBase58()
+  let privateKey = PrivateKey.fromBase58(base58Key)
+  return { publicKey: privateKey.toPublicKey(), privateKey }
+}
