@@ -9,12 +9,14 @@
   "scripts": {
     "task": "node --enable-source-maps --no-warnings= --loader ts-node/esm",
     "test": "npm run task -- --test FungibleToken.test.ts",
-    "build": "tsc"
+    "build": "tsc",
+    "toc": "doctoc mftb.md"
   },
   "peerDependencies": {
     "o1js": "^1.1.0"
   },
   "devDependencies": {
+    "doctoc": "^2.2.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.3"
   }
