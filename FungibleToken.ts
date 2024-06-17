@@ -22,12 +22,13 @@ import {
 } from "o1js"
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 
-export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
+interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** Address of the contract controlling permissions for administrative actions */
   admin: PublicKey
   /** The token symbol. */
   symbol: string
-  /** A source code reference, which is placed within the `zkappUri` of the contract account. */
+  /** A source code reference, which is placed within the `zkappUri` of the contract account.
+   * Typically a link to a file on github. */
   src: string
   /** Number of decimals in a unit */
   decimals: UInt8
@@ -95,7 +96,7 @@ export class FungibleToken extends TokenContract {
   }
 
   @method.returns(AccountUpdate)
-  async mint(recipient: PublicKey, amount: UInt64) {
+  async mint(recipient: PublicKey, amount: UInt64): Promise<AccountUpdate> {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const adminContract = await this.getAdminContract()
@@ -108,7 +109,7 @@ export class FungibleToken extends TokenContract {
   }
 
   @method.returns(AccountUpdate)
-  async burn(from: PublicKey, amount: UInt64) {
+  async burn(from: PublicKey, amount: UInt64): Promise<AccountUpdate> {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
@@ -221,7 +222,7 @@ export class FungibleToken extends TokenContract {
   }
 
   @method.returns(UInt8)
-  async getDecimals() {
+  async getDecimals(): Promise<UInt8> {
     return this.decimals.getAndRequireEquals()
   }
 }
