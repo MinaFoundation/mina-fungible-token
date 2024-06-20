@@ -29,5 +29,5 @@ jobs:
           cache-dependency-path: package-lock.json
           node-version: 21.x
       - run: npm ci
-      - run: npm run build
+      - run: npm run check
       - run: npm run test
