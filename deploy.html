@@ -149,50 +149,15 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="deploy"><a class="header" href="#deploy">Deploy</a></h1>
-<p>To create a token manager smart contract, inherit your smart contract from base custom token
-implementation, or use the <code>FungibleToken</code> directly</p>
-<pre><code class="language-ts">import { FungibleToken } from &quot;mina-fungible-token&quot;
-
-class MyToken extends FungibleToken {}
-</code></pre>
-<blockquote>
-<p>[!NOTE] If you inherit from <code>FungibleToken</code> to override some functionality, you will need to
-compile both parent and child contracts to be able to prove code for both of them</p>
-</blockquote>
-<p>To deploy a token manager contract, create and compile the token contract instance, then create,
-prove and sign the deploy transaction:</p>
-<pre><code class="language-ts">await FungibleToken.compile()
-await MyToken.compile()
-
-const {
-  privateKey: tokenKey,
-  publicKey: tokenAddress,
-} = PrivateKey.randomKeypair()
-const token = new MyToken(tokenAddress)
-
-// paste the private key of the deployer and admin account here
-const deployerKey = PrivateKey.fromBase58(&quot;...&quot;)
-const ownerKey = PrivateKey.fromBase58(&quot;...&quot;)
-const owner = PublicKey.fromPrivateKey(ownerKey)
-const deployer = PublicKey.fromPrivateKey(deployerKey)
-
-const supply = UInt64.from(21_000_000)
-const symbol = &quot;MYTKN&quot;
-const src = &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts&quot;
-
-const fee = 1e8
-
-const tx = await Mina.transaction({ sender: deployer, fee }, () =&gt; {
-  AccountUpdate.fundNewAccount(deployer, 1)
-  token.deploy(owner, supply, symbol, src)
-})
-
-tx.sign([deployerKey, tokenKey])
-await tx.prove()
-await tx.send()
-</code></pre>
-<p>For this and following samples to work, make sure you have enough funds on deployer and admin
-accounts.</p>
+<p>To create a new token, deploy the <code>FungibleToken</code> contract. You will need an admin account as well,
+to control permissions. You can either use the supplied contract <code>FungibleTokenAdmin</code>, or write your
+own contract that implements <code>FungibleTokenAdminBase</code>. An example can be found in
+<code>FungibleToken.test.ts</code>, where a non-standard admin contract is implemented (<code>CustomTokenAdmin</code>,
+implementing a minting policy that resembles a faucet).</p>
+<p>[!NOTE] Note that you have to write the admin contract from scratch. Inheriting from
+<code>FungibleTokenAdmin</code> and overwriting specific methods might not work.</p>
+<p>[!NOTE] If you do not use the <code>FungibleToken</code> as is, third parties that want to integrate your token
+will need to use your custom contract as well.</p>
 <p>Refer to
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts">examples/e2e.eg.ts</a>
 to see executable end to end example.</p>

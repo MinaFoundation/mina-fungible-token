@@ -150,32 +150,34 @@
 <p>Mina natively supports custom tokens
 (<a href="https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics">MIP-4</a>). Each
 account on Mina can correspond to a custom token.</p>
-<p>To create a new token, one creates a smart contract, which becomes the manager for the token, and
-uses that contract to set the rules around how the token can be minted, burned and transferred. The
+<p>To create a new token, one creates a smart contract, which becomes the owner for the token, and uses
+that contract to set the rules around how the token can be minted, burned and transferred. The
 contract may also set a token symbol. Uniqueness is not enforced for token names. Instead the public
 key of the contract is used to derive the token's unique identifier.</p>
 <h2 id="show-me-the-code"><a class="header" href="#show-me-the-code">SHOW ME THE CODE</a></h2>
 <p>The
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts"><code>mina-fungible-token</code> repo's e2e example</a>
 showcases the entire lifecycle of a token.</p>
-<p>After running <code>npm i mina-fungible-token</code>, import the <code>FungibleToken</code> contract and deploy it like
-so.</p>
+<p>After running <code>npm i mina-fungible-token</code>, import the <code>FungibleToken</code> and <code>FungibleTokenAdmin</code>
+contracts and deploy them:</p>
 <pre><code class="language-ts">const token = new FungibleToken(contract.publicKey)
+const adminContract = new FungibleTokenAdmin(admin.publicKey)
 
 const deployTx = await Mina.transaction({
-  sender: deployer.publicKey,
+  sender: deployer,
   fee,
-}, () =&gt; {
-  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
-  token.deploy({
-    owner: owner.publicKey,
-    supply: UInt64.from(10_000_000_000_000),
+}, async () =&gt; {
+  AccountUpdate.fundNewAccount(deployer, 2)
+  await adminContract.deploy({ adminPublicKey: admin.publicKey })
+  await token.deploy({
+    admin: admin.publicKey,
     symbol: &quot;abc&quot;,
     src: &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts&quot;,
+    decimals: UInt8.from(9),
   })
 })
 await deployTx.prove()
-deployTx.sign([deployer.privateKey, contract.privateKey])
+deployTx.sign([deployer.key, contract.privateKey, admin.privateKey])
 await deployTx.send()
 </code></pre>
 <blockquote>
@@ -183,23 +185,24 @@ await deployTx.send()
 </blockquote>
 <h2 id="how"><a class="header" href="#how">How?</a></h2>
 <p>How is this custom token mechanism implemented in Mina?</p>
-<h3 id="token-manager"><a class="header" href="#token-manager">Token Manager</a></h3>
-<p>The token manager account is a contract with the following capabilities.</p>
+<h3 id="token-owner-account"><a class="header" href="#token-owner-account">Token Owner Account</a></h3>
+<p>The token owner account is a contract with the following capabilities.</p>
 <ul>
 <li>Set a token symbol (also called token name) for its token. Uniqueness is not enforced for token
-names because the public key of the manager account is used to derive a unique identifier for each
+names because the public key of the owner account is used to derive a unique identifier for each
 token.</li>
 <li>Mint new tokens. The zkApp updates an account's balance by adding the newly created tokens to it.
 You can send minted tokens to any existing account in the network.</li>
 <li>Burn tokens (the opposite of minting). Burning tokens deducts the balance of a certain address by
 the specified amount. A zkApp cannot burn more tokens than the specified account has.</li>
-<li>Send tokens between two accounts. Any account can initiate a transfer, and the transfer must be
-approved by a Token Manager zkApp (see <a href="introduction.html#approval-mechanism">Approval mechanism</a>).</li>
+<li>Send tokens between two accounts. There are two ways to initiate a transfer: either, the token
+owner can create the account updates directly (via the <code>transfer</code> method), or the account updates
+can be created externally, and then approved by the token owner (see
+<a href="introduction.html#approval-mechanism">Approval mechanism</a>).</li>
 </ul>
 <h3 id="token-account"><a class="header" href="#token-account">Token Account</a></h3>
 <p>Token accounts are like regular accounts, but they hold a balance of a specific custom token instead
-of MINA. A token account is created from an existing account and is specified by a public key <em>and</em>
-a token id.</p>
+of MINA. A token account is specified by a public key <em>and</em> a token id.</p>
 <p>Token accounts are specific for each type of custom token, so a single public key can have many
 different token accounts.</p>
 <p>A token account is automatically created for a public key whenever an existing account receives a
@@ -211,77 +214,77 @@ paid the same as creating a new standard account.</p>
 <h3 id="token-id"><a class="header" href="#token-id">Token ID</a></h3>
 <p>Token ids are unique identifiers that distinguish between different types of custom tokens. Custom
 token identifiers are globally unique across the entire network.</p>
-<p>Token ids are derived from a Token Manager zkApp. Use <code>deriveTokenId()</code> function to get id of a
-token.</p>
+<p>Token ids are derived from a Token Owner account. Use the <code>deriveTokenId()</code> function to get the id
+of a token.</p>
 <h3 id="approval-mechanism"><a class="header" href="#approval-mechanism">Approval mechanism</a></h3>
-<p>Sending tokens between two accounts must be approved by a Token Manager zkApp. This can be done with
-<code>approveBase()</code> method of the custom token standard reference implementation.</p>
-<p>If you customize the <code>transfer()</code> function or constructing <code>AccountUpdate</code>s for sending tokens
-manually, don't forget to call <code>approveBase()</code>.</p>
+<p>Sending tokens between two accounts must be approved by a Token Owner zkApp. This can be done with
+the <code>approveBase()</code> method of the custom token standard reference implementation.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-overview"><a class="header" href="#api-overview">API overview</a></h1>
-<p>The token standard implementation is a Token Manager zkApp that is split in 2 parts: low-level and
-high-level one.</p>
-<p>The low-level implementation is included in <code>o1js</code> library <code>TokenContract</code> abstract class. See the
-overview in the o1js
-<a href="https://docs.minaprotocol.com/zkapps/o1js/custom-tokens">Custom Tokens tutorial</a></p>
-<blockquote>
-<p>[!WARNING] Please note that this is a beta release. The implementation will change soon. The API
-may also change in future.</p>
-</blockquote>
-<p>The high-level part inherits from the <code>TokenContract</code> class and has following user-facing features:</p>
-<h2 id="on-chain-state-decimals-and-deploy-arguments"><a class="header" href="#on-chain-state-decimals-and-deploy-arguments">On-chain State, <code>decimals</code> and deploy arguments</a></h2>
+<p>The token standard implementation provides a smart contract <code>FungibleToken</code> that can be deployed as
+the token owner for a new token. It provides all the user facing functionality that is expected of a
+fungible token: creating, transferring, and destroying tokens, as well as querying balances and the
+overall amount of tokens.</p>
+<p>Using the standard means using this particular, unmodified, contract. The reason that altering the
+contract is considered deviating from the standard is the off-chain execution model of MINA: a third
+party (wallet, exchange, etc.) that wants to integrate a token needs to have access to and execute
+the code of the token owner contract in order to interact with the token. Agreeing on one particular
+implementation reduces the burden of integration significantly.</p>
+<p>In order to allow for some customization without changing the token owner contract, we delegate some
+functionality to a secondary admin contract, called <code>FungibleTokenAdmin</code>. This contract controls
+access to privileged operations such as minting, pausing/resuming transfers, or changing the admin
+contract itself. This construction allows you to set the rules for monetary expansion, without
+changing the token owner contract itself. Since the admin contract will only be called from methods
+of the token contract that are not meant to be called by regular users, the code of the admin
+contract does not need to be integrated into wallets or other third party applications.</p>
+<p>is a Token Manager zkApp that is split in 2 parts: low-level and high-level one.</p>
+<h2 id="the-fungibletoken-contract"><a class="header" href="#the-fungibletoken-contract">The <code>FungibleToken</code> contract</a></h2>
+<h2 id="on-chain-state-and-deploy-arguments"><a class="header" href="#on-chain-state-and-deploy-arguments">On-chain State and deploy arguments</a></h2>
 <p>The on-chain state is defined as follows:</p>
-<pre><code class="language-ts">@state(PublicKey) public owner = State&lt;PublicKey&gt;();
-@state(UInt64) public supply = State&lt;UInt64&gt;();
-@state(UInt64) public circulating = State&lt;UInt64&gt;();
+<pre><code class="language-ts">@state(UInt8) decimals = State&lt;UInt8&gt;()
+@state(PublicKey) admin = State&lt;PublicKey&gt;()
+@state(UInt64) private circulating = State&lt;UInt64&gt;()
+@state(Field) actionState = State&lt;Field&gt;()
+@state(Bool) paused = State&lt;Bool&gt;()
 </code></pre>
+<p>The <code>deploy</code> function takes as arguments</p>
 <ul>
-<li>
-<p><code>owner</code> is set on deployment, and some of token functionality requires an admin signature.</p>
-<p>If you want to implement admin-only method, just call <code>this.ensureOwnerSignature()</code> helper in the
-method you want to protect.</p>
-</li>
-<li>
-<p><code>supply</code> defines a maximum amount of tokens to exist. It is set on deployment and can be modified
-with <code>setSupply()</code> function (can be called by admin only)</p>
-</li>
-<li>
-<p><code>circulating</code> tracks the total amount in circulation. When new tokens are minted, the
-<code>circulating</code> increases by an amount minted.</p>
-</li>
-<li>
-<p>The <code>decimals</code> is a constant, that defines where to place the decimal comma in the token amounts.</p>
-</li>
-<li>
-<p>The <code>deploy()</code> function requires <code>owner</code> and <code>supply</code> to be passed as parameters.</p>
-</li>
-<li>
-<p>Along with state variables initial values, the <code>deploy()</code> function also takes <code>symbol</code> (to set
-<code>account.tokenSymbol</code>) and <code>src</code> (to set <code>account.zkappUri</code>)</p>
-</li>
+<li>The public key of the account that the admin contract has been deployed to</li>
+<li>A symbol to use as the token symbol</li>
+<li>A string pointing to the source code of the contract -- when following the standard, this should
+point to the source of the standard implementation on github</li>
+<li>A <code>UInt8</code> for the number of decimals</li>
 </ul>
+<p>and initializes the state of the contract. Initially, the circulating supply is set to zero, as no
+tokens have been created yet.</p>
 <h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
-<p>Methods that can be called only by admin are:</p>
-<pre><code class="language-ts">mint(address: PublicKey, amount: UInt64)
-setTotalSupply(amount: UInt64)
-setOwner(owner: PublicKey)
+<p>The user facing methods of <code>FungibleToken</code> are</p>
+<pre><code class="language-ts">@method.returns(AccountUpdate) async burn(from: PublicKey, amount: UInt64): Promise&lt;AccountUpdate&gt;
+
+@method async transfer(from: PublicKey, to: PublicKey, amount: UInt64)
+@method async approveBase(updates: AccountUpdateForest): Promise&lt;void&gt;
+@method.returns(UInt64) async getBalanceOf(address: PublicKey): Promise&lt;UInt64&gt;
+@method.returns(UInt64) async getCirculating(): Promise&lt;UInt64&gt;
+@method async updateCirculating()
+@method.returns(UInt8) async getDecimals(): Promise&lt;UInt8&gt;
 </code></pre>
-<p>Transfer and burn functionality is available by following methods:</p>
-<pre><code class="language-ts">transfer(from: PublicKey, to: PublicKey, amount: UInt64)
-burn(from: PublicKey, amount: UInt64)
+<p>The following methods call the admin account for permission, and are not supposed to be called by
+regular users</p>
+<pre><code class="language-ts">@method async setAdmin(admin: PublicKey)
+@method.returns(AccountUpdate) async mint(recipient: PublicKey, amount: UInt64): Promise&lt;AccountUpdate&gt;
+@method async pause()
+@method async resume()
 </code></pre>
-<p>Helper methods for reading state variables and account balance</p>
-<pre><code class="language-ts">getBalanceOf(address: PublicKey)
-getSupply()
-getCirculating()
-getDecimals()
-</code></pre>
+<h3 id="minting-burning-and-updating-the-circulating-supply"><a class="header" href="#minting-burning-and-updating-the-circulating-supply">Minting, burning, and updating the circulating supply</a></h3>
+<p>In order to allow multiple minting/burning transactions in a single block, we use the
+actions/reducer model of MINA. The <code>mint</code> and <code>burn</code> methods will modify the token balance in the
+specified account. But instead of directly modifying the value of <code>circulating</code> in the contract
+state, they will instead dispatches an action that instructs the reducer to modify the state. The
+method <code>calculateCirculating</code> collects all the actions and updates the state of the contract.</p>
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
-<p>On each token operation, the event is emitted. The events are declared as follows:</p>
+<p>The following events are emitted from <code>FungibleToken</code> when appropriate:</p>
 <pre><code class="language-ts">events = {
-  SetOwner: PublicKey,
+  SetAdmin: PublicKey,
   Mint: MintEvent,
-  SetSupply: UInt64,
   Burn: BurnEvent,
   Transfer: TransferEvent,
 }
@@ -302,52 +305,19 @@ class TransferEvent extends Struct({
   amount: UInt64,
 }) {}
 </code></pre>
-<p>That completes a review of a fungible token.</p>
+<p>Note that <code>approveBase</code> does not emit an event. Thus, transfers where the account updates have been
+constructed externally to <code>FungibleToken</code> will not have an event emitted by the <code>FungibleToken</code>
+contract.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deploy"><a class="header" href="#deploy">Deploy</a></h1>
-<p>To create a token manager smart contract, inherit your smart contract from base custom token
-implementation, or use the <code>FungibleToken</code> directly</p>
-<pre><code class="language-ts">import { FungibleToken } from &quot;mina-fungible-token&quot;
-
-class MyToken extends FungibleToken {}
-</code></pre>
-<blockquote>
-<p>[!NOTE] If you inherit from <code>FungibleToken</code> to override some functionality, you will need to
-compile both parent and child contracts to be able to prove code for both of them</p>
-</blockquote>
-<p>To deploy a token manager contract, create and compile the token contract instance, then create,
-prove and sign the deploy transaction:</p>
-<pre><code class="language-ts">await FungibleToken.compile()
-await MyToken.compile()
-
-const {
-  privateKey: tokenKey,
-  publicKey: tokenAddress,
-} = PrivateKey.randomKeypair()
-const token = new MyToken(tokenAddress)
-
-// paste the private key of the deployer and admin account here
-const deployerKey = PrivateKey.fromBase58(&quot;...&quot;)
-const ownerKey = PrivateKey.fromBase58(&quot;...&quot;)
-const owner = PublicKey.fromPrivateKey(ownerKey)
-const deployer = PublicKey.fromPrivateKey(deployerKey)
-
-const supply = UInt64.from(21_000_000)
-const symbol = &quot;MYTKN&quot;
-const src = &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts&quot;
-
-const fee = 1e8
-
-const tx = await Mina.transaction({ sender: deployer, fee }, () =&gt; {
-  AccountUpdate.fundNewAccount(deployer, 1)
-  token.deploy(owner, supply, symbol, src)
-})
-
-tx.sign([deployerKey, tokenKey])
-await tx.prove()
-await tx.send()
-</code></pre>
-<p>For this and following samples to work, make sure you have enough funds on deployer and admin
-accounts.</p>
+<p>To create a new token, deploy the <code>FungibleToken</code> contract. You will need an admin account as well,
+to control permissions. You can either use the supplied contract <code>FungibleTokenAdmin</code>, or write your
+own contract that implements <code>FungibleTokenAdminBase</code>. An example can be found in
+<code>FungibleToken.test.ts</code>, where a non-standard admin contract is implemented (<code>CustomTokenAdmin</code>,
+implementing a minting policy that resembles a faucet).</p>
+<p>[!NOTE] Note that you have to write the admin contract from scratch. Inheriting from
+<code>FungibleTokenAdmin</code> and overwriting specific methods might not work.</p>
+<p>[!NOTE] If you do not use the <code>FungibleToken</code> as is, third parties that want to integrate your token
+will need to use your custom contract as well.</p>
 <p>Refer to
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts">examples/e2e.eg.ts</a>
 to see executable end to end example.</p>
@@ -365,15 +335,17 @@ include:</p>
 const mintTo = PublicKey.fromBase58(&quot;...&quot;)
 const mintAmount = UInt64.from(1000)
 
-const tx = await Mina.transaction({ sender: owner, fee }, () =&gt; {
-  // comment this line if a receiver already has token account
+const mintTx = await Mina.transaction({
+  sender: owner,
+  fee,
+}, async () =&gt; {
+  // remove this line if a receiver already has token account
   AccountUpdate.fundNewAccount(owner, 1)
-  token.mint(mintTo, mintAmount)
+  await token.mint(mintTo, new UInt64(2e9))
 })
-
-tx.sign([tokenAdminKey])
-await tx.prove()
-await tx.send()
+mintTx.sign([owner.privateKey, admin.privateKey])
+await mintTx.prove()
+await mintTx.send()
 </code></pre>
 <blockquote>
 <p>[!IMPORTANT] When a token account is created for the first time, an account creation fee must be

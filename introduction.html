@@ -152,32 +152,34 @@
 <p>Mina natively supports custom tokens
 (<a href="https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics">MIP-4</a>). Each
 account on Mina can correspond to a custom token.</p>
-<p>To create a new token, one creates a smart contract, which becomes the manager for the token, and
-uses that contract to set the rules around how the token can be minted, burned and transferred. The
+<p>To create a new token, one creates a smart contract, which becomes the owner for the token, and uses
+that contract to set the rules around how the token can be minted, burned and transferred. The
 contract may also set a token symbol. Uniqueness is not enforced for token names. Instead the public
 key of the contract is used to derive the token's unique identifier.</p>
 <h2 id="show-me-the-code"><a class="header" href="#show-me-the-code">SHOW ME THE CODE</a></h2>
 <p>The
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts"><code>mina-fungible-token</code> repo's e2e example</a>
 showcases the entire lifecycle of a token.</p>
-<p>After running <code>npm i mina-fungible-token</code>, import the <code>FungibleToken</code> contract and deploy it like
-so.</p>
+<p>After running <code>npm i mina-fungible-token</code>, import the <code>FungibleToken</code> and <code>FungibleTokenAdmin</code>
+contracts and deploy them:</p>
 <pre><code class="language-ts">const token = new FungibleToken(contract.publicKey)
+const adminContract = new FungibleTokenAdmin(admin.publicKey)
 
 const deployTx = await Mina.transaction({
-  sender: deployer.publicKey,
+  sender: deployer,
   fee,
-}, () =&gt; {
-  AccountUpdate.fundNewAccount(deployer.publicKey, 1)
-  token.deploy({
-    owner: owner.publicKey,
-    supply: UInt64.from(10_000_000_000_000),
+}, async () =&gt; {
+  AccountUpdate.fundNewAccount(deployer, 2)
+  await adminContract.deploy({ adminPublicKey: admin.publicKey })
+  await token.deploy({
+    admin: admin.publicKey,
     symbol: &quot;abc&quot;,
     src: &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts&quot;,
+    decimals: UInt8.from(9),
   })
 })
 await deployTx.prove()
-deployTx.sign([deployer.privateKey, contract.privateKey])
+deployTx.sign([deployer.key, contract.privateKey, admin.privateKey])
 await deployTx.send()
 </code></pre>
 <blockquote>
@@ -185,23 +187,24 @@ await deployTx.send()
 </blockquote>
 <h2 id="how"><a class="header" href="#how">How?</a></h2>
 <p>How is this custom token mechanism implemented in Mina?</p>
-<h3 id="token-manager"><a class="header" href="#token-manager">Token Manager</a></h3>
-<p>The token manager account is a contract with the following capabilities.</p>
+<h3 id="token-owner-account"><a class="header" href="#token-owner-account">Token Owner Account</a></h3>
+<p>The token owner account is a contract with the following capabilities.</p>
 <ul>
 <li>Set a token symbol (also called token name) for its token. Uniqueness is not enforced for token
-names because the public key of the manager account is used to derive a unique identifier for each
+names because the public key of the owner account is used to derive a unique identifier for each
 token.</li>
 <li>Mint new tokens. The zkApp updates an account's balance by adding the newly created tokens to it.
 You can send minted tokens to any existing account in the network.</li>
 <li>Burn tokens (the opposite of minting). Burning tokens deducts the balance of a certain address by
 the specified amount. A zkApp cannot burn more tokens than the specified account has.</li>
-<li>Send tokens between two accounts. Any account can initiate a transfer, and the transfer must be
-approved by a Token Manager zkApp (see <a href="#approval-mechanism">Approval mechanism</a>).</li>
+<li>Send tokens between two accounts. There are two ways to initiate a transfer: either, the token
+owner can create the account updates directly (via the <code>transfer</code> method), or the account updates
+can be created externally, and then approved by the token owner (see
+<a href="#approval-mechanism">Approval mechanism</a>).</li>
 </ul>
 <h3 id="token-account"><a class="header" href="#token-account">Token Account</a></h3>
 <p>Token accounts are like regular accounts, but they hold a balance of a specific custom token instead
-of MINA. A token account is created from an existing account and is specified by a public key <em>and</em>
-a token id.</p>
+of MINA. A token account is specified by a public key <em>and</em> a token id.</p>
 <p>Token accounts are specific for each type of custom token, so a single public key can have many
 different token accounts.</p>
 <p>A token account is automatically created for a public key whenever an existing account receives a
@@ -213,13 +216,11 @@ paid the same as creating a new standard account.</p>
 <h3 id="token-id"><a class="header" href="#token-id">Token ID</a></h3>
 <p>Token ids are unique identifiers that distinguish between different types of custom tokens. Custom
 token identifiers are globally unique across the entire network.</p>
-<p>Token ids are derived from a Token Manager zkApp. Use <code>deriveTokenId()</code> function to get id of a
-token.</p>
+<p>Token ids are derived from a Token Owner account. Use the <code>deriveTokenId()</code> function to get the id
+of a token.</p>
 <h3 id="approval-mechanism"><a class="header" href="#approval-mechanism">Approval mechanism</a></h3>
-<p>Sending tokens between two accounts must be approved by a Token Manager zkApp. This can be done with
-<code>approveBase()</code> method of the custom token standard reference implementation.</p>
-<p>If you customize the <code>transfer()</code> function or constructing <code>AccountUpdate</code>s for sending tokens
-manually, don't forget to call <code>approveBase()</code>.</p>
+<p>Sending tokens between two accounts must be approved by a Token Owner zkApp. This can be done with
+the <code>approveBase()</code> method of the custom token standard reference implementation.</p>
 
                     </main>
 
