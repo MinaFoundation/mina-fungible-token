@@ -23,7 +23,8 @@ import {
   FungibleTokenAdminDeployProps,
 } from "./index.js"
 
-const proofsEnabled = process.argv.indexOf("--proofs-disabled") === -1
+const proofsEnabled = process.env.SKIP_PROOFS !== "true"
+if (!proofsEnabled) console.log("Skipping proof generation in tests.")
 
 const localChain = await Mina.LocalBlockchain({
   proofsEnabled,
@@ -32,7 +33,7 @@ const localChain = await Mina.LocalBlockchain({
 Mina.setActiveInstance(localChain)
 
 describe("token integration", async () => {
-  if (proofsEnabled) {
+  {
     await FungibleToken.compile()
     await ThirdParty.compile()
     await FungibleTokenAdmin.compile()
