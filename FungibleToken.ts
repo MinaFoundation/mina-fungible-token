@@ -36,7 +36,7 @@ interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
 
 export class FungibleToken extends TokenContract {
   @state(UInt8)
-  decimals = State<UInt8>() // UInt64.from(9)
+  decimals = State<UInt8>()
   @state(PublicKey)
   admin = State<PublicKey>()
   @state(UInt64)
