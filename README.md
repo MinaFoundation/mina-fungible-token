@@ -12,6 +12,15 @@ awaiting an audit of the code before removing the beta status.
 npm run test
 ```
 
+If you want disable proof generation during testing, you can do so via
+
+```sh
+SKIP_PROOFS=true npm run test
+```
+
+The tests will run much faster that way, which is nice when you're testing locally while developing.
+Note that this will skip one test does
+
 ## Running [Examples](./examples)
 
 ```sh
