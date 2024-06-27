@@ -85,11 +85,20 @@ The following events are emitted from `FungibleToken` when appropriate:
 
 ```ts
 events = {
-  SetAdmin: PublicKey,
+  SetAdmin: SetAdminEvent,
+  Pause: PauseEvent,
   Mint: MintEvent,
   Burn: BurnEvent,
   Transfer: TransferEvent,
 }
+
+export class SetAdminEvent extends Struct({
+  adminKey: PublicKey,
+}) {}
+
+export class PauseEvent extends Struct({
+  isPaused: Bool,
+}) {}
 
 class MintEvent extends Struct({
   recipient: PublicKey,
