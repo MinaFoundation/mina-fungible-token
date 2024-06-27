@@ -53,6 +53,7 @@ export class FungibleToken extends TokenContract {
 
   readonly events = {
     SetAdmin: SetAdminEvent,
+    Pause: PauseEvent,
     Mint: MintEvent,
     Burn: BurnEvent,
     Transfer: TransferEvent,
@@ -123,6 +124,7 @@ export class FungibleToken extends TokenContract {
     const canPause = await adminContract.canPause()
     canPause.assertTrue()
     this.paused.set(Bool(true))
+    this.emitEvent("Pause", new PauseEvent({ isPaused: Bool(true) }))
   }
 
   @method
@@ -131,6 +133,7 @@ export class FungibleToken extends TokenContract {
     const canResume = await adminContract.canResume()
     canResume.assertTrue()
     this.paused.set(Bool(false))
+    this.emitEvent("Pause", new PauseEvent({ isPaused: Bool(false) }))
   }
 
   @method
@@ -229,6 +232,10 @@ export class FungibleToken extends TokenContract {
 
 export class SetAdminEvent extends Struct({
   adminKey: PublicKey,
+}) {}
+
+export class PauseEvent extends Struct({
+  isPaused: Bool,
 }) {}
 
 export class MintEvent extends Struct({
