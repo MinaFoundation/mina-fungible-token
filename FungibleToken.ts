@@ -52,7 +52,7 @@ export class FungibleToken extends TokenContract {
   static adminContract: new(...args: any) => FungibleTokenAdminBase = FungibleTokenAdmin
 
   readonly events = {
-    SetAdmin: PublicKey,
+    SetAdmin: SetAdminEvent,
     Mint: MintEvent,
     Burn: BurnEvent,
     Transfer: TransferEvent,
@@ -92,7 +92,7 @@ export class FungibleToken extends TokenContract {
     const canChangeAdmin = await adminContract.canChangeAdmin(admin)
     canChangeAdmin.assertTrue()
     this.admin.set(admin)
-    this.emitEvent("SetAdmin", admin)
+    this.emitEvent("SetAdmin", new SetAdminEvent({ adminKey: admin }))
   }
 
   @method.returns(AccountUpdate)
@@ -226,6 +226,10 @@ export class FungibleToken extends TokenContract {
     return this.decimals.getAndRequireEquals()
   }
 }
+
+export class SetAdminEvent extends Struct({
+  adminKey: PublicKey,
+}) {}
 
 export class MintEvent extends Struct({
   recipient: PublicKey,
