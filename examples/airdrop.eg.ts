@@ -9,6 +9,7 @@ import {
   Experimental,
   Field,
   method,
+  Mina,
   Poseidon,
   Provable,
   PublicKey,
@@ -18,14 +19,13 @@ import {
   Struct,
   UInt64,
 } from "o1js"
-import { newTestPublicKeys } from "test_util"
 import { token, tokenId } from "./token.eg"
 const { IndexedMerkleMap, BatchReducer } = Experimental
 
 class MerkleMap extends IndexedMerkleMap(10) {}
 
 // a couple of test accounts
-const accounts = newTestPublicKeys(20)
+const accounts = Mina.TestPublicKey.random(20)
 
 // create a map of eligible accounts
 const eligible = createEligibleMap(accounts)
@@ -37,21 +37,29 @@ class Claim extends Struct({ account: PublicKey, amount: UInt64 }) {}
 
 // set up reducer
 let batchReducer = new BatchReducer({ actionType: Claim, batchSize: 5 })
-class ActionBatchProof extends batchReducer.Proof {}
+class Batch extends batchReducer.Batch {}
+class BatchProof extends batchReducer.BatchProof {}
 
 /**
  * Contract that manages airdrop claims.
  */
 class Airdrop extends SmartContract {
+  // merkle map related state
   @state(Field)
   eligibleRoot = State(eligible.root)
+  @state(Field)
+  eligibleLength = State(eligible.length)
 
+  // batch reducer state
   @state(Field)
   actionState = State(BatchReducer.initialActionState)
+  @state(Field)
+  actionStack = State(BatchReducer.initialActionStack)
 
   @method
   async claim(amount: UInt64) {
     let account = this.sender.getUnconstrained()
+    account.isEmpty().assertFalse() // TODO remove when this is prevented in `createSigned`
 
     // ensure that the token account already exists and that the sender knows its private key
     let au = AccountUpdate.createSigned(account, tokenId)
@@ -61,16 +69,15 @@ class Airdrop extends SmartContract {
   }
 
   @method.returns(MerkleMap.provable)
-  async settleClaims(proof: ActionBatchProof) {
+  async settleClaims(batch: Batch, proof: BatchProof) {
     // fetch merkle map and assert that it matches the onchain root
-    let root = this.eligibleRoot.getAndRequireEquals()
     let eligible = await Provable.witnessAsync(MerkleMap.provable, fetchEligibleMap)
-    eligible.root.assertEquals(root)
+    this.eligibleRoot.requireEquals(eligible.root)
 
     let accountUpdates = AccountUpdateForest.empty()
 
     // process claims by reducing actions
-    batchReducer.processNextBatch(proof, (claim, isDummy) => {
+    batchReducer.processBatch({ batch, proof }, (claim, isDummy) => {
       // check whether the claim is valid = exactly contained in the map
       let accountKey = key(claim.account)
       let amountOption = eligible.getOption(accountKey)
@@ -90,8 +97,9 @@ class Airdrop extends SmartContract {
     // approve the created account updates
     token.approveBase(accountUpdates)
 
-    // update the onchain root and action state pointer
+    // update the onchain eligible map
     this.eligibleRoot.set(eligible.root)
+    this.eligibleLength.set(eligible.length)
 
     // return the updated eligible map
     return eligible
