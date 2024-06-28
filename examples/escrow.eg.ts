@@ -53,7 +53,7 @@ Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy, jackie] = Mina.TestPublicKey.random(5)
+const [deployer, owner, alexa, billy, jackie] = localChain.testAccounts
 const tokenContract = PrivateKey.randomKeypair()
 const escrowContract = PrivateKey.randomKeypair()
 const admin = PrivateKey.randomKeypair()

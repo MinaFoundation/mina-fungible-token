@@ -10,7 +10,7 @@ Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy] = Mina.TestPublicKey.random(4)
+const [deployer, owner, alexa, billy] = localChain.testAccounts
 const contract = PrivateKey.randomKeypair()
 const admin = PrivateKey.randomKeypair()
 
