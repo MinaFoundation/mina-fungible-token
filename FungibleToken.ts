@@ -21,22 +21,22 @@ import {
   UInt8,
 } from "o1js"
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
-import type { FungibleTokenLike } from "./FungibleTokenLike.js"
 
-export interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
+interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** Address of the contract controlling permissions for administrative actions */
   admin: PublicKey
   /** The token symbol. */
   symbol: string
-  /** A source code reference, which is placed within the `zkappUri` of the contract account. */
+  /** A source code reference, which is placed within the `zkappUri` of the contract account.
+   * Typically a link to a file on github. */
   src: string
   /** Number of decimals in a unit */
   decimals: UInt8
 }
 
-export class FungibleToken extends TokenContract implements FungibleTokenLike {
+export class FungibleToken extends TokenContract {
   @state(UInt8)
-  decimals = State<UInt8>() // UInt64.from(9)
+  decimals = State<UInt8>()
   @state(PublicKey)
   admin = State<PublicKey>()
   @state(UInt64)
@@ -76,24 +76,31 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
     this.actionState.set(Reducer.initialActionState)
   }
 
-  public getAdminContract(): FungibleTokenAdminBase {
-    return (new FungibleToken.adminContract(this.admin.getAndRequireEquals()))
+  public async getAdminContract(): Promise<FungibleTokenAdminBase> {
+    const admin = await Provable.witnessAsync(PublicKey, async () => {
+      let pk = await this.admin.fetch()
+      assert(pk !== undefined, "could not fetch admin contract key")
+      return pk
+    })
+    this.admin.requireEquals(admin)
+    return (new FungibleToken.adminContract(admin))
   }
 
   @method
   async setAdmin(admin: PublicKey) {
-    const canChangeAdmin = await this.getAdminContract().canChangeAdmin(admin)
+    const adminContract = await this.getAdminContract()
+    const canChangeAdmin = await adminContract.canChangeAdmin(admin)
     canChangeAdmin.assertTrue()
     this.admin.set(admin)
     this.emitEvent("SetAdmin", admin)
   }
 
   @method.returns(AccountUpdate)
-  async mint(recipient: PublicKey, amount: UInt64) {
+  async mint(recipient: PublicKey, amount: UInt64): Promise<AccountUpdate> {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.mint({ address: recipient, amount })
-    const canMint = await this.getAdminContract()
-      .canMint(accountUpdate)
+    const adminContract = await this.getAdminContract()
+    const canMint = await adminContract.canMint(accountUpdate)
     canMint.assertTrue()
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
@@ -102,7 +109,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method.returns(AccountUpdate)
-  async burn(from: PublicKey, amount: UInt64) {
+  async burn(from: PublicKey, amount: UInt64): Promise<AccountUpdate> {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.burn({ address: from, amount })
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
@@ -112,14 +119,16 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
 
   @method
   async pause() {
-    const canPause = await this.getAdminContract().canPause()
+    const adminContract = await this.getAdminContract()
+    const canPause = await adminContract.canPause()
     canPause.assertTrue()
     this.paused.set(Bool(true))
   }
 
   @method
   async resume() {
-    const canResume = await this.getAdminContract().canResume()
+    const adminContract = await this.getAdminContract()
+    const canResume = await adminContract.canResume()
     canResume.assertTrue()
     this.paused.set(Bool(false))
   }
@@ -213,7 +222,7 @@ export class FungibleToken extends TokenContract implements FungibleTokenLike {
   }
 
   @method.returns(UInt8)
-  async getDecimals() {
+  async getDecimals(): Promise<UInt8> {
     return this.decimals.getAndRequireEquals()
   }
 }

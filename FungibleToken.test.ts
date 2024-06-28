@@ -1,5 +1,5 @@
 import { equal, rejects } from "node:assert"
-import { before, describe, it } from "node:test"
+import { describe, it } from "node:test"
 import {
   AccountUpdate,
   AccountUpdateForest,
@@ -22,9 +22,9 @@ import {
   FungibleTokenAdminBase,
   FungibleTokenAdminDeployProps,
 } from "./index.js"
-import { newTestPublicKey } from "./test_util.js"
 
-const proofsEnabled = true
+const proofsEnabled = process.env.SKIP_PROOFS !== "true"
+if (!proofsEnabled) console.log("Skipping proof generation in tests.")
 
 const localChain = await Mina.LocalBlockchain({
   proofsEnabled,
@@ -32,36 +32,31 @@ const localChain = await Mina.LocalBlockchain({
 })
 Mina.setActiveInstance(localChain)
 
-describe("token integration", () => {
-  let [deployer, sender, receiver] = localChain.testAccounts
+describe("token integration", async () => {
+  {
+    await FungibleToken.compile()
+    await ThirdParty.compile()
+    await FungibleTokenAdmin.compile()
+    await CustomTokenAdmin.compile()
+  }
 
-  let tokenAdmin = newTestPublicKey()
-  let tokenAdminContract = new FungibleTokenAdmin(tokenAdmin)
-  let newTokenAdmin = newTestPublicKey()
-  let newTokenAdminContract = new FungibleTokenAdmin(newTokenAdmin)
-  let tokenA = newTestPublicKey()
-  let tokenAContract = new FungibleToken(tokenA)
-  let tokenBAdmin = newTestPublicKey()
-  let tokenBAdminContract: CustomTokenAdmin
-  let tokenB = newTestPublicKey()
-  let tokenBContract = new FungibleToken(tokenB)
-  let thirdPartyA = newTestPublicKey()
-  let thirdPartyAContract: ThirdParty
-  let thirdPartyB = newTestPublicKey()
-  let thirdPartyBContract: ThirdParty
-
-  before(async () => {
-    tokenBAdminContract = new CustomTokenAdmin(tokenBAdmin)
-    thirdPartyAContract = new ThirdParty(thirdPartyA)
-    thirdPartyBContract = new ThirdParty(thirdPartyB)
-
-    if (proofsEnabled) {
-      await FungibleToken.compile()
-      await ThirdParty.compile()
-      await FungibleTokenAdmin.compile()
-      await CustomTokenAdmin.compile()
-    }
-  })
+  const [
+    tokenAdmin,
+    newTokenAdmin,
+    tokenA,
+    tokenBAdmin,
+    tokenB,
+    thirdPartyA,
+    thirdPartyB,
+  ] = Mina.TestPublicKey.random(7)
+  const [deployer, sender, receiver] = localChain.testAccounts
+  const tokenAdminContract = new FungibleTokenAdmin(tokenAdmin)
+  const newTokenAdminContract = new FungibleTokenAdmin(newTokenAdmin)
+  const tokenAContract = new FungibleToken(tokenA)
+  const tokenBAdminContract = new CustomTokenAdmin(tokenBAdmin)
+  const tokenBContract = new FungibleToken(tokenB)
+  const thirdPartyAContract = new ThirdParty(thirdPartyA)
+  const thirdPartyBContract = new ThirdParty(thirdPartyB)
 
   describe("deploy", () => {
     it("should deploy token contract A", async () => {

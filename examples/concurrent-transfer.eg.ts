@@ -1,4 +1,4 @@
-import { AccountUpdate, fetchAccount, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
+import { AccountUpdate, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
@@ -60,18 +60,18 @@ Mina.setActiveInstance(Mina.Network(url))
 
 const feePayerKey = PrivateKey.fromBase58("EKE5nJtRFYVWqrCfdpqJqKKdt2Sskf5Co2q8CWJKEGSg71ZXzES7")
 const [contract, feepayer, alexa, billy, jackie, admin] = [
-  keypair("EKF5VLgGNU9Y3xA1q5mudiiwp47m7RZ8DGhU6JVg6e3fZdejUY5X"),
+  keypair(),
   {
     privateKey: feePayerKey,
     publicKey: feePayerKey.toPublicKey(),
   },
-  keypair("EKFQXBdCLBGQd1BPmvq9FTLdDEQtpMLUH2SdaAW6yyoDGQbStwPd"),
-  keypair("EKE8H3cNvgHAUQxRa2kxRQ5HqGYWaH5MCyBoAKXsWYVRiDhYNoB4"),
-  keypair("EKF4exFf35LpqPyom9ms35rv1xh7cUTugcXcdpwKd9LSvY9kYzrZ"),
-  keypair("EKEfnNMvDXL8NMNoWb2rJZdocwNHfh1RbbxWF3RuinFX242rGXxa"),
+  keypair(),
+  keypair(),
+  keypair(),
+  keypair(),
 ]
 
-printKeypairs({ alexa, billy, jackie, contract, admin, feepayer })
+printKeyPairs({ alexa, billy, jackie, contract, admin, feepayer })
 
 await FungibleToken.compile()
 await FungibleTokenAdmin.compile()
@@ -142,8 +142,8 @@ function keypair(base58Key?: string): KeyPair {
   return { publicKey: privateKey.toPublicKey(), privateKey }
 }
 
-function printKeypairs(keypairs: Record<string, KeyPair>) {
-  for (let [name, keypair] of Object.entries(keypairs)) {
+function printKeyPairs(keyPairs: Record<string, KeyPair>) {
+  for (let [name, keypair] of Object.entries(keyPairs)) {
     console.log(`${name} ${keypair.publicKey.toBase58()} ${keypair.privateKey.toBase58()}`)
   }
 }

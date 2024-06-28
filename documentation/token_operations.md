@@ -16,15 +16,17 @@ To mint tokens to some address:
 const mintTo = PublicKey.fromBase58("...")
 const mintAmount = UInt64.from(1000)
 
-const tx = await Mina.transaction({ sender: owner, fee }, () => {
-  // comment this line if a receiver already has token account
+const mintTx = await Mina.transaction({
+  sender: owner,
+  fee,
+}, async () => {
+  // remove this line if a receiver already has token account
   AccountUpdate.fundNewAccount(owner, 1)
-  token.mint(mintTo, mintAmount)
+  await token.mint(mintTo, new UInt64(2e9))
 })
-
-tx.sign([tokenAdminKey])
-await tx.prove()
-await tx.send()
+mintTx.sign([owner.privateKey, admin.privateKey])
+await mintTx.prove()
+await mintTx.send()
 ```
 
 > [!IMPORTANT] When a token account is created for the first time, an account creation fee must be
