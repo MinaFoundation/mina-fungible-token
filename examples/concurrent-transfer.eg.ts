@@ -100,7 +100,6 @@ const deployTxResult = await deployTx.send().then((v) => v.wait())
 console.log("Deploy tx:", deployTxResult.hash)
 
 console.log("Minting new tokens to Alexa.")
-await fetchAccount({ publicKey: admin.publicKey }) // hack to ensure the admin account is fetched
 const mintTx = await Mina.transaction({
   sender: feepayer.publicKey,
   fee,
