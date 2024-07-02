@@ -140,19 +140,12 @@ export class FungibleToken extends TokenContract {
     this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
-  private permissionEquals(p1: Types.AuthRequired, p2: Types.AuthRequired) {
-    return p1.constant
-      .equals(p2.constant)
-      .and(p1.signatureNecessary.equals(p2.signatureNecessary))
-      .and(p1.signatureSufficient.equals(p2.signatureSufficient))
-  }
-
   private checkPermissionsUpdate(update: AccountUpdate) {
     let permissions = update.update.permissions
 
     let { access, receive } = permissions.value
-    let accessIsNone = this.permissionEquals(access, Permissions.none())
-    let receiveIsNone = this.permissionEquals(receive, Permissions.none())
+    let accessIsNone = Provable.equal(Types.AuthRequired, access, Permissions.none())
+    let receiveIsNone = Provable.equal(Types.AuthRequired, receive, Permissions.none())
     let updateAllowed = accessIsNone.and(receiveIsNone)
 
     assert(updateAllowed.or(permissions.isSome.not()))
