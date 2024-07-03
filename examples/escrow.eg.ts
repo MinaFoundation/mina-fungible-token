@@ -53,7 +53,7 @@ Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy, jackie] = Mina.TestPublicKey.random(5)
+const [deployer, owner, alexa, billy, jackie] = localChain.testAccounts
 const tokenContract = PrivateKey.randomKeypair()
 const escrowContract = PrivateKey.randomKeypair()
 const admin = PrivateKey.randomKeypair()
@@ -84,6 +84,7 @@ const deployTokenTx = await Mina.transaction({
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts",
     decimals: UInt8.from(9),
+    startUnpaused: true,
   })
 })
 await deployTokenTx.prove()
