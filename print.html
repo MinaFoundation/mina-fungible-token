@@ -283,11 +283,20 @@ method <code>calculateCirculating</code> collects all the actions and updates th
 <h2 id="events"><a class="header" href="#events">Events</a></h2>
 <p>The following events are emitted from <code>FungibleToken</code> when appropriate:</p>
 <pre><code class="language-ts">events = {
-  SetAdmin: PublicKey,
+  SetAdmin: SetAdminEvent,
+  Pause: PauseEvent,
   Mint: MintEvent,
   Burn: BurnEvent,
   Transfer: TransferEvent,
 }
+
+export class SetAdminEvent extends Struct({
+  adminKey: PublicKey,
+}) {}
+
+export class PauseEvent extends Struct({
+  isPaused: Bool,
+}) {}
 
 class MintEvent extends Struct({
   recipient: PublicKey,
