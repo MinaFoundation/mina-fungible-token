@@ -32,6 +32,10 @@ interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   src: string
   /** Number of decimals in a unit */
   decimals: UInt8
+  /** Unless this is set to `true`, the tokens will start in paused mode,
+   * and will need to be explicitly resumed by calling the `resume()` method.
+   * You should only set this to `true` in atomic deploys. */
+  startUnpaused?: boolean
 }
 
 export class FungibleToken extends TokenContract {
@@ -75,6 +79,11 @@ export class FungibleToken extends TokenContract {
     this.account.zkappUri.set(props.src)
 
     this.actionState.set(Reducer.initialActionState)
+    if (props.startUnpaused) {
+      this.paused.set(Bool(false))
+    } else {
+      this.paused.set(Bool(true))
+    }
   }
 
   public async getAdminContract(): Promise<FungibleTokenAdminBase> {
