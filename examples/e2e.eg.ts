@@ -10,7 +10,7 @@ Mina.setActiveInstance(localChain)
 
 const fee = 1e8
 
-const [deployer, owner, alexa, billy] = Mina.TestPublicKey.random(4)
+const [deployer, owner, alexa, billy] = localChain.testAccounts
 const contract = PrivateKey.randomKeypair()
 const admin = PrivateKey.randomKeypair()
 
@@ -29,6 +29,7 @@ const deployTx = await Mina.transaction({
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
     decimals: UInt8.from(9),
+    startUnpaused: true,
   })
 })
 await deployTx.prove()

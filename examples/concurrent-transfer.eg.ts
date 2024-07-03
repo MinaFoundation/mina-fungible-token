@@ -92,6 +92,7 @@ const deployTx = await Mina.transaction({
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
     decimals: UInt8.from(9),
+    startUnpaused: true,
   })
 })
 await deployTx.prove()
