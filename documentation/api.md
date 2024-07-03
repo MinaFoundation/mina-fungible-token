@@ -56,7 +56,8 @@ The user facing methods of `FungibleToken` are
 @method async transfer(from: PublicKey, to: PublicKey, amount: UInt64)
 @method async approveBase(updates: AccountUpdateForest): Promise<void>
 @method.returns(UInt64) async getBalanceOf(address: PublicKey): Promise<UInt64>
-@method.returns(UInt64) async getCirculating(updateContractState: Bool): Promise<UInt64>
+@method.returns(UInt64) async getCirculating(): Promise<UInt64>
+@method async updateCirculating()
 @method.returns(UInt8) async getDecimals(): Promise<UInt8>
 ```
 
@@ -76,8 +77,7 @@ In order to allow multiple minting/burning transactions in a single block, we us
 actions/reducer model of MINA. The `mint` and `burn` methods will modify the token balance in the
 specified account. But instead of directly modifying the value of `circulating` in the contract
 state, they will instead dispatches an action that instructs the reducer to modify the state. The
-method `getCirculating(updateContractState:Bool)`, when supplied with
-`updateContractState:Bool(true)`, collects all the actions and updates the state of the contract.
+method `calculateCirculating` collects all the actions and updates the state of the contract.
 
 ## Events
 

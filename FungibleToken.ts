@@ -190,11 +190,18 @@ export class FungibleToken extends TokenContract {
 
   /** Reports the current circulating supply
    * This does take into account currently unreduced actions.
-   *
-   * If @param updateContractState is true, also updates the circulating supply in the contract state.
    */
+  async getCirculating(): Promise<UInt64> {
+    return this.getOrUpdateCirculating(Bool(false))
+  }
+
+  /** Aggregate actions from minting and burning to update the circulating supply */
+  async updateCirculating() {
+    this.getOrUpdateCirculating(Bool(true))
+  }
+
   @method.returns(UInt64)
-  async getCirculating(updateContractState: Bool): Promise<UInt64> {
+  async getOrUpdateCirculating(updateContractState: Bool): Promise<UInt64> {
     let oldCirculating = this.circulating.getAndRequireEquals()
     let actionState = this.actionState.getAndRequireEquals()
     let pendingActions = this.reducer.getActions({ fromActionState: actionState })
@@ -205,7 +212,6 @@ export class FungibleToken extends TokenContract {
 
     this.circulating.set(contractCirculating)
     this.actionState.set(contractActionState)
-
     return newCirculating
   }
 
