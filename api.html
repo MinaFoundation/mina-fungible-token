@@ -182,6 +182,11 @@ contract does not need to be integrated into wallets or other third party applic
 <li>A string pointing to the source code of the contract -- when following the standard, this should
 point to the source of the standard implementation on github</li>
 <li>A <code>UInt8</code> for the number of decimals</li>
+<li>An optional <code>boolean</code> to signify whether token transfers should be enabled immediately. Unless
+this is supplied and set to <code>true</code>, the token contract will be in a paused state initially, and
+the <code>resume()</code> will need to be called before tokens can be minted or transferred. This is safer if
+you have a non-atomic deploy (i.e., if you do not have the admin contract deployed in the same
+transaction as the token contract itself).</li>
 </ul>
 <p>and initializes the state of the contract. Initially, the circulating supply is set to zero, as no
 tokens have been created yet.</p>
