@@ -29,6 +29,10 @@ const deployTx = await Mina.transaction({
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
     decimals: UInt8.from(9),
+    // We can set `startUnpaused` to true here, because we are doing an atomic deployment
+    // If you are not deploying the admin and token contracts in the same transaction,
+    // it is safer to start the tokens paused, and resume them only after verifying that
+    // the admin contract has been deployed
     startUnpaused: true,
   })
 })
