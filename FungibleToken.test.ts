@@ -100,6 +100,7 @@ describe("token integration", async () => {
           symbol: "tokB",
           src: "",
           decimals: UInt8.from(9),
+          startUnpaused: true,
         })
       })
 
@@ -130,6 +131,28 @@ describe("token integration", async () => {
     const mintAmount = UInt64.from(1000)
     const burnAmount = UInt64.from(100)
 
+    it("should not mint before calling resume()", async () => {
+      await rejects(() =>
+        Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          AccountUpdate.fundNewAccount(sender, 1)
+          await tokenAContract.mint(sender, mintAmount)
+        })
+      )
+    })
+    it("should accept a call to resume()", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.resume()
+      })
+      tx.sign([sender.key, tokenAdmin.key])
+      await tx.prove()
+      await tx.send()
+    })
     it("should mint for the sender account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
