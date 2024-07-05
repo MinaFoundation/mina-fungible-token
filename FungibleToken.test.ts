@@ -358,6 +358,27 @@ describe("token integration", async () => {
       )
     })
 
+    it("should reject flash-minting transactions", async () => {
+      const updateSend = AccountUpdate.createSigned(
+        sender,
+        tokenAContract.deriveTokenId(),
+      )
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg()
+      const updateReceive = AccountUpdate.create(
+        receiver,
+        tokenAContract.deriveTokenId(),
+      )
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
+      await rejects(async () =>
+        await Mina.transaction({
+          sender: deployer,
+          fee: 1e8,
+        }, async () => {
+          await tokenAContract.approveAccountUpdates([updateReceive, updateSend])
+        })
+      )
+    })
+
     it("should reject unbalanced transactions", async () => {
       const updateSend = AccountUpdate.createSigned(
         sender,
