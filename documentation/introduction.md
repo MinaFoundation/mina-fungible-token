@@ -88,3 +88,7 @@ of a token.
 
 Sending tokens between two accounts must be approved by a Token Owner zkApp. This can be done with
 the `approveBase()` method of the custom token standard reference implementation.
+
+> [!IMPORTANT] When manually constructing `AccountUpdate`s, make sure to order then appropriately in
+> the call to `approveBase()`. The contract will not allow flash minting, i.e., tokens cannot be
+> received by an account before they have been sent from an account.
