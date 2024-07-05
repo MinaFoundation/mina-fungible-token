@@ -161,10 +161,9 @@ export class FungibleToken extends TokenContract {
     this.forEachUpdate(updates, (update, usesToken) => {
       this.checkPermissionsUpdate(update)
       totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
-      Bool.or(
-        totalBalance.isPositive().not(),
-        totalBalance.equals(0),
-      ).assertTrue("Flash-minting detected.")
+      totalBalance.isPositiveV2().assertFalse(
+        "Flash-minting detected. Please make sure that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
+      )
     })
     totalBalance.assertEquals(Int64.zero)
   }
