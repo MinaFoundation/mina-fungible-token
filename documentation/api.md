@@ -94,7 +94,7 @@ events = {
   Pause: PauseEvent,
   Mint: MintEvent,
   Burn: BurnEvent,
-  Transfer: TransferEvent,
+  BalanceChange: BalanceChangeEvent,
 }
 
 export class SetAdminEvent extends Struct({
@@ -115,13 +115,13 @@ class BurnEvent extends Struct({
   amount: UInt64,
 }) {}
 
-class TransferEvent extends Struct({
-  from: PublicKey,
-  to: PublicKey,
-  amount: UInt64,
+export class BalanceChangeEvent extends Struct({
+  address: PublicKey,
+  amount: Int64,
 }) {}
 ```
 
-Note that `approveBase` does not emit an event. Thus, transfers where the account updates have been
-constructed externally to `FungibleToken` will not have an event emitted by the `FungibleToken`
-contract.
+Note that `MintEvent`, `BurnEvent`, and `BalanceChangeEvent` each signal that the balance of an
+account changes. The difference is that `MintEvent` and `BurnEvent` are emitted when tokens are
+minted/burned, and `BalanceChangeEvent` is emitted when a transaction takes tokens from some
+addresses, and sends them to others.

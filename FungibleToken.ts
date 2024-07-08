@@ -60,7 +60,7 @@ export class FungibleToken extends TokenContract {
     Pause: PauseEvent,
     Mint: MintEvent,
     Burn: BurnEvent,
-    Transfer: TransferEvent,
+    BalanceChange: BalanceChangeEvent,
   }
 
   // We use actions and reducers for changing the circulating supply. That is to allow multiple mints/burns in a single block, which would not work if those would alter the contract state directly.
@@ -149,7 +149,6 @@ export class FungibleToken extends TokenContract {
   async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
     this.paused.getAndRequireEquals().assertFalse()
     this.internal.send({ from, to, amount })
-    this.emitEvent("Transfer", new TransferEvent({ from, to, amount }))
   }
 
   private checkPermissionsUpdate(update: AccountUpdate) {
@@ -169,6 +168,12 @@ export class FungibleToken extends TokenContract {
     let totalBalance = Int64.from(0)
     this.forEachUpdate(updates, (update, usesToken) => {
       this.checkPermissionsUpdate(update)
+      if (usesToken) {
+        this.emitEvent(
+          "BalanceChange",
+          new BalanceChangeEvent({ address: update.publicKey, amount: update.balanceChange }),
+        )
+      }
       totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
       totalBalance.isPositiveV2().assertFalse(
         "Flash-minting detected. Please make sure that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
@@ -254,8 +259,7 @@ export class BurnEvent extends Struct({
   amount: UInt64,
 }) {}
 
-export class TransferEvent extends Struct({
-  from: PublicKey,
-  to: PublicKey,
-  amount: UInt64,
+export class BalanceChangeEvent extends Struct({
+  address: PublicKey,
+  amount: Int64,
 }) {}
