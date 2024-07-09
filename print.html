@@ -219,6 +219,11 @@ of a token.</p>
 <h3 id="approval-mechanism"><a class="header" href="#approval-mechanism">Approval mechanism</a></h3>
 <p>Sending tokens between two accounts must be approved by a Token Owner zkApp. This can be done with
 the <code>approveBase()</code> method of the custom token standard reference implementation.</p>
+<blockquote>
+<p>[!IMPORTANT] When manually constructing <code>AccountUpdate</code>s, make sure to order then appropriately in
+the call to <code>approveBase()</code>. The contract will not allow flash minting, i.e., tokens cannot be
+received by an account before they have been sent from an account.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-overview"><a class="header" href="#api-overview">API overview</a></h1>
 <p>The token standard implementation provides a smart contract <code>FungibleToken</code> that can be deployed as
 the token owner for a new token. It provides all the user facing functionality that is expected of a
