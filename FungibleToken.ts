@@ -8,6 +8,7 @@ import {
   Int64,
   MerkleList,
   method,
+  Option,
   Permissions,
   Provable,
   PublicKey,
@@ -166,20 +167,35 @@ export class FungibleToken extends TokenContract {
   async approveBase(updates: AccountUpdateForest): Promise<void> {
     this.paused.getAndRequireEquals().assertFalse()
     let totalBalance = Int64.from(0)
+    let balanceChanges = [] as Array<Option<BalanceChangeEvent>>
     this.forEachUpdate(updates, (update, usesToken) => {
       this.checkPermissionsUpdate(update)
-      if (usesToken) {
-        this.emitEvent(
-          "BalanceChange",
+      const balanceChange = Provable.if(
+        usesToken,
+        Option(BalanceChangeEvent),
+        Option(BalanceChangeEvent).fromValue(
           new BalanceChangeEvent({ address: update.publicKey, amount: update.balanceChange }),
-        )
-      }
+        ),
+        Option(BalanceChangeEvent).none(),
+      )
+      balanceChanges.push(balanceChange)
+
       totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
       totalBalance.isPositiveV2().assertFalse(
         "Flash-minting detected. Please make sure that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
       )
     })
     totalBalance.assertEquals(Int64.zero)
+    balanceChanges.filter((
+      value: Option<BalanceChangeEvent>,
+      _index: number,
+      _array: Option<BalanceChangeEvent>[],
+    ) => value.isSome)
+      .forEach((
+        value: Option<BalanceChangeEvent>,
+        _index: number,
+        _array: Option<BalanceChangeEvent>[],
+      ) => this.emitEvent("BalanceChange", value.value))
   }
 
   @method.returns(UInt64)
