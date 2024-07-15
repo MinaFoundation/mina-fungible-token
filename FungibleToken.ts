@@ -11,7 +11,6 @@ import {
   Permissions,
   Provable,
   PublicKey,
-  Reducer,
   State,
   state,
   Struct,
@@ -76,7 +75,7 @@ export class FungibleToken extends TokenContract {
     }
   }
 
-  // ** Initialises the account for tracking total circulation. */
+  // ** Initializes the account for tracking total circulation. */
   @method
   async initialize() {
     const accountUpdate = AccountUpdate.createSigned(this.address, this.deriveTokenId())
