@@ -85,7 +85,7 @@ const deployTx = await Mina.transaction({
   fee,
   nonce,
 }, async () => {
-  AccountUpdate.fundNewAccount(feepayer.publicKey, 2)
+  AccountUpdate.fundNewAccount(feepayer.publicKey, 3)
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
     admin: admin.publicKey,
@@ -98,6 +98,7 @@ const deployTx = await Mina.transaction({
     // the admin contract has been deployed
     startUnpaused: true,
   })
+  await token.initialize()
 })
 await deployTx.prove()
 deployTx.sign([feepayer.privateKey, contract.privateKey, admin.privateKey])
