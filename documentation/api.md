@@ -31,7 +31,6 @@ The on-chain state is defined as follows:
 @state(UInt8) decimals = State<UInt8>()
 @state(PublicKey) admin = State<PublicKey>()
 @state(UInt64) private circulating = State<UInt64>()
-@state(Field) actionState = State<Field>()
 @state(Bool) paused = State<Bool>()
 ```
 
@@ -76,13 +75,17 @@ regular users
 @method async resume()
 ```
 
-### Minting, burning, and updating the circulating supply
+### Minting, burning, and keeping track of the circulating supply
 
-In order to allow multiple minting/burning transactions in a single block, we use the
-actions/reducer model of MINA. The `mint` and `burn` methods will modify the token balance in the
-specified account. But instead of directly modifying the value of `circulating` in the contract
-state, they will instead dispatches an action that instructs the reducer to modify the state. The
-method `calculateCirculating` collects all the actions and updates the state of the contract.
+In order to allow multiple minting/burning transactions in a single block, we do not tally the
+circulating supply as part of the contract state. Instead, we use a special account, the balance of
+which always corresponds to the total number of tokens in other accounts. The balance of this
+account is updated in the `mint()` and `burn()` methods. Transfers to and from this account are not
+possible. The `getCirculating()` method reports the balance of the account.
+
+Note that if you want to require certain limits on the circulation, you should express your
+constraints using `requireBetween()` rather than `requireEquals()`. This is more robust against
+minting or burning transactions in the same block invalidating your preconditions.
 
 ## Events
 

@@ -26,7 +26,7 @@ const deployTx = await Mina.transaction({
   sender: deployer,
   fee,
 }, async () => {
-  AccountUpdate.fundNewAccount(deployer, 2)
+  AccountUpdate.fundNewAccount(deployer, 3)
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
     admin: admin.publicKey,
@@ -34,6 +34,7 @@ const deployTx = await Mina.transaction({
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts",
     decimals: UInt8.from(9),
   })
+  await tokenBContract.initialize()
 })
 await deployTx.prove()
 deployTx.sign([deployer.key, contract.privateKey, admin.privateKey])
