@@ -423,6 +423,86 @@ describe("token integration", async () => {
         })
       ))
     })
+
+    it("Should prevent transfers from account that's tracking circulation", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        AccountUpdate.fundNewAccount(sender, 1)
+        await tokenAContract.transfer(
+          tokenA,
+          receiver,
+          sendAmount,
+        )
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await rejects(() => tx.send())
+    })
+
+    it("Should prevent transfers to account that's tracking circulation", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        AccountUpdate.fundNewAccount(sender, 1)
+        await tokenAContract.transfer(
+          sender,
+          tokenA,
+          sendAmount,
+        )
+      })
+
+      tx.sign([sender.key])
+      await tx.prove()
+      await rejects(() => tx.send())
+    })
+
+    it("Should reject manually constructed transfers from the account that's tracking circulation", async () => {
+      const updateSend = AccountUpdate.createSigned(
+        tokenA,
+        tokenAContract.deriveTokenId(),
+      )
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg()
+      const updateReceive = AccountUpdate.create(
+        receiver,
+        tokenAContract.deriveTokenId(),
+      )
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
+
+      await rejects(() =>
+        Mina.transaction({
+          sender: deployer,
+          fee: 1e8,
+        }, async () => {
+          await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
+        })
+      )
+    })
+
+    it("Should reject manually constructed transfers to the account that's tracking circulation", async () => {
+      const updateSend = AccountUpdate.createSigned(
+        sender,
+        tokenAContract.deriveTokenId(),
+      )
+      updateSend.balanceChange = Int64.fromUnsigned(sendAmount).neg()
+      const updateReceive = AccountUpdate.create(
+        tokenA,
+        tokenAContract.deriveTokenId(),
+      )
+      updateReceive.balanceChange = Int64.fromUnsigned(sendAmount)
+
+      await rejects(() =>
+        Mina.transaction({
+          sender: deployer,
+          fee: 1e8,
+        }, async () => {
+          await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
+        })
+      )
+    })
   })
 
   describe("account permissions", () => {
@@ -443,8 +523,6 @@ describe("token integration", async () => {
         })
       )
     })
-
-    it.todo("Should prevent transfers from account that's tracking circulation")
   })
 
   describe("pausing/resuming", () => {
