@@ -221,7 +221,7 @@ method <code>calculateCirculating</code> collects all the actions and updates th
   Pause: PauseEvent,
   Mint: MintEvent,
   Burn: BurnEvent,
-  Transfer: TransferEvent,
+  BalanceChange: BalanceChangeEvent,
 }
 
 export class SetAdminEvent extends Struct({
@@ -242,15 +242,15 @@ class BurnEvent extends Struct({
   amount: UInt64,
 }) {}
 
-class TransferEvent extends Struct({
-  from: PublicKey,
-  to: PublicKey,
-  amount: UInt64,
+export class BalanceChangeEvent extends Struct({
+  address: PublicKey,
+  amount: Int64,
 }) {}
 </code></pre>
-<p>Note that <code>approveBase</code> does not emit an event. Thus, transfers where the account updates have been
-constructed externally to <code>FungibleToken</code> will not have an event emitted by the <code>FungibleToken</code>
-contract.</p>
+<p>Note that <code>MintEvent</code>, <code>BurnEvent</code>, and <code>BalanceChangeEvent</code> each signal that the balance of an
+account changes. The difference is that <code>MintEvent</code> and <code>BurnEvent</code> are emitted when tokens are
+minted/burned, and <code>BalanceChangeEvent</code> is emitted when a transaction takes tokens from some
+addresses, and sends them to others.</p>
 
                     </main>
 
