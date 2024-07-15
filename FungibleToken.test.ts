@@ -64,7 +64,7 @@ describe("token integration", async () => {
         sender: deployer,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer, 2)
+        AccountUpdate.fundNewAccount(deployer, 3)
         await tokenAdminContract.deploy({
           adminPublicKey: tokenAdmin,
         })
@@ -74,6 +74,7 @@ describe("token integration", async () => {
           src: "",
           decimals: UInt8.from(9),
         })
+        await tokenAContract.initialize()
       })
 
       tx.sign([
@@ -91,7 +92,7 @@ describe("token integration", async () => {
         sender: deployer,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(deployer, 2)
+        AccountUpdate.fundNewAccount(deployer, 3)
         await tokenBAdminContract.deploy({
           adminPublicKey: tokenBAdmin,
         })
@@ -102,6 +103,7 @@ describe("token integration", async () => {
           decimals: UInt8.from(9),
           startUnpaused: true,
         })
+        await tokenBContract.initialize()
       })
 
       tx.sign([deployer.key, tokenB.key, tokenBAdmin.key])
@@ -177,27 +179,6 @@ describe("token integration", async () => {
       equal(
         (await tokenAContract.getCirculating()).toBigInt(),
         initialCirculating + mintAmount.toBigInt(),
-      )
-    })
-
-    it("calling the reducer should not change the reported circulating supply", async () => {
-      const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
-
-      const tx = await Mina.transaction({
-        sender: sender,
-        fee: 1e8,
-      }, async () => {
-        await tokenAContract.updateCirculating()
-      })
-
-      tx.sign([sender.key])
-      await tx.prove()
-      await tx.send()
-
-      localChain.incrementGlobalSlot(1)
-      equal(
-        (await tokenAContract.getCirculating()).toBigInt(),
-        initialCirculating,
       )
     })
 
@@ -462,6 +443,8 @@ describe("token integration", async () => {
         })
       )
     })
+
+    it.todo("Should prevent transfers from account that's tracking circulation")
   })
 
   describe("pausing/resuming", () => {

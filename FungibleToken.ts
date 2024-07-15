@@ -6,7 +6,6 @@ import {
   DeployArgs,
   Field,
   Int64,
-  MerkleList,
   method,
   Option,
   Permissions,
@@ -44,8 +43,6 @@ export class FungibleToken extends TokenContract {
   decimals = State<UInt8>()
   @state(PublicKey)
   admin = State<PublicKey>()
-  @state(UInt64)
-  private circulating = State<UInt64>()
   @state(Field)
   actionState = State<Field>()
   @state(Bool)
@@ -64,15 +61,10 @@ export class FungibleToken extends TokenContract {
     BalanceChange: BalanceChangeEvent,
   }
 
-  // We use actions and reducers for changing the circulating supply. That is to allow multiple mints/burns in a single block, which would not work if those would alter the contract state directly.
-  // Minting will emit an action with a positive number corresponding to the amount of tokens minted, burning will emit a negative value.
-  reducer = Reducer({ actionType: Int64 })
-
   async deploy(props: FungibleTokenDeployProps) {
     await super.deploy(props)
 
     this.admin.set(props.admin)
-    this.circulating.set(UInt64.from(0))
     this.decimals.set(props.decimals)
     this.paused.set(Bool(false))
 
@@ -85,6 +77,16 @@ export class FungibleToken extends TokenContract {
     } else {
       this.paused.set(Bool(true))
     }
+  }
+
+  // ** Initialises the account for tracking total circulation. */
+  @method
+  async initialize() {
+    const accountUpdate = AccountUpdate.createSigned(this.address, this.deriveTokenId())
+    let permissions = Permissions.default()
+    // This is necessary in order to allow token holders to burn.
+    permissions.send = Permissions.none()
+    accountUpdate.account.permissions.set(permissions)
   }
 
   public async getAdminContract(): Promise<FungibleTokenAdminBase> {
@@ -115,7 +117,8 @@ export class FungibleToken extends TokenContract {
     canMint.assertTrue()
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
-    this.reducer.dispatch(Int64.fromUnsigned(amount))
+    const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
+    circulationUpdate.balanceChange = Int64.fromUnsigned(amount)
     return accountUpdate
   }
 
@@ -123,8 +126,9 @@ export class FungibleToken extends TokenContract {
   async burn(from: PublicKey, amount: UInt64): Promise<AccountUpdate> {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.burn({ address: from, amount })
+    const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
+    circulationUpdate.balanceChange = Int64.fromUnsigned(amount).mul(Int64.minusOne)
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
-    this.reducer.dispatch(Int64.fromUnsigned(amount).neg())
     return accountUpdate
   }
 
@@ -168,11 +172,16 @@ export class FungibleToken extends TokenContract {
     this.paused.getAndRequireEquals().assertFalse()
     let totalBalance = Int64.from(0)
     this.forEachUpdate(updates, (update, usesToken) => {
+      // Make sure that the account permissions are not changed
       this.checkPermissionsUpdate(update)
       this.emitEventIf(
         usesToken,
         "BalanceChange",
         new BalanceChangeEvent({ address: update.publicKey, amount: update.balanceChange }),
+      )
+      // Don't allow transfers to/from the account that's tracking circulation
+      update.publicKey.equals(this.address).and(usesToken).assertFalse(
+        "Can't transfer to/from the circulation account",
       )
       totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
       totalBalance.isPositiveV2().assertFalse(
@@ -190,49 +199,12 @@ export class FungibleToken extends TokenContract {
     return balance
   }
 
-  /** This function is used to fold the actions from minting/burning */
-  private calculateCirculating(
-    oldCirculating: UInt64,
-    pendingActions: MerkleList<MerkleList<Int64>>,
-  ): UInt64 {
-    let newCirculating: Int64 = this.reducer.reduce(
-      pendingActions,
-      Int64,
-      (circulating: Int64, action: Int64) => {
-        return circulating.add(action)
-      },
-      Int64.from(oldCirculating),
-      { maxUpdatesWithActions: 500 },
-    )
-    newCirculating.isPositive().assertTrue()
-    return newCirculating.magnitude
-  }
-
   /** Reports the current circulating supply
    * This does take into account currently unreduced actions.
    */
   async getCirculating(): Promise<UInt64> {
-    return this.getOrUpdateCirculating(Bool(false))
-  }
-
-  /** Aggregate actions from minting and burning to update the circulating supply */
-  async updateCirculating() {
-    this.getOrUpdateCirculating(Bool(true))
-  }
-
-  @method.returns(UInt64)
-  async getOrUpdateCirculating(updateContractState: Bool): Promise<UInt64> {
-    let oldCirculating = this.circulating.getAndRequireEquals()
-    let actionState = this.actionState.getAndRequireEquals()
-    let pendingActions = this.reducer.getActions({ fromActionState: actionState })
-
-    let newCirculating = this.calculateCirculating(oldCirculating, pendingActions)
-    let contractCirculating = Provable.if(updateContractState, newCirculating, oldCirculating)
-    let contractActionState = Provable.if(updateContractState, pendingActions.hash, actionState)
-
-    this.circulating.set(contractCirculating)
-    this.actionState.set(contractActionState)
-    return newCirculating
+    let circulating = await this.getBalanceOf(this.address)
+    return circulating
   }
 
   @method.returns(UInt8)
