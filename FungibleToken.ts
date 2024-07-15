@@ -43,8 +43,6 @@ export class FungibleToken extends TokenContract {
   decimals = State<UInt8>()
   @state(PublicKey)
   admin = State<PublicKey>()
-  @state(Field)
-  actionState = State<Field>()
   @state(Bool)
   paused = State<Bool>()
 
@@ -71,7 +69,6 @@ export class FungibleToken extends TokenContract {
     this.account.tokenSymbol.set(props.symbol)
     this.account.zkappUri.set(props.src)
 
-    this.actionState.set(Reducer.initialActionState)
     if (props.startUnpaused) {
       this.paused.set(Bool(false))
     } else {
