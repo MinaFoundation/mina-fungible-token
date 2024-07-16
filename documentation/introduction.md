@@ -93,3 +93,6 @@ the `approveBase()` method of the custom token standard reference implementation
 > [!IMPORTANT] When manually constructing `AccountUpdate`s, make sure to order then appropriately in
 > the call to `approveBase()`. The contract will not allow flash minting, i.e., tokens cannot be
 > received by an account before they have been sent from an account.
+
+[!NOTE] The number of `AccountUpdate`s that you can pass to `approveBase()` is limited by the base
+token contract. The current limit is 9.
