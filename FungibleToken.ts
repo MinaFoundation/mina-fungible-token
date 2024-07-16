@@ -14,6 +14,7 @@ import {
   state,
   Struct,
   TokenContract,
+  TokenContractV2,
   Types,
   UInt64,
   UInt8,
@@ -36,7 +37,7 @@ interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   startUnpaused?: boolean
 }
 
-export class FungibleToken extends TokenContract {
+export class FungibleToken extends TokenContractV2 {
   @state(UInt8)
   decimals = State<UInt8>()
   @state(PublicKey)
@@ -162,6 +163,10 @@ export class FungibleToken extends TokenContract {
     assert(updateAllowed.or(permissions.isSome.not()))
   }
 
+  /** Approve `AccountUpdate`s that have been created outside of the token contract.
+   *
+   * @argument {AccountUpdateForest} updates - The `AccountUpdate`s to approve. Note that the forest size is limited by the base token contract, @see TokenContractV2.MAX_ACCOUNT_UPDATES The current limit is 9.
+   */
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
     this.paused.getAndRequireEquals().assertFalse()
