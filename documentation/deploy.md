@@ -24,7 +24,7 @@ You can find an example of a custom admin contract in `FungibleToken.test.ts`.
 ## Deploying the token contract
 
 The `deploy` function of `FungibleToken` takes as one argument the address of the admin contract. If
-you have written your own admin contract, you will also need to set `FungibleToken.adminContract` to
+you have written your own admin contract, you will also need to set `FungibleToken.AdminContract` to
 that class.
 
 [!NOTE] If you do not use the `FungibleToken` as is, third parties that want to integrate your token

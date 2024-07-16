@@ -7,7 +7,6 @@ import {
   Field,
   Int64,
   method,
-  Option,
   Permissions,
   Provable,
   PublicKey,
@@ -46,9 +45,9 @@ export class FungibleToken extends TokenContract {
   paused = State<Bool>()
 
   // This defines the type of the contract that is used to control access to administrative actions.
-  // If you want to have a custom contract, overwrite this by setting FungibleToken.adminContract to
+  // If you want to have a custom contract, overwrite this by setting FungibleToken.AdminContract to
   // your own implementation of FungibleTokenAdminBase.
-  static adminContract: new(...args: any) => FungibleTokenAdminBase = FungibleTokenAdmin
+  static AdminContract: new(...args: any) => FungibleTokenAdminBase = FungibleTokenAdmin
 
   readonly events = {
     SetAdmin: SetAdminEvent,
@@ -92,7 +91,7 @@ export class FungibleToken extends TokenContract {
       return pk
     })
     this.admin.requireEquals(admin)
-    return (new FungibleToken.adminContract(admin))
+    return (new FungibleToken.AdminContract(admin))
   }
 
   @method
