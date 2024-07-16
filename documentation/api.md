@@ -128,3 +128,7 @@ Note that `MintEvent`, `BurnEvent`, and `BalanceChangeEvent` each signal that th
 account changes. The difference is that `MintEvent` and `BurnEvent` are emitted when tokens are
 minted/burned, and `BalanceChangeEvent` is emitted when a transaction takes tokens from some
 addresses, and sends them to others.
+
+[!NOTE] Note that `MintEvent`, `BurnEvent`, and `BalanceChangeEvent` events can be emitted with
+`amount = 0`. If you want to track "true" mintings/burnings/transfers (for example, to maintain a
+list of depositors), you will need to filter for non-zero values of `amount`.
