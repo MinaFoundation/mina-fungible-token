@@ -708,7 +708,7 @@ describe("token integration", async () => {
     const sendAmount = UInt64.from(100)
 
     it("should mint with a custom admin contract", async () => {
-      FungibleToken.adminContract = CustomTokenAdmin
+      FungibleToken.AdminContract = CustomTokenAdmin
       const initialBalance = (await tokenBContract.getBalanceOf(sender))
         .toBigInt()
       const initialCirculating = (await tokenBContract.getCirculating()).toBigInt()
@@ -733,7 +733,7 @@ describe("token integration", async () => {
         (await tokenBContract.getCirculating()).toBigInt(),
         initialCirculating + mintAmount.toBigInt(),
       )
-      FungibleToken.adminContract = FungibleTokenAdmin
+      FungibleToken.AdminContract = FungibleTokenAdmin
     })
 
     it("should send tokens without having the custom admin contract", async () => {
@@ -774,7 +774,7 @@ describe("token integration", async () => {
     })
 
     it("should not mint too many B tokens", async () => {
-      FungibleToken.adminContract = CustomTokenAdmin
+      FungibleToken.AdminContract = CustomTokenAdmin
       await rejects(async () =>
         await Mina.transaction({
           sender: sender,
@@ -783,7 +783,7 @@ describe("token integration", async () => {
           await tokenBContract.mint(sender, illegalMintAmount)
         })
       )
-      FungibleToken.adminContract = FungibleTokenAdmin
+      FungibleToken.AdminContract = FungibleTokenAdmin
     })
     it("should not mint too many B tokens using the vanilla admin contract", {
       skip: !proofsEnabled,
