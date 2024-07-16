@@ -123,7 +123,7 @@ export class FungibleToken extends TokenContract {
     this.paused.getAndRequireEquals().assertFalse()
     const accountUpdate = this.internal.burn({ address: from, amount })
     const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
-    circulationUpdate.balanceChange = Int64.fromUnsigned(amount).mul(Int64.minusOne)
+    circulationUpdate.balanceChange = Int64.fromUnsigned(amount).negV2()
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
     return accountUpdate
   }
