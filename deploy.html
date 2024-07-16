@@ -149,15 +149,37 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="deploy"><a class="header" href="#deploy">Deploy</a></h1>
-<p>To create a new token, deploy the <code>FungibleToken</code> contract. You will need an admin account as well,
-to control permissions. You can either use the supplied contract <code>FungibleTokenAdmin</code>, or write your
-own contract that implements <code>FungibleTokenAdminBase</code>. An example can be found in
-<code>FungibleToken.test.ts</code>, where a non-standard admin contract is implemented (<code>CustomTokenAdmin</code>,
-implementing a minting policy that resembles a faucet).</p>
-<p>[!NOTE] Note that you have to write the admin contract from scratch. Inheriting from
-<code>FungibleTokenAdmin</code> and overwriting specific methods might not work.</p>
+<p>Setting up a new fungible token requires three steps: deploying an admin contract, deploying the
+token contract itself, and initializing the contract</p>
+<h2 id="deploying-an-admin-contract"><a class="header" href="#deploying-an-admin-contract">Deploying an admin contract</a></h2>
+<p>The admin contract handles permissions for privileged actions, such as minting. It is called by the
+token contract whenever a user tries to do a privileged action.</p>
+<p>The benefit of separating those permissions out into a separate contract is that it allows changing
+the permission logic without changing the original token contract. That is important because third
+parties that want to integrate a specific token will need the contract code for that token. If most
+tokens use the standard token contract, and only modify the admin contract, the integration burden
+for third parties is reduced significantly.</p>
+<p>If you want to change your admin contract, you can write a contract that <code>extends SmartContract</code> and
+<code>implements FungibleTokenAdminBase</code>.</p>
+<p>[!NOTE] Note that if you want to use a custom admin contract, you should write the admin contract
+from scratch. Inheriting from <code>FungibleTokenAdmin</code> and overwriting specific methods might not work.
+You can find an example of a custom admin contract in <code>FungibleToken.test.ts</code>.</p>
+<h2 id="deploying-the-token-contract"><a class="header" href="#deploying-the-token-contract">Deploying the token contract</a></h2>
+<p>The <code>deploy</code> function of <code>FungibleToken</code> takes as one argument the address of the admin contract. If
+you have written your own admin contract, you will also need to set <code>FungibleToken.adminContract</code> to
+that class.</p>
 <p>[!NOTE] If you do not use the <code>FungibleToken</code> as is, third parties that want to integrate your token
 will need to use your custom contract as well.</p>
+<h2 id="initializing-the-token-contract"><a class="header" href="#initializing-the-token-contract">Initializing the token contract</a></h2>
+<p>After being deployed, the token contract needs to be initialized, by calling the <code>initialize()</code>
+method. That method creates an account on the chain that will be used to track the current
+circulation of the token.</p>
+<p>[!NOTE] All three steps above can be carried out in a single transaction, or in separate
+transactions. [!NOTE] Each of the three steps requires funding a new account on the chain via
+<code>AccountUpdate.fundNewAccount</code>. [!NOTE] Per default, the token contract will start in paused mode.
+If you perform all the steps in one single transaction, you can instead opt for starting it in
+non-paused mode. Otherwise, you will need to call <code>resume()</code> before any tokens can be minted or
+transferred.</p>
 <p>Refer to
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts">examples/e2e.eg.ts</a>
 to see executable end to end example.</p>
