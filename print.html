@@ -170,12 +170,14 @@ const deployTx = await Mina.transaction({
   AccountUpdate.fundNewAccount(deployer, 3)
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
-    admin: admin.publicKey,
     symbol: &quot;abc&quot;,
     src: &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts&quot;,
-    decimals: UInt8.from(9),
   })
-  await tokenBContract.initialize()
+  await tokenBContract.initialize(
+    admin.publicKey,
+    UInt8.from(9),
+    Bool(false),
+  )
 })
 await deployTx.prove()
 deployTx.sign([deployer.key, contract.privateKey, admin.privateKey])
@@ -225,6 +227,8 @@ the <code>approveBase()</code> method of the custom token standard reference imp
 the call to <code>approveBase()</code>. The contract will not allow flash minting, i.e., tokens cannot be
 received by an account before they have been sent from an account.</p>
 </blockquote>
+<p>[!NOTE] The number of <code>AccountUpdate</code>s that you can pass to <code>approveBase()</code> is limited by the base
+token contract. The current limit is 9.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-overview"><a class="header" href="#api-overview">API overview</a></h1>
 <p>The token standard implementation provides a smart contract <code>FungibleToken</code> that can be deployed as
 the token owner for a new token. It provides all the user facing functionality that is expected of a
@@ -251,21 +255,26 @@ contract does not need to be integrated into wallets or other third party applic
 @state(UInt64) private circulating = State&lt;UInt64&gt;()
 @state(Bool) paused = State&lt;Bool&gt;()
 </code></pre>
-<p>The <code>deploy</code> function takes as arguments</p>
+<p>The <code>deploy()</code> function takes as arguments</p>
 <ul>
-<li>The public key of the account that the admin contract has been deployed to</li>
-<li>A symbol to use as the token symbol</li>
+<li>A string to use as the token symbol</li>
 <li>A string pointing to the source code of the contract -- when following the standard, this should
 point to the source of the standard implementation on github</li>
-<li>A <code>UInt8</code> for the number of decimals</li>
-<li>An optional <code>boolean</code> to signify whether token transfers should be enabled immediately. Unless
-this is supplied and set to <code>true</code>, the token contract will be in a paused state initially, and
-the <code>resume()</code> will need to be called before tokens can be minted or transferred. This is safer if
-you have a non-atomic deploy (i.e., if you do not have the admin contract deployed in the same
-transaction as the token contract itself).</li>
 </ul>
-<p>and initializes the state of the contract. Initially, the circulating supply is set to zero, as no
-tokens have been created yet.</p>
+<p>Immediately after deploying the contract -- ideally, in the same transaction -- the contract needs
+to be initialized via the <code>initialize()</code> method. Its arguments are</p>
+<ul>
+<li>The public key of the account that the admin contract has been deployed to</li>
+<li>A <code>UInt8</code> for the number of decimals</li>
+<li>A <code>Bool</code> to determine whether the token contract should start in paused mode. whether token
+transfers should be enabled immediately. If set to <code>Bool(true)</code>, the token contract will be in a
+paused state initially, and the <code>resume()</code> method will need to be called before tokens can be
+minted or transferred. This is safer if you have a non-atomic deploy (i.e., if you do not have the
+admin contract deployed in the same transaction as the token contract is itself is deployed and
+initialized).</li>
+</ul>
+<p>This method initializes the state of the contract. Initially, the circulating supply is set to zero,
+as no tokens have been created yet.</p>
 <h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
 <p>The user facing methods of <code>FungibleToken</code> are</p>
 <pre><code class="language-ts">@method.returns(AccountUpdate) async burn(from: PublicKey, amount: UInt64): Promise&lt;AccountUpdate&gt;
@@ -330,10 +339,14 @@ export class BalanceChangeEvent extends Struct({
 account changes. The difference is that <code>MintEvent</code> and <code>BurnEvent</code> are emitted when tokens are
 minted/burned, and <code>BalanceChangeEvent</code> is emitted when a transaction takes tokens from some
 addresses, and sends them to others.</p>
+<p>[!NOTE] Note that <code>MintEvent</code>, <code>BurnEvent</code>, and <code>BalanceChangeEvent</code> events can be emitted with
+<code>amount = 0</code>. If you want to track &quot;true&quot; mints/burns/transfers (for example, to maintain a list of
+depositors), you will need to filter for non-zero values of <code>amount</code>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deploy"><a class="header" href="#deploy">Deploy</a></h1>
 <p>Setting up a new fungible token requires three steps: deploying an admin contract, deploying the
 token contract itself, and initializing the contract</p>
 <h2 id="deploying-an-admin-contract"><a class="header" href="#deploying-an-admin-contract">Deploying an admin contract</a></h2>
+<p>The first step is deploying the admin contract via its <code>deploy()</code> function.</p>
 <p>The admin contract handles permissions for privileged actions, such as minting. It is called by the
 token contract whenever a user tries to do a privileged action.</p>
 <p>The benefit of separating those permissions out into a separate contract is that it allows changing
@@ -346,22 +359,25 @@ for third parties is reduced significantly.</p>
 <p>[!NOTE] Note that if you want to use a custom admin contract, you should write the admin contract
 from scratch. Inheriting from <code>FungibleTokenAdmin</code> and overwriting specific methods might not work.
 You can find an example of a custom admin contract in <code>FungibleToken.test.ts</code>.</p>
-<h2 id="deploying-the-token-contract"><a class="header" href="#deploying-the-token-contract">Deploying the token contract</a></h2>
-<p>The <code>deploy</code> function of <code>FungibleToken</code> takes as one argument the address of the admin contract. If
-you have written your own admin contract, you will also need to set <code>FungibleToken.adminContract</code> to
-that class.</p>
-<p>[!NOTE] If you do not use the <code>FungibleToken</code> as is, third parties that want to integrate your token
-will need to use your custom contract as well.</p>
-<h2 id="initializing-the-token-contract"><a class="header" href="#initializing-the-token-contract">Initializing the token contract</a></h2>
+<p>The <code>initialize()</code> method of <code>FungibleToken</code> takes as one argument the address of the admin
+contract. If you have written your own admin contract, you will also need to set
+<code>FungibleToken.AdminContract</code> to that class.</p>
+<p>[!NOTE] If you do not use the <code>FungibleToken</code> class as is, third parties that want to integrate your
+token will need to use your custom contract as well.</p>
+<h2 id="initializing-and-deploying-the-token-contract"><a class="header" href="#initializing-and-deploying-the-token-contract">Initializing and deploying the token contract</a></h2>
+<p>Next, the token contract needs to be deployed, via its <code>deploy()</code> function.</p>
 <p>After being deployed, the token contract needs to be initialized, by calling the <code>initialize()</code>
-method. That method creates an account on the chain that will be used to track the current
-circulation of the token.</p>
+method. That method initializes the contract state, and creates an account on the chain that will be
+used to track the current circulation of the token.</p>
 <p>[!NOTE] All three steps above can be carried out in a single transaction, or in separate
-transactions. [!NOTE] Each of the three steps requires funding a new account on the chain via
-<code>AccountUpdate.fundNewAccount</code>. [!NOTE] Per default, the token contract will start in paused mode.
-If you perform all the steps in one single transaction, you can instead opt for starting it in
-non-paused mode. Otherwise, you will need to call <code>resume()</code> before any tokens can be minted or
-transferred.</p>
+transactions. It is highly recommended to have a single transaction with all three steps.</p>
+<p>[!NOTE] Unless you have a very good reason, please use one transaction that deploys the admin
+contract, deploys the token contract, and calls <code>initialize()</code> on the token contract.</p>
+<p>[!NOTE] Each of the three steps requires funding a new account on the chain via
+<code>AccountUpdate.fundNewAccount</code>.</p>
+<p>[!NOTE] If you use separate transactions for deploying the admin contract and deploying and
+initializing the token contract, you should start the token contract in paused mode, and only call
+<code>resume()</code> after you have verified that the admin contract has been successfully deployed.</p>
 <p>Refer to
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts">examples/e2e.eg.ts</a>
 to see executable end to end example.</p>

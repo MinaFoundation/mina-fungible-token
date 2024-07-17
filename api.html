@@ -174,21 +174,26 @@ contract does not need to be integrated into wallets or other third party applic
 @state(UInt64) private circulating = State&lt;UInt64&gt;()
 @state(Bool) paused = State&lt;Bool&gt;()
 </code></pre>
-<p>The <code>deploy</code> function takes as arguments</p>
+<p>The <code>deploy()</code> function takes as arguments</p>
 <ul>
-<li>The public key of the account that the admin contract has been deployed to</li>
-<li>A symbol to use as the token symbol</li>
+<li>A string to use as the token symbol</li>
 <li>A string pointing to the source code of the contract -- when following the standard, this should
 point to the source of the standard implementation on github</li>
-<li>A <code>UInt8</code> for the number of decimals</li>
-<li>An optional <code>boolean</code> to signify whether token transfers should be enabled immediately. Unless
-this is supplied and set to <code>true</code>, the token contract will be in a paused state initially, and
-the <code>resume()</code> will need to be called before tokens can be minted or transferred. This is safer if
-you have a non-atomic deploy (i.e., if you do not have the admin contract deployed in the same
-transaction as the token contract itself).</li>
 </ul>
-<p>and initializes the state of the contract. Initially, the circulating supply is set to zero, as no
-tokens have been created yet.</p>
+<p>Immediately after deploying the contract -- ideally, in the same transaction -- the contract needs
+to be initialized via the <code>initialize()</code> method. Its arguments are</p>
+<ul>
+<li>The public key of the account that the admin contract has been deployed to</li>
+<li>A <code>UInt8</code> for the number of decimals</li>
+<li>A <code>Bool</code> to determine whether the token contract should start in paused mode. whether token
+transfers should be enabled immediately. If set to <code>Bool(true)</code>, the token contract will be in a
+paused state initially, and the <code>resume()</code> method will need to be called before tokens can be
+minted or transferred. This is safer if you have a non-atomic deploy (i.e., if you do not have the
+admin contract deployed in the same transaction as the token contract is itself is deployed and
+initialized).</li>
+</ul>
+<p>This method initializes the state of the contract. Initially, the circulating supply is set to zero,
+as no tokens have been created yet.</p>
 <h2 id="methods"><a class="header" href="#methods">Methods</a></h2>
 <p>The user facing methods of <code>FungibleToken</code> are</p>
 <pre><code class="language-ts">@method.returns(AccountUpdate) async burn(from: PublicKey, amount: UInt64): Promise&lt;AccountUpdate&gt;
@@ -253,6 +258,9 @@ export class BalanceChangeEvent extends Struct({
 account changes. The difference is that <code>MintEvent</code> and <code>BurnEvent</code> are emitted when tokens are
 minted/burned, and <code>BalanceChangeEvent</code> is emitted when a transaction takes tokens from some
 addresses, and sends them to others.</p>
+<p>[!NOTE] Note that <code>MintEvent</code>, <code>BurnEvent</code>, and <code>BalanceChangeEvent</code> events can be emitted with
+<code>amount = 0</code>. If you want to track &quot;true&quot; mints/burns/transfers (for example, to maintain a list of
+depositors), you will need to filter for non-zero values of <code>amount</code>.</p>
 
                     </main>
 

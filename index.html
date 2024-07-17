@@ -172,12 +172,14 @@ const deployTx = await Mina.transaction({
   AccountUpdate.fundNewAccount(deployer, 3)
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
-    admin: admin.publicKey,
     symbol: &quot;abc&quot;,
     src: &quot;https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts&quot;,
-    decimals: UInt8.from(9),
   })
-  await tokenBContract.initialize()
+  await tokenBContract.initialize(
+    admin.publicKey,
+    UInt8.from(9),
+    Bool(false),
+  )
 })
 await deployTx.prove()
 deployTx.sign([deployer.key, contract.privateKey, admin.privateKey])
@@ -227,6 +229,8 @@ the <code>approveBase()</code> method of the custom token standard reference imp
 the call to <code>approveBase()</code>. The contract will not allow flash minting, i.e., tokens cannot be
 received by an account before they have been sent from an account.</p>
 </blockquote>
+<p>[!NOTE] The number of <code>AccountUpdate</code>s that you can pass to <code>approveBase()</code> is limited by the base
+token contract. The current limit is 9.</p>
 
                     </main>
 
