@@ -13,7 +13,6 @@ import {
   State,
   state,
   Struct,
-  TokenContract,
   TokenContractV2,
   Types,
   UInt64,
@@ -22,19 +21,11 @@ import {
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 
 interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
-  /** Address of the contract controlling permissions for administrative actions */
-  admin: PublicKey
   /** The token symbol. */
   symbol: string
   /** A source code reference, which is placed within the `zkappUri` of the contract account.
    * Typically a link to a file on github. */
   src: string
-  /** Number of decimals in a unit */
-  decimals: UInt8
-  /** Unless this is set to `true`, the tokens will start in paused mode,
-   * and will need to be explicitly resumed by calling the `resume()` method.
-   * You should only set this to `true` in atomic deploys. */
-  startUnpaused?: boolean
 }
 
 export class FungibleToken extends TokenContractV2 {
@@ -60,24 +51,29 @@ export class FungibleToken extends TokenContractV2 {
 
   async deploy(props: FungibleTokenDeployProps) {
     await super.deploy(props)
-
-    this.admin.set(props.admin)
-    this.decimals.set(props.decimals)
-    this.paused.set(Bool(false))
-
-    this.account.tokenSymbol.set(props.symbol)
+    this.paused.set(Bool(true))
     this.account.zkappUri.set(props.src)
-
-    if (props.startUnpaused) {
-      this.paused.set(Bool(false))
-    } else {
-      this.paused.set(Bool(true))
-    }
   }
 
-  // ** Initializes the account for tracking total circulation. */
+  /** Initializes the account for tracking total circulation.
+   * @argument {PublicKey} admin - public key where the admin contract is deployed
+   * @argument {UInt8} decimals - number of decimals for the token
+   * @argument {Bool} startPaused - if set to `Bool(true), the contract will start in a mode where token minting and transfers are paused. This should be used for non-atomic deployments
+   */
   @method
-  async initialize() {
+  async initialize(
+    admin: PublicKey,
+    decimals: UInt8,
+    startPaused: Bool,
+  ) {
+    this.account.provedState.requireEquals(Bool(false))
+    super.init()
+    this.admin.set(admin)
+    this.decimals.set(decimals)
+    this.paused.set(Bool(false))
+
+    this.paused.set(startPaused)
+
     const accountUpdate = AccountUpdate.createSigned(this.address, this.deriveTokenId())
     let permissions = Permissions.default()
     // This is necessary in order to allow token holders to burn.
