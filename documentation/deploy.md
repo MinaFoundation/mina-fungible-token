@@ -21,7 +21,7 @@ If you want to change your admin contract, you can write a contract that `extend
 
 [!NOTE] Note that if you want to use a custom admin contract, you should write the admin contract
 from scratch. Inheriting from `FungibleTokenAdmin` and overwriting specific methods might not work.
-You can find an example of a custom admin contract in `FungibleToken.test.ts`.ß
+You can find an example of a custom admin contract in `FungibleToken.test.ts`.
 
 The `initialize()` method of `FungibleToken` takes as one argument the address of the admin
 contract. If you have written your own admin contract, you will also need to set
