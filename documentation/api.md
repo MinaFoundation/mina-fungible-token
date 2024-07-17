@@ -34,21 +34,26 @@ The on-chain state is defined as follows:
 @state(Bool) paused = State<Bool>()
 ```
 
-The `deploy` function takes as arguments
+The `deploy()` function takes as arguments
 
-- The public key of the account that the admin contract has been deployed to
-- A symbol to use as the token symbol
+- A string to use as the token symbol
 - A string pointing to the source code of the contract -- when following the standard, this should
   point to the source of the standard implementation on github
-- A `UInt8` for the number of decimals
-- An optional `boolean` to signify whether token transfers should be enabled immediately. Unless
-  this is supplied and set to `true`, the token contract will be in a paused state initially, and
-  the `resume()` will need to be called before tokens can be minted or transferred. This is safer if
-  you have a non-atomic deploy (i.e., if you do not have the admin contract deployed in the same
-  transaction as the token contract itself).
 
-and initializes the state of the contract. Initially, the circulating supply is set to zero, as no
-tokens have been created yet.
+Immediately after deploying the contract -- ideally, in the same transaction -- the contract needs
+to be initialized via the `initialize()` method. Its arguments are
+
+- The public key of the account that the admin contract has been deployed to
+- A `UInt8` for the number of decimals
+- A `Bool` to determine whether the token contract should start in paused mode. whether token
+  transfers should be enabled immediately. If set to `Bool(true)`, the token contract will be in a
+  paused state initially, and the `resume()` method will need to be called before tokens can be
+  minted or transferred. This is safer if you have a non-atomic deploy (i.e., if you do not have the
+  admin contract deployed in the same transaction as the token contract is itself is deployed and
+  initialized).
+
+This method initializes the state of the contract. Initially, the circulating supply is set to zero,
+as no tokens have been created yet.
 
 ## Methods
 

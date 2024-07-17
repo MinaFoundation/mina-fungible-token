@@ -69,12 +69,14 @@ describe("token integration", async () => {
           adminPublicKey: tokenAdmin,
         })
         await tokenAContract.deploy({
-          admin: tokenAdmin,
           symbol: "tokA",
-          src: "",
-          decimals: UInt8.from(9),
+          src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
         })
-        await tokenAContract.initialize()
+        await tokenAContract.initialize(
+          tokenAdmin,
+          UInt8.from(9),
+          Bool(true),
+        )
       })
 
       tx.sign([
@@ -97,13 +99,14 @@ describe("token integration", async () => {
           adminPublicKey: tokenBAdmin,
         })
         await tokenBContract.deploy({
-          admin: tokenBAdmin,
           symbol: "tokB",
-          src: "",
-          decimals: UInt8.from(9),
-          startUnpaused: true,
+          src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
         })
-        await tokenBContract.initialize()
+        await tokenBContract.initialize(
+          tokenBAdmin,
+          UInt8.from(9),
+          Bool(false),
+        )
       })
 
       tx.sign([deployer.key, tokenB.key, tokenBAdmin.key])

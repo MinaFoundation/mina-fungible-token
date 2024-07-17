@@ -1,6 +1,7 @@
 import { equal } from "node:assert"
 import {
   AccountUpdate,
+  Bool,
   DeployArgs,
   method,
   Mina,
@@ -80,17 +81,18 @@ const deployTokenTx = await Mina.transaction({
   AccountUpdate.fundNewAccount(deployer, 3)
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
   await token.deploy({
-    admin: admin.publicKey,
     symbol: "abc",
-    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts",
-    decimals: UInt8.from(9),
-    // We can set `startUnpaused` to true here, because we are doing an atomic deployment
+    src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
+  })
+  await token.initialize(
+    admin.publicKey,
+    UInt8.from(9),
+    // We can set `startPaused` to `Bool(false)` here, because we are doing an atomic deployment
     // If you are not deploying the admin and token contracts in the same transaction,
     // it is safer to start the tokens paused, and resume them only after verifying that
     // the admin contract has been deployed
-    startUnpaused: true,
-  })
-  await token.initialize()
+    Bool(false),
+  )
 })
 await deployTokenTx.prove()
 deployTokenTx.sign([deployer.key, tokenContract.privateKey, admin.privateKey])
