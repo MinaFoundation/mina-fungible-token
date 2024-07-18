@@ -28,6 +28,20 @@ interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   src: string
 }
 
+export const FungibleTokenErrors = {
+  noAdminKey: "could not fetch admin contract key",
+  noPermissionToChangeAdmin: "Not allowed to change admin contract",
+  tokenPaused: "Token is currently paused",
+  noPermissionToMint: "Not allowed to mint tokens",
+  noPermissionToPause: "Not allowed to pause token",
+  noPermissionToResume: "Not allowed to resume token",
+  noTransferFromCirculation: "Can't transfer to/from the circulation account",
+  noPermissionChangeAllowed: "Can't change permissions for access or receive on token accounts",
+  flashMinting:
+    "Flash-minting detected. Please make sure that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
+  unbalancedTransaction: "Transaction is unbalanced",
+}
+
 export class FungibleToken extends TokenContractV2 {
   @state(UInt8)
   decimals = State<UInt8>()
@@ -84,7 +98,7 @@ export class FungibleToken extends TokenContractV2 {
   public async getAdminContract(): Promise<FungibleTokenAdminBase> {
     const admin = await Provable.witnessAsync(PublicKey, async () => {
       let pk = await this.admin.fetch()
-      assert(pk !== undefined, "could not fetch admin contract key")
+      assert(pk !== undefined, FungibleTokenErrors.noAdminKey)
       return pk
     })
     this.admin.requireEquals(admin)
@@ -95,18 +109,18 @@ export class FungibleToken extends TokenContractV2 {
   async setAdmin(admin: PublicKey) {
     const adminContract = await this.getAdminContract()
     const canChangeAdmin = await adminContract.canChangeAdmin(admin)
-    canChangeAdmin.assertTrue()
+    canChangeAdmin.assertTrue(FungibleTokenErrors.noPermissionToChangeAdmin)
     this.admin.set(admin)
     this.emitEvent("SetAdmin", new SetAdminEvent({ adminKey: admin }))
   }
 
   @method.returns(AccountUpdate)
   async mint(recipient: PublicKey, amount: UInt64): Promise<AccountUpdate> {
-    this.paused.getAndRequireEquals().assertFalse()
+    this.paused.getAndRequireEquals().assertFalse(FungibleTokenErrors.tokenPaused)
     const accountUpdate = this.internal.mint({ address: recipient, amount })
     const adminContract = await this.getAdminContract()
     const canMint = await adminContract.canMint(accountUpdate)
-    canMint.assertTrue()
+    canMint.assertTrue(FungibleTokenErrors.noPermissionToMint)
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
     const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
@@ -116,7 +130,7 @@ export class FungibleToken extends TokenContractV2 {
 
   @method.returns(AccountUpdate)
   async burn(from: PublicKey, amount: UInt64): Promise<AccountUpdate> {
-    this.paused.getAndRequireEquals().assertFalse()
+    this.paused.getAndRequireEquals().assertFalse(FungibleTokenErrors.tokenPaused)
     const accountUpdate = this.internal.burn({ address: from, amount })
     const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
     circulationUpdate.balanceChange = Int64.fromUnsigned(amount).negV2()
@@ -128,7 +142,7 @@ export class FungibleToken extends TokenContractV2 {
   async pause() {
     const adminContract = await this.getAdminContract()
     const canPause = await adminContract.canPause()
-    canPause.assertTrue()
+    canPause.assertTrue(FungibleTokenErrors.noPermissionToPause)
     this.paused.set(Bool(true))
     this.emitEvent("Pause", new PauseEvent({ isPaused: Bool(true) }))
   }
@@ -137,19 +151,19 @@ export class FungibleToken extends TokenContractV2 {
   async resume() {
     const adminContract = await this.getAdminContract()
     const canResume = await adminContract.canResume()
-    canResume.assertTrue()
+    canResume.assertTrue(FungibleTokenErrors.noPermissionToResume)
     this.paused.set(Bool(false))
     this.emitEvent("Pause", new PauseEvent({ isPaused: Bool(false) }))
   }
 
   @method
   async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
-    this.paused.getAndRequireEquals().assertFalse()
+    this.paused.getAndRequireEquals().assertFalse(FungibleTokenErrors.tokenPaused)
     from.equals(this.address).assertFalse(
-      "Can't transfer to/from the circulation account",
+      FungibleTokenErrors.noTransferFromCirculation,
     )
     to.equals(this.address).assertFalse(
-      "Can't transfer to/from the circulation account",
+      FungibleTokenErrors.noTransferFromCirculation,
     )
     this.internal.send({ from, to, amount })
   }
@@ -162,7 +176,10 @@ export class FungibleToken extends TokenContractV2 {
     let receiveIsNone = Provable.equal(Types.AuthRequired, receive, Permissions.none())
     let updateAllowed = accessIsNone.and(receiveIsNone)
 
-    assert(updateAllowed.or(permissions.isSome.not()))
+    assert(
+      updateAllowed.or(permissions.isSome.not()),
+      FungibleTokenErrors.noPermissionChangeAllowed,
+    )
   }
 
   /** Approve `AccountUpdate`s that have been created outside of the token contract.
@@ -171,7 +188,7 @@ export class FungibleToken extends TokenContractV2 {
    */
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
-    this.paused.getAndRequireEquals().assertFalse()
+    this.paused.getAndRequireEquals().assertFalse(FungibleTokenErrors.tokenPaused)
     let totalBalance = Int64.from(0)
     this.forEachUpdate(updates, (update, usesToken) => {
       // Make sure that the account permissions are not changed
@@ -183,14 +200,14 @@ export class FungibleToken extends TokenContractV2 {
       )
       // Don't allow transfers to/from the account that's tracking circulation
       update.publicKey.equals(this.address).and(usesToken).assertFalse(
-        "Can't transfer to/from the circulation account",
+        FungibleTokenErrors.noTransferFromCirculation,
       )
       totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
       totalBalance.isPositiveV2().assertFalse(
-        "Flash-minting detected. Please make sure that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
+        FungibleTokenErrors.flashMinting,
       )
     })
-    totalBalance.assertEquals(Int64.zero)
+    totalBalance.assertEquals(Int64.zero, FungibleTokenErrors.unbalancedTransaction)
   }
 
   @method.returns(UInt64)
