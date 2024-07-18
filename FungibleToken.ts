@@ -145,6 +145,12 @@ export class FungibleToken extends TokenContractV2 {
   @method
   async transfer(from: PublicKey, to: PublicKey, amount: UInt64) {
     this.paused.getAndRequireEquals().assertFalse()
+    from.equals(this.address).assertFalse(
+      "Can't transfer to/from the circulation account",
+    )
+    to.equals(this.address).assertFalse(
+      "Can't transfer to/from the circulation account",
+    )
     this.internal.send({ from, to, amount })
   }
 

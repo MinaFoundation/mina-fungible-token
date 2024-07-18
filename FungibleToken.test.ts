@@ -428,39 +428,35 @@ describe("token integration", async () => {
     })
 
     it("Should prevent transfers from account that's tracking circulation", async () => {
-      const tx = await Mina.transaction({
-        sender: sender,
-        fee: 1e8,
-      }, async () => {
-        AccountUpdate.fundNewAccount(sender, 1)
-        await tokenAContract.transfer(
-          tokenA,
-          receiver,
-          sendAmount,
-        )
-      })
-
-      tx.sign([sender.key])
-      await tx.prove()
-      await rejects(() => tx.send())
+      await rejects(() =>
+        Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          AccountUpdate.fundNewAccount(sender, 1)
+          await tokenAContract.transfer(
+            tokenA,
+            receiver,
+            sendAmount,
+          )
+        })
+      )
     })
 
     it("Should prevent transfers to account that's tracking circulation", async () => {
-      const tx = await Mina.transaction({
-        sender: sender,
-        fee: 1e8,
-      }, async () => {
-        AccountUpdate.fundNewAccount(sender, 1)
-        await tokenAContract.transfer(
-          sender,
-          tokenA,
-          sendAmount,
-        )
-      })
-
-      tx.sign([sender.key])
-      await tx.prove()
-      await rejects(() => tx.send())
+      await rejects(() =>
+        Mina.transaction({
+          sender: sender,
+          fee: 1e8,
+        }, async () => {
+          AccountUpdate.fundNewAccount(sender, 1)
+          await tokenAContract.transfer(
+            sender,
+            tokenA,
+            sendAmount,
+          )
+        })
+      )
     })
 
     it("Should reject manually constructed transfers from the account that's tracking circulation", async () => {
