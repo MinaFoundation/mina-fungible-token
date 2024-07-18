@@ -121,6 +121,9 @@ export class FungibleToken extends TokenContractV2 {
     const adminContract = await this.getAdminContract()
     const canMint = await adminContract.canMint(accountUpdate)
     canMint.assertTrue(FungibleTokenErrors.noPermissionToMint)
+    recipient.equals(this.address).assertFalse(
+      FungibleTokenErrors.noTransferFromCirculation,
+    )
     this.approve(accountUpdate)
     this.emitEvent("Mint", new MintEvent({ recipient, amount }))
     const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
@@ -133,6 +136,9 @@ export class FungibleToken extends TokenContractV2 {
     this.paused.getAndRequireEquals().assertFalse(FungibleTokenErrors.tokenPaused)
     const accountUpdate = this.internal.burn({ address: from, amount })
     const circulationUpdate = AccountUpdate.create(this.address, this.deriveTokenId())
+    from.equals(this.address).assertFalse(
+      FungibleTokenErrors.noTransferFromCirculation,
+    )
     circulationUpdate.balanceChange = Int64.fromUnsigned(amount).negV2()
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
     return accountUpdate
