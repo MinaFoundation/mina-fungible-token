@@ -30,6 +30,17 @@ contract. If you have written your own admin contract, you will also need to set
 [!NOTE] If you do not use the `FungibleToken` class as is, third parties that want to integrate your
 token will need to use your custom contract as well.
 
+### Admin Contract and Centralization
+
+The default admin contract uses a single keypair. That is not ideal, as it introduces a single point
+of failure.
+
+Higher levels of security can be achieved by utilizing a decentralized governance or multi-sig
+scheme, and it is recommended to do so.
+
+Any user purchasing a token should investigate the key management practices of the token deployer
+and validate the token contract permissions as one should with any o1js application.
+
 ## Initializing and deploying the token contract
 
 Next, the token contract needs to be deployed, via its `deploy()` function.
@@ -54,3 +65,10 @@ initializing the token contract, you should start the token contract in paused m
 Refer to
 [examples/e2e.eg.ts](https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts)
 to see executable end to end example.
+
+## Upgradeability
+
+Both the token and admin contract have permissions set so that they cannot be upgraded, except in
+case of a non-backwards compatible hard fork of Mina (see
+[Mina documentation on upgradeability](https://docs.minaprotocol.com/zkapps/writing-a-zkapp/feature-overview/permissions#example-impossible-to-upgrade)).
+This is to ensure that the rules around the token are not changed after the token is deployed.
