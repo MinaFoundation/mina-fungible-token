@@ -21,6 +21,7 @@ import {
   FungibleTokenAdmin,
   FungibleTokenAdminBase,
   FungibleTokenAdminDeployProps,
+  FungibleTokenErrors,
 } from "./index.js"
 
 const proofsEnabled = process.env.SKIP_PROOFS !== "true"
@@ -137,15 +138,17 @@ describe("token integration", async () => {
     const burnAmount = UInt64.from(100)
 
     it("should not mint before calling resume()", async () => {
-      await rejects(() =>
-        Mina.transaction({
+      await rejects(async () =>
+        await Mina.transaction({
           sender: sender,
           fee: 1e8,
         }, async () => {
           AccountUpdate.fundNewAccount(sender, 1)
           await tokenAContract.mint(sender, mintAmount)
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.tokenPaused)) return true
+        else return false
+      })
     })
     it("should accept a call to resume()", async () => {
       const tx = await Mina.transaction({
@@ -158,7 +161,7 @@ describe("token integration", async () => {
       await tx.prove()
       await tx.send()
     })
-    it("should mint for the sender account", async () => {
+    it("should mint for the sender and receiver account", async () => {
       const initialBalance = (await tokenAContract.getBalanceOf(sender))
         .toBigInt()
       const initialCirculating = (await tokenAContract.getCirculating()).toBigInt()
@@ -175,13 +178,25 @@ describe("token integration", async () => {
       await tx.prove()
       await tx.send()
 
+      const tx2 = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        AccountUpdate.fundNewAccount(sender, 1)
+        await tokenAContract.mint(receiver, mintAmount)
+      })
+
+      tx2.sign([sender.key, tokenAdmin.key])
+      await tx2.prove()
+      await tx2.send()
+
       equal(
         (await tokenAContract.getBalanceOf(sender)).toBigInt(),
         initialBalance + mintAmount.toBigInt(),
       )
       equal(
         (await tokenAContract.getCirculating()).toBigInt(),
-        initialCirculating + mintAmount.toBigInt(),
+        initialCirculating + mintAmount.mul(UInt64.from(2)).toBigInt(),
       )
     })
 
@@ -221,7 +236,10 @@ describe("token integration", async () => {
 
       tx.sign([sender.key])
       await tx.prove()
-      await rejects(() => tx.send())
+      await rejects(() => tx.send(), (err: Error) => {
+        if (err.message.includes("required authorization was not provided")) return true
+        else return false
+      })
     })
 
     it("should refuse to burn tokens without signature from the token holder", async () => {
@@ -229,11 +247,15 @@ describe("token integration", async () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.burn(sender, burnAmount)
+        await tokenAContract.burn(receiver, burnAmount)
       })
 
+      tx.sign([sender.key])
       await tx.prove()
-      await rejects(() => tx.send())
+      await rejects(() => tx.send(), (err: Error) => {
+        if (err.message.includes("Invalid signature on account_update 1")) return true
+        else return false
+      })
     })
 
     it("correctly changes the admin contract", async () => {
@@ -269,7 +291,10 @@ describe("token integration", async () => {
       })
       tx3.sign([sender.key, tokenAdmin.key])
       await tx3.prove()
-      await rejects(() => tx3.send())
+      await rejects(() => tx3.send(), (err: Error) => {
+        if (err.message.includes("required authorization was not provided")) return true
+        else return false
+      })
     })
   })
 
@@ -287,7 +312,6 @@ describe("token integration", async () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        AccountUpdate.fundNewAccount(sender, 1)
         await tokenAContract.transfer(
           sender,
           receiver,
@@ -318,10 +342,15 @@ describe("token integration", async () => {
         sender: sender,
         fee: 1e8,
       }, async () => {
-        await tokenAContract.transfer(sender, receiver, sendAmount)
+        await tokenAContract.transfer(receiver, sender, sendAmount)
       })
+
+      tx.sign([sender.key])
       await tx.prove()
-      await rejects(() => tx.send())
+      await rejects(() => tx.send(), (err: Error) => {
+        if (err.message.includes("Invalid signature on account_update 1")) return true
+        else return false
+      })
     })
 
     it("should do a transaction constructed manually, approved by the token contract", async () => {
@@ -382,8 +411,10 @@ describe("token integration", async () => {
           fee: 1e8,
         }, async () => {
           await tokenAContract.approveAccountUpdates([updateReceive, updateSend])
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.flashMinting)) return true
+        else return false
+      })
     })
 
     it("should reject unbalanced transactions", async () => {
@@ -400,8 +431,10 @@ describe("token integration", async () => {
       await rejects(() =>
         Mina.transaction(deployer, async () => {
           await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.flashMinting)) return true
+        else return false
+      })
     })
 
     it("rejects transactions with mismatched tokens", async () => {
@@ -423,7 +456,10 @@ describe("token integration", async () => {
           AccountUpdate.fundNewAccount(sender, 1)
           await tokenAContract.approveAccountUpdates([updateSend])
           await tokenBContract.approveAccountUpdates([updateReceive])
-        })
+        }), (err: Error) => {
+          if (err.message.includes(FungibleTokenErrors.flashMinting)) return true
+          else return false
+        }
       ))
     })
 
@@ -439,8 +475,10 @@ describe("token integration", async () => {
             receiver,
             sendAmount,
           )
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.noTransferFromCirculation)) return true
+        else return false
+      })
     })
 
     it("Should prevent transfers to account that's tracking circulation", async () => {
@@ -455,8 +493,10 @@ describe("token integration", async () => {
             tokenA,
             sendAmount,
           )
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.noTransferFromCirculation)) return true
+        else return false
+      })
     })
 
     it("Should reject manually constructed transfers from the account that's tracking circulation", async () => {
@@ -477,8 +517,10 @@ describe("token integration", async () => {
           fee: 1e8,
         }, async () => {
           await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.noTransferFromCirculation)) return true
+        else return false
+      })
     })
 
     it("Should reject manually constructed transfers to the account that's tracking circulation", async () => {
@@ -499,8 +541,10 @@ describe("token integration", async () => {
           fee: 1e8,
         }, async () => {
           await tokenAContract.approveAccountUpdates([updateSend, updateReceive])
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.noTransferFromCirculation)) return true
+        else return false
+      })
     })
   })
 
@@ -519,8 +563,10 @@ describe("token integration", async () => {
           fee: 1e8,
         }, async () => {
           await tokenAContract.approveBase(AccountUpdateForest.fromFlatArray([updateSend]))
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.noPermissionChangeAllowed)) return true
+        else return false
+      })
     })
   })
 
@@ -539,14 +585,16 @@ describe("token integration", async () => {
       await tx.send()
     })
     it("will block transactions while paused", async () => {
-      await rejects(() => (
+      await rejects(() =>
         Mina.transaction({
           sender: sender,
           fee: 1e8,
         }, async () => {
           await tokenAContract.transfer(sender, receiver, sendAmount)
-        })
-      ))
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.tokenPaused)) return true
+        else return false
+      })
     })
     it("can be resumed by the admin", async () => {
       const tx = await Mina.transaction({
@@ -681,8 +729,8 @@ describe("token integration", async () => {
     })
 
     it("should reject an unbalanced transaction", async () => {
-      const depositAmount = UInt64.from(10)
-      const withdrawAmount = UInt64.from(5)
+      const depositAmount = UInt64.from(5)
+      const withdrawAmount = UInt64.from(10)
       const updateWithdraw = await thirdPartyAContract.withdraw(withdrawAmount)
       const updateDeposit = await thirdPartyBContract.deposit(depositAmount)
       updateDeposit.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent
@@ -696,8 +744,10 @@ describe("token integration", async () => {
             updateWithdraw,
             updateDeposit,
           ]))
-        })
-      )
+        }), (err: Error) => {
+        if (err.message.includes(FungibleTokenErrors.unbalancedTransaction)) return true
+        else return false
+      })
     })
   })
 
