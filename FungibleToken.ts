@@ -38,7 +38,7 @@ export const FungibleTokenErrors = {
   noTransferFromCirculation: "Can't transfer to/from the circulation account",
   noPermissionChangeAllowed: "Can't change permissions for access or receive on token accounts",
   flashMinting:
-    "Flash-minting detected. Please make sure that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
+    "Flash-minting or unbalanced transaction detected. Please make sure that your transaction is balanced, and that your `AccountUpdate`s are ordered properly, so that tokens are not received before they are sent.",
   unbalancedTransaction: "Transaction is unbalanced",
 }
 
