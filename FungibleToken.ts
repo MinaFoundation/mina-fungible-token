@@ -17,6 +17,7 @@ import {
   Types,
   UInt64,
   UInt8,
+  VerificationKey,
 } from "o1js"
 import { FungibleTokenAdmin, FungibleTokenAdminBase } from "./FungibleTokenAdmin.js"
 
@@ -67,6 +68,23 @@ export class FungibleToken extends TokenContractV2 {
     await super.deploy(props)
     this.paused.set(Bool(true))
     this.account.zkappUri.set(props.src)
+  }
+
+  init() {
+    super.init()
+    this.account.permissions.set({
+      ...Permissions.default(),
+      setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),
+      setPermissions: Permissions.impossible(),
+    })
+  }
+
+  /** Update the verification key.
+   * Note that because we have set the permissions for setting the verification key to `impossibleDuringCurrentVersion()`, this will only be possible in case of a protocol update that requires an update.
+   */
+  @method
+  async updateVerificationKey(vk: VerificationKey) {
+    this.account.verificationKey.set(vk)
   }
 
   /** Initializes the account for tracking total circulation.
