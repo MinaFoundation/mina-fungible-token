@@ -93,6 +93,11 @@ export class FungibleToken extends TokenContractV2 {
     // This is necessary in order to allow token holders to burn.
     permissions.send = Permissions.none()
     accountUpdate.account.permissions.set(permissions)
+
+    const accountUpdate2 = AccountUpdate.createSigned(this.address)
+    let permissions2 = Permissions.default()
+    permissions2.access = Permissions.proof()
+    accountUpdate2.account.permissions.set(permissions2)
   }
 
   public async getAdminContract(): Promise<FungibleTokenAdminBase> {
