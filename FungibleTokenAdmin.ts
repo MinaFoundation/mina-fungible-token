@@ -4,11 +4,13 @@ import {
   Bool,
   DeployArgs,
   method,
+  Permissions,
   Provable,
   PublicKey,
   SmartContract,
   State,
   state,
+  VerificationKey,
 } from "o1js"
 
 export type FungibleTokenAdminBase = SmartContract & {
@@ -37,6 +39,25 @@ export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAd
   async deploy(props: FungibleTokenAdminDeployProps) {
     await super.deploy(props)
     this.adminPublicKey.set(props.adminPublicKey)
+  }
+
+  // Overwriting the init function in this way ensures that the admin contract can only
+  // be replaced in case there is a breaking update of the protocol that requires an update
+  init() {
+    super.init()
+    this.account.permissions.set({
+      ...Permissions.default(),
+      setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),
+      setPermissions: Permissions.impossible(),
+    })
+  }
+
+  /** Update the verification key.
+   * Note that because we have set the permissions for setting the verification key to `impossibleDuringCurrentVersion()`, this will only be possible in case of a protocol update that requires an update.
+   */
+  @method
+  async updateVerificationKey(vk: VerificationKey) {
+    this.account.verificationKey.set(vk)
   }
 
   private async ensureAdminSignature() {
