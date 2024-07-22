@@ -92,6 +92,7 @@ export class FungibleToken extends TokenContractV2 {
     let permissions = Permissions.default()
     // This is necessary in order to allow token holders to burn.
     permissions.send = Permissions.none()
+    permissions.setPermissions = Permissions.impossible()
     accountUpdate.account.permissions.set(permissions)
   }
 
