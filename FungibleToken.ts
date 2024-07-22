@@ -76,6 +76,7 @@ export class FungibleToken extends TokenContractV2 {
       ...Permissions.default(),
       setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),
       setPermissions: Permissions.impossible(),
+      access: Permissions.proof(),
     })
   }
 
@@ -100,6 +101,7 @@ export class FungibleToken extends TokenContractV2 {
   ) {
     this.account.provedState.requireEquals(Bool(false))
     super.init()
+
     this.admin.set(admin)
     this.decimals.set(decimals)
     this.paused.set(Bool(false))
