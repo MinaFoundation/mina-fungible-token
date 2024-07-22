@@ -30,6 +30,12 @@ contract. If you have written your own admin contract, you will also need to set
 [!NOTE] If you do not use the `FungibleToken` class as is, third parties that want to integrate your
 token will need to use your custom contract as well.
 
+[!NOTE] The `init()` function of the admin contract sets permissions such that the admin contract
+can only be upgraded/replaced in case of a breaking update of the chain, and prevents changing the
+permissions of the account the contract is deployed to. That way, users can trust that the code of
+the admin contract will not change arbitrarily. If you use the admin contract that is supplied, make
+sure to call `init()`. If you write your own admin contract, set permissions accordingly.
+
 ### Admin Contract and Centralization
 
 The default admin contract uses a single keypair. That is not ideal, as it introduces a single point
@@ -39,15 +45,27 @@ Higher levels of security can be achieved by utilizing a decentralized governanc
 scheme, and it is recommended to do so.
 
 Any user purchasing a token should investigate the key management practices of the token deployer
-and validate the token contract permissions as one should with any o1js application.
+and validate the token contract permissions as one should with any o1js application. In particular,
+they should check that
+
+- The verification keys of the admin and token contract are as expected
+- Both admin and token contract have set the permission such that the verification key can only be
+  set after a breaking update of the network
+- Both the admin and token contract have set the permissions to change permissions set to
+  `impossible`
+- The deployment transaction of the token contract has not been changed to skip the `isNew` check
+  that has been introduced in [Issue 1439](https://github.com/o1-labs/o1js/issues/1439). If a
+  malicious deployer were to skip this test, they could mint tokens for themselves before deployment
+  of the token contract.
 
 ## Initializing and deploying the token contract
 
 Next, the token contract needs to be deployed, via its `deploy()` function.
 
-After being deployed, the token contract needs to be initialized, by calling the `initialize()`
-method. That method initializes the contract state, and creates an account on the chain that will be
-used to track the current circulation of the token.
+After being deployed, the token contract needs to be initialized, by calling the `init()` function
+and `initialize()` method. Those make sure that the contract state is initialized, create an account
+on the chain that will be used to track the current circulation of the token, set all permissions on
+the account of the token contract and the account that's tracking the total circulation.
 
 [!NOTE] All three steps above can be carried out in a single transaction, or in separate
 transactions. It is highly recommended to have a single transaction with all three steps.
@@ -55,8 +73,8 @@ transactions. It is highly recommended to have a single transaction with all thr
 [!NOTE] Unless you have a very good reason, please use one transaction that deploys the admin
 contract, deploys the token contract, and calls `initialize()` on the token contract.
 
-[!NOTE] Each of the three steps requires funding a new account on the chain via
-`AccountUpdate.fundNewAccount`.
+[!NOTE] Deploying the admin contract, deploying the token contract, and calling `initialize()` each
+require funding a new account on the chain via `AccountUpdate.fundNewAccount`.
 
 [!NOTE] If you use separate transactions for deploying the admin contract and deploying and
 initializing the token contract, you should start the token contract in paused mode, and only call
