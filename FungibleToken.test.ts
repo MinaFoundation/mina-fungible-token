@@ -69,10 +69,12 @@ describe("token integration", async () => {
         await tokenAdminContract.deploy({
           adminPublicKey: tokenAdmin,
         })
+        tokenAdminContract.init()
         await tokenAContract.deploy({
           symbol: "tokA",
           src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
         })
+        tokenAContract.init()
         await tokenAContract.initialize(
           tokenAdmin,
           UInt8.from(9),
@@ -103,6 +105,7 @@ describe("token integration", async () => {
           symbol: "tokB",
           src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
         })
+        tokenBContract.init()
         await tokenBContract.initialize(
           tokenBAdmin,
           UInt8.from(9),
@@ -641,6 +644,33 @@ describe("token integration", async () => {
         (await tokenAContract.getCirculating()).toBigInt(),
         initialCirculating,
       )
+    })
+
+    it("should prevent the deployer from minting without calling into the admin contract", async () => {
+      const attackTx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        // AccountUpdate.fundNewAccount(sender, 1)
+        let nopUpdate = AccountUpdate.default(tokenA, tokenAContract.tokenId)
+
+        let maliciousUpdate = AccountUpdate.default(sender, tokenAContract.deriveTokenId())
+        maliciousUpdate.balanceChange = new Int64(new UInt64(100n))
+        maliciousUpdate.body.mayUseToken = {
+          parentsOwnToken: new Bool(true),
+          inheritFromParent: new Bool(false),
+        }
+        AccountUpdate.attachToTransaction(nopUpdate)
+
+        nopUpdate.approve(maliciousUpdate)
+
+        nopUpdate.requireSignature()
+        maliciousUpdate.requireSignature()
+      })
+
+      await attackTx.prove()
+      attackTx.sign([sender.key, tokenA.key])
+      await rejects(() => attackTx.send())
     })
   })
 
