@@ -68,6 +68,7 @@ export class FungibleToken extends TokenContractV2 {
     await super.deploy(props)
     this.paused.set(Bool(true))
     this.account.zkappUri.set(props.src)
+    this.account.tokenSymbol.set(props.symbol)
   }
 
   init() {
