@@ -9,7 +9,6 @@ import {
   method,
   Mina,
   Permissions,
-  Provable,
   PublicKey,
   SmartContract,
   State,
@@ -89,24 +88,6 @@ describe("token integration", async () => {
 
       await tx.prove()
       await tx.send()
-
-      const account = localChain.getAccount(tokenA)
-      Provable.log(
-        "access permissions",
-        account.permissions.access,
-        "access permissions are correct",
-        account.permissions.access === Permissions.proof(),
-        "upgrade permissions",
-        account.permissions.setVerificationKey,
-        "token symbol",
-        account.tokenSymbol,
-      )
-
-      const adminAccount = localChain.getAccount(tokenAdmin)
-      Provable.log(
-        "admin upgrade permissions",
-        adminAccount.permissions.setVerificationKey,
-      )
     })
 
     it("should deploy token contract B", async () => {
