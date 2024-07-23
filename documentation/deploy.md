@@ -30,11 +30,11 @@ contract. If you have written your own admin contract, you will also need to set
 [!NOTE] If you do not use the `FungibleToken` class as is, third parties that want to integrate your
 token will need to use your custom contract as well.
 
-[!NOTE] The `init()` function of the admin contract sets permissions such that the admin contract
+[!NOTE] The `deploy()` function of the admin contract sets permissions such that the admin contract
 can only be upgraded/replaced in case of a breaking update of the chain, and prevents changing the
 permissions of the account the contract is deployed to. That way, users can trust that the code of
-the admin contract will not change arbitrarily. If you use the admin contract that is supplied, make
-sure to call `init()`. If you write your own admin contract, set permissions accordingly.
+the admin contract will not change arbitrarily. If you write your own admin contract, set
+permissions accordingly.
 
 ### Admin Contract and Centralization
 
@@ -73,8 +73,8 @@ transactions. It is highly recommended to have a single transaction with all thr
 [!NOTE] Unless you have a very good reason, please use one transaction that deploys the admin
 contract, deploys the token contract, and calls `initialize()` on the token contract.
 
-[!NOTE] Deploying the admin contract, deploying the token contract, and calling `initialize()` each
-require funding a new account on the chain via `AccountUpdate.fundNewAccount`.
+[!NOTE] Each of the three steps requires funding a new account on the chain via
+`AccountUpdate.fundNewAccount`.
 
 [!NOTE] If you use separate transactions for deploying the admin contract and deploying and
 initializing the token contract, you should start the token contract in paused mode, and only call

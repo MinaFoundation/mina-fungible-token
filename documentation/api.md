@@ -41,8 +41,7 @@ The `deploy()` function takes as arguments
   point to the source of the standard implementation on github
 
 Immediately after deploying the contract -- ideally, in the same transaction -- the contract needs
-to be initialized by calling the `init()` function and `initialize()` method. The `initialize()`
-method takes as arguments
+to be initialized via the `initialize()` method. Its arguments are
 
 - The public key of the account that the admin contract has been deployed to
 - A `UInt8` for the number of decimals
