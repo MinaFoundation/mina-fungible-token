@@ -98,7 +98,6 @@ export class FungibleToken extends TokenContractV2 {
     startPaused: Bool,
   ) {
     this.account.provedState.requireEquals(Bool(false))
-    super.init()
 
     this.admin.set(admin)
     this.decimals.set(decimals)

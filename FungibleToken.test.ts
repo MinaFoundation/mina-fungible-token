@@ -131,6 +131,27 @@ describe("token integration", async () => {
       await tx.prove()
       await tx.send()
     })
+
+    it("should prevent calling `initialize()` a second time", async () => {
+      const tx = await Mina.transaction({
+        sender: deployer,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.initialize(
+          tokenAdmin,
+          UInt8.from(9),
+          Bool(true),
+        )
+      })
+
+      tx.sign([
+        deployer.key,
+        tokenA.key,
+      ])
+
+      await tx.prove()
+      await rejects(() => tx.send())
+    })
   })
 
   describe("admin", () => {
