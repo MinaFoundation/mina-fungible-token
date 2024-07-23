@@ -88,12 +88,10 @@ const deployTx = await Mina.transaction({
 }, async () => {
   AccountUpdate.fundNewAccount(feepayer.publicKey, 3)
   await adminContract.deploy({ adminPublicKey: admin.publicKey })
-  adminContract.init()
   await token.deploy({
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
   })
-  token.init()
   await token.initialize(
     admin.publicKey,
     UInt8.from(9),

@@ -39,12 +39,6 @@ export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAd
   async deploy(props: FungibleTokenAdminDeployProps) {
     await super.deploy(props)
     this.adminPublicKey.set(props.adminPublicKey)
-  }
-
-  // Overwriting the init function in this way ensures that the admin contract can only
-  // be replaced in case there is a breaking update of the protocol that requires an update
-  init() {
-    super.init()
     this.account.permissions.set({
       ...Permissions.default(),
       setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),

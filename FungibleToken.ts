@@ -69,10 +69,7 @@ export class FungibleToken extends TokenContractV2 {
     this.paused.set(Bool(true))
     this.account.zkappUri.set(props.src)
     this.account.tokenSymbol.set(props.symbol)
-  }
 
-  init() {
-    super.init()
     this.account.permissions.set({
       ...Permissions.default(),
       setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),

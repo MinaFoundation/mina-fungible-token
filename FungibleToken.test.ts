@@ -9,6 +9,7 @@ import {
   method,
   Mina,
   Permissions,
+  Provable,
   PublicKey,
   SmartContract,
   State,
@@ -69,12 +70,10 @@ describe("token integration", async () => {
         await tokenAdminContract.deploy({
           adminPublicKey: tokenAdmin,
         })
-        tokenAdminContract.init()
         await tokenAContract.deploy({
           symbol: "tokA",
           src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
         })
-        tokenAContract.init()
         await tokenAContract.initialize(
           tokenAdmin,
           UInt8.from(9),
@@ -90,6 +89,24 @@ describe("token integration", async () => {
 
       await tx.prove()
       await tx.send()
+
+      const account = localChain.getAccount(tokenA)
+      Provable.log(
+        "access permissions",
+        account.permissions.access,
+        "access permissions are correct",
+        account.permissions.access === Permissions.proof(),
+        "upgrade permissions",
+        account.permissions.setVerificationKey,
+        "token symbol",
+        account.tokenSymbol,
+      )
+
+      const adminAccount = localChain.getAccount(tokenAdmin)
+      Provable.log(
+        "admin upgrade permissions",
+        adminAccount.permissions.setVerificationKey,
+      )
     })
 
     it("should deploy token contract B", async () => {
@@ -105,7 +122,6 @@ describe("token integration", async () => {
           symbol: "tokB",
           src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
         })
-        tokenBContract.init()
         await tokenBContract.initialize(
           tokenBAdmin,
           UInt8.from(9),
