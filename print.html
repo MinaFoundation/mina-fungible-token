@@ -82,7 +82,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API</a></li><li class="chapter-item expanded "><a href="deploy.html"><strong aria-hidden="true">3.</strong> Deploy</a></li><li class="chapter-item expanded "><a href="token_operations.html"><strong aria-hidden="true">4.</strong> Token Operations</a></li><li class="chapter-item expanded "><a href="use_in_zk_app.html"><strong aria-hidden="true">5.</strong> Use in ZkApp</a></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded "><a href="introduction.html"><strong aria-hidden="true">1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="api.html"><strong aria-hidden="true">2.</strong> API</a></li><li class="chapter-item expanded "><a href="deploy.html"><strong aria-hidden="true">3.</strong> Deploy</a></li><li class="chapter-item expanded "><a href="token_operations.html"><strong aria-hidden="true">4.</strong> Token Operations</a></li><li class="chapter-item expanded "><a href="use_in_zk_app.html"><strong aria-hidden="true">5.</strong> Use in ZkApp</a></li><li class="chapter-item expanded "><a href="limitations.html"><strong aria-hidden="true">6.</strong> Design Limitations</a></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
         </nav>
@@ -490,6 +490,49 @@ previous chapter is executed from within zkApp methods):</p>
 <p>Refer to
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/escrow.eg.ts">examples/escrow.eg.ts</a>
 to see executable <code>TokenEscrow</code> example.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="limitations-of-the-current-design"><a class="header" href="#limitations-of-the-current-design">Limitations of the Current Design</a></h1>
+<p>The design of having one standard implementation of the token contract, and custom admin contracts,
+allows for some flexibility, but there are some remaining limitations.</p>
+<ol>
+<li>
+<p>Since token transfers should not depend on custom code, the <code>transfer()</code> and <code>approveBase()</code>
+methods do not call into the admin contract. Consequently, custom transfer logic is not
+supported.</p>
+<p>Thus, token implementations will struggle to implement the following features:</p>
+<ol>
+<li>Fee on transfer. For examples, see
+<a href="https://github.com/d-xo/weird-erc20?tab=readme-ov-file#fee-on-transfer">here</a>.</li>
+<li>Token blacklists or whitelists. For examples, see
+<a href="https://github.com/d-xo/weird-erc20?tab=readme-ov-file#tokens-with-blocklists">here</a>.</li>
+<li>Circuit-breaking or transfer amount limits. For examples, see
+<a href="https://github.com/d-xo/weird-erc20?tab=readme-ov-file#revert-on-large-approvals--transfers">here</a>.</li>
+</ol>
+</li>
+<li>
+<p>Custom burn logic is not supported.</p>
+<p>Many applications may wish to maintain some invariant related to the total supply. For instance,
+a <code>wMina</code> token contract's admin would have a mechanism to lock or release <code>Mina</code> in return for
+minting or burning <code>wMina</code>. This would currently be implemented by the <code>wMina</code> admin contract
+having a method which calls burn on behalf of the user. However, this would only maintain the
+invariant <code>wMina supply &gt;= locked Mina</code>, rather than strict equality.</p>
+<p>This type of invariant is generally of interest to any token representing a share of some wrapped
+assets.</p>
+</li>
+<li>
+<p>Custom <code>balanceOf()</code> logic is not supported:</p>
+<ol>
+<li>Rebasable (like
+<a href="https://github.com/lidofinance/lido-dao/blob/5fcedc6e9a9f3ec154e69cff47c2b9e25503a78a/contracts/0.4.24/StETH.sol#L166-L168">stEth</a>)
+tokens may be difficult to implement. For more examples, see
+<a href="https://github.com/d-xo/weird-erc20?tab=readme-ov-file#balance-modifications-outside-of-transfers-rebasingairdrops">here</a>.</li>
+</ol>
+</li>
+</ol>
+<p>In the future, Mina Foundation and the community might develop more flexible versions of the token
+implementation that get around some or all of those limitations. That might involve additional
+hooks, possibly with flags in the main token contract state that determine whether a custom contract
+should be called or not. But for now, these limitations remain, and token developers should be aware
+of them.</p>
 
                     </main>
 
