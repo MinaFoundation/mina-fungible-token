@@ -12,6 +12,7 @@ import {
   state,
   UInt64,
   UInt8,
+  Permissions
 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
@@ -20,18 +21,35 @@ export class TokenEscrow extends SmartContract {
   tokenAddress = State<PublicKey>()
   @state(UInt64)
   total = State<UInt64>()
+  @state(PublicKey)
+  owner = State<PublicKey>()
 
-  async deploy(args: DeployArgs & { tokenAddress: PublicKey }) {
+  async deploy(args: DeployArgs & { tokenAddress: PublicKey, owner: PublicKey }) {
     await super.deploy(args)
 
     this.tokenAddress.set(args.tokenAddress)
     this.total.set(UInt64.zero)
+    this.owner.set(args.owner)
+    this.account.permissions.set({
+      ...Permissions.default(),
+      send: Permissions.proof(),
+      setVerificationKey:
+        Permissions.VerificationKey.impossibleDuringCurrentVersion(),
+      setPermissions: Permissions.impossible(),
+    })
   }
 
   @method
-  async deposit(from: PublicKey, amount: UInt64) {
+  async deposit(amount: UInt64) {
     const token = new FungibleToken(this.tokenAddress.getAndRequireEquals())
-    await token.transfer(from, this.address, amount)
+    token.deriveTokenId().assertEquals(this.tokenId)
+
+    const sender = this.sender.getUnconstrained()
+    const senderUpdate = AccountUpdate.createSigned(sender)
+    senderUpdate.body.useFullCommitment = Bool(true)
+
+    await token.transfer(sender, this.address, amount)
+
     const total = this.total.getAndRequireEquals()
     this.total.set(total.add(amount))
   }
@@ -39,10 +57,20 @@ export class TokenEscrow extends SmartContract {
   @method
   async withdraw(to: PublicKey, amount: UInt64) {
     const token = new FungibleToken(this.tokenAddress.getAndRequireEquals())
+    token.deriveTokenId().assertEquals(this.tokenId)
+
+    const sender = this.sender.getUnconstrained()
+    const senderUpdate = AccountUpdate.createSigned(sender)
+    senderUpdate.body.useFullCommitment = Bool(true)
+    this.owner.getAndRequireEquals().assertEquals(sender)
+
+    let receiverUpdate = this.send({ to: sender, amount })
+    receiverUpdate.body.mayUseToken = AccountUpdate.MayUseToken.InheritFromParent
+    receiverUpdate.body.useFullCommitment = Bool(true)
+
     const total = this.total.getAndRequireEquals()
-    total.greaterThanOrEqual(amount)
+    total.assertGreaterThanOrEqual(amount, "insufficient balance")
     this.total.set(total.sub(amount))
-    await token.transfer(this.address, to, amount)
   }
 }
 
@@ -70,7 +98,8 @@ console.log(`
   admin ${admin.publicKey.toBase58()}
 `)
 const token = new FungibleToken(tokenContract.publicKey)
-const escrow = new TokenEscrow(escrowContract.publicKey)
+const tokenId = token.deriveTokenId()
+const escrow = new TokenEscrow(escrowContract.publicKey, tokenId)
 const adminContract = new FungibleTokenAdmin(admin.publicKey)
 
 console.log("Deploying token contract.")
@@ -97,7 +126,7 @@ const deployTokenTx = await Mina.transaction({
 await deployTokenTx.prove()
 deployTokenTx.sign([deployer.key, tokenContract.privateKey, admin.privateKey])
 const deployTokenTxResult = await deployTokenTx.send().then((v) => v.wait())
-console.log("Deploy tx result:", deployTokenTxResult.toPretty())
+console.log("Deploy token tx result:", deployTokenTxResult.toPretty())
 equal(deployTokenTxResult.status, "included")
 
 console.log("Deploying escrow contract.")
@@ -108,12 +137,14 @@ const deployEscrowTx = await Mina.transaction({
   AccountUpdate.fundNewAccount(deployer, 1)
   await escrow.deploy({
     tokenAddress: tokenContract.publicKey,
+    owner,
   })
+  await token.approveAccountUpdate(escrow.self)
 })
 await deployEscrowTx.prove()
 deployEscrowTx.sign([deployer.key, escrowContract.privateKey])
 const deployEscrowTxResult = await deployEscrowTx.send().then((v) => v.wait())
-console.log("Deploy tx result:", deployEscrowTxResult.toPretty())
+console.log("Deploy escrow tx result:", deployEscrowTxResult.toPretty())
 equal(deployEscrowTxResult.status, "included")
 
 console.log("Minting new tokens to Alexa and Billy.")
@@ -148,8 +179,8 @@ const depositTx1 = await Mina.transaction({
   sender: alexa,
   fee,
 }, async () => {
-  AccountUpdate.fundNewAccount(alexa, 1)
-  await escrow.deposit(alexa, new UInt64(2e9))
+  await escrow.deposit(new UInt64(2e9))
+  await token.approveAccountUpdate(escrow.self)
 })
 await depositTx1.prove()
 depositTx1.sign([alexa.key])
@@ -158,7 +189,7 @@ console.log("Deposit tx result 1:", depositTxResult1.toPretty())
 equal(depositTxResult1.status, "included")
 
 const escrowBalanceAfterDeposit1 = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after deposit:", escrowBalanceAfterDeposit1)
+console.log("Escrow balance after 1st deposit:", escrowBalanceAfterDeposit1/1_000_000_000n)
 equal(escrowBalanceAfterDeposit1, BigInt(2e9))
 
 console.log("Billy deposits tokens to the escrow.")
@@ -166,8 +197,8 @@ const depositTx2 = await Mina.transaction({
   sender: billy,
   fee,
 }, async () => {
-  // note that there is no need to fund escrow token account as its already exists
-  await escrow.deposit(billy, new UInt64(3e9))
+  await escrow.deposit(new UInt64(3e9))
+  await token.approveAccountUpdate(escrow.self)
 })
 await depositTx2.prove()
 depositTx2.sign([billy.key])
@@ -176,29 +207,47 @@ console.log("Deposit tx result 2:", depositTxResult2.toPretty())
 equal(depositTxResult2.status, "included")
 
 const escrowBalanceAfterDeposit2 = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after deposit:", escrowBalanceAfterDeposit2)
+console.log("Escrow balance after 2nd deposit:", escrowBalanceAfterDeposit2/1_000_000_000n)
 equal(escrowBalanceAfterDeposit2, BigInt(5e9))
 
 const escrowTotalAfterDeposits = escrow.total.get()
 equal(escrowTotalAfterDeposits.toBigInt(), escrowBalanceAfterDeposit2)
 
-console.log("Escrow deployer withdraws portion of tokens to Jackie.")
+console.log("Escrow owner withdraws portion of tokens to Jackie.")
 const withdrawTx = await Mina.transaction({
-  sender: deployer,
+  sender: owner,
   fee,
 }, async () => {
-  AccountUpdate.fundNewAccount(deployer, 1)
+  AccountUpdate.fundNewAccount(owner, 1)
   await escrow.withdraw(jackie, new UInt64(4e9))
+  await token.approveAccountUpdate(escrow.self)
 })
 await withdrawTx.prove()
-withdrawTx.sign([deployer.key, escrowContract.privateKey])
+withdrawTx.sign([owner.key])
 const withdrawTxResult = await withdrawTx.send().then((v) => v.wait())
 console.log("Withdraw tx result:", withdrawTxResult.toPretty())
 equal(withdrawTxResult.status, "included")
 
 const escrowBalanceAfterWithdraw = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after deposit:", escrowBalanceAfterDeposit2)
+console.log("Escrow balance after withdraw:", escrowBalanceAfterWithdraw/1_000_000_000n)
 equal(escrowBalanceAfterWithdraw, BigInt(1e9))
+
+console.log("Jackie should fail to withdraw all remaining in escrow contract tokens directly without using escrow contract.")
+const directWithdrawTx = await Mina.transaction({
+  sender: jackie,
+  fee,
+}, async () => {
+  await token.transfer(escrowContract.publicKey, jackie, new UInt64(1e9))
+})
+await directWithdrawTx.prove()
+directWithdrawTx.sign([jackie.key, escrowContract.privateKey])
+const directWithdrawTxResult = await directWithdrawTx.safeSend()
+console.log("Direct Withdraw tx status:", directWithdrawTxResult.status)
+equal(directWithdrawTxResult.status, "rejected")
+
+const escrowBalanceAfterDirectWithdraw = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
+console.log("Escrow balance after the attempt of direct withdraw:", escrowBalanceAfterDirectWithdraw/1_000_000_000n)
+equal(escrowBalanceAfterDirectWithdraw, BigInt(1e9))
 
 const escrowTotalAfterWithdraw = escrow.total.get()
 equal(escrowTotalAfterWithdraw.toBigInt(), escrowBalanceAfterWithdraw)
