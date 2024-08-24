@@ -5,6 +5,7 @@ import {
   DeployArgs,
   method,
   Mina,
+  Permissions,
   PrivateKey,
   PublicKey,
   SmartContract,
@@ -12,7 +13,6 @@ import {
   state,
   UInt64,
   UInt8,
-  Permissions
 } from "o1js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
@@ -24,7 +24,7 @@ export class TokenEscrow extends SmartContract {
   @state(PublicKey)
   owner = State<PublicKey>()
 
-  async deploy(args: DeployArgs & { tokenAddress: PublicKey, owner: PublicKey }) {
+  async deploy(args: DeployArgs & { tokenAddress: PublicKey; owner: PublicKey }) {
     await super.deploy(args)
 
     this.tokenAddress.set(args.tokenAddress)
@@ -33,8 +33,7 @@ export class TokenEscrow extends SmartContract {
     this.account.permissions.set({
       ...Permissions.default(),
       send: Permissions.proof(),
-      setVerificationKey:
-        Permissions.VerificationKey.impossibleDuringCurrentVersion(),
+      setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),
       setPermissions: Permissions.impossible(),
     })
   }
@@ -189,7 +188,7 @@ console.log("Deposit tx result 1:", depositTxResult1.toPretty())
 equal(depositTxResult1.status, "included")
 
 const escrowBalanceAfterDeposit1 = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after 1st deposit:", escrowBalanceAfterDeposit1/1_000_000_000n)
+console.log("Escrow balance after 1st deposit:", escrowBalanceAfterDeposit1 / 1_000_000_000n)
 equal(escrowBalanceAfterDeposit1, BigInt(2e9))
 
 console.log("Billy deposits tokens to the escrow.")
@@ -207,7 +206,7 @@ console.log("Deposit tx result 2:", depositTxResult2.toPretty())
 equal(depositTxResult2.status, "included")
 
 const escrowBalanceAfterDeposit2 = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after 2nd deposit:", escrowBalanceAfterDeposit2/1_000_000_000n)
+console.log("Escrow balance after 2nd deposit:", escrowBalanceAfterDeposit2 / 1_000_000_000n)
 equal(escrowBalanceAfterDeposit2, BigInt(5e9))
 
 const escrowTotalAfterDeposits = escrow.total.get()
@@ -229,10 +228,12 @@ console.log("Withdraw tx result:", withdrawTxResult.toPretty())
 equal(withdrawTxResult.status, "included")
 
 const escrowBalanceAfterWithdraw = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after withdraw:", escrowBalanceAfterWithdraw/1_000_000_000n)
+console.log("Escrow balance after withdraw:", escrowBalanceAfterWithdraw / 1_000_000_000n)
 equal(escrowBalanceAfterWithdraw, BigInt(1e9))
 
-console.log("Jackie should fail to withdraw all remaining in escrow contract tokens directly without using escrow contract.")
+console.log(
+  "Jackie should fail to withdraw all remaining in escrow contract tokens directly without using escrow contract.",
+)
 const directWithdrawTx = await Mina.transaction({
   sender: jackie,
   fee,
@@ -245,8 +246,12 @@ const directWithdrawTxResult = await directWithdrawTx.safeSend()
 console.log("Direct Withdraw tx status:", directWithdrawTxResult.status)
 equal(directWithdrawTxResult.status, "rejected")
 
-const escrowBalanceAfterDirectWithdraw = (await token.getBalanceOf(escrowContract.publicKey)).toBigInt()
-console.log("Escrow balance after the attempt of direct withdraw:", escrowBalanceAfterDirectWithdraw/1_000_000_000n)
+const escrowBalanceAfterDirectWithdraw = (await token.getBalanceOf(escrowContract.publicKey))
+  .toBigInt()
+console.log(
+  "Escrow balance after the attempt of direct withdraw:",
+  escrowBalanceAfterDirectWithdraw / 1_000_000_000n,
+)
 equal(escrowBalanceAfterDirectWithdraw, BigInt(1e9))
 
 const escrowTotalAfterWithdraw = escrow.total.get()
