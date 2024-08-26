@@ -61,9 +61,7 @@ export class FungibleTokenAdmin extends SmartContract implements FungibleTokenAd
       return pk
     })
     this.adminPublicKey.requireEquals(admin)
-    let adminUpdate = AccountUpdate.createSigned(admin)
-    adminUpdate.body.useFullCommitment = Bool(true)
-    return adminUpdate
+    return AccountUpdate.createSigned(admin)
   }
 
   @method.returns(Bool)
