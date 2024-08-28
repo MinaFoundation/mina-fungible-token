@@ -149,13 +149,19 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="introduction"><a class="header" href="#introduction">Introduction</a></h1>
-<p>Mina natively supports custom tokens
-(<a href="https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics">MIP-4</a>). Each
-account on Mina can correspond to a custom token.</p>
+<p>This document describes how to work with the fungible token standard on Mina. The corresponding code
+can be found on <a href="https://github.com/MinaFoundation/mina-fungible-token">github</a>, or installed as an
+<a href="https://www.npmjs.com/package/mina-fungible-token">npm package</a>.</p>
+<p>The fungible token standard uses Mina's native support for custom tokens (see
+<a href="https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics">MIP-4</a>). An
+account on Mina can be created to hold either Mina, or a custom token.</p>
 <p>To create a new token, one creates a smart contract, which becomes the owner for the token, and uses
 that contract to set the rules around how the token can be minted, burned and transferred. The
 contract may also set a token symbol. Uniqueness is not enforced for token names. Instead the public
 key of the contract is used to derive the token's unique identifier.</p>
+<p>The token contract defines the behavior of the token -- how tokens can be minted, burned,
+transferred, etc. The fungible token standard consists of a smart contract that is suitable for
+fungible tokens.</p>
 <h2 id="show-me-the-code"><a class="header" href="#show-me-the-code">SHOW ME THE CODE</a></h2>
 <p>The
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts"><code>mina-fungible-token</code> repo's e2e example</a>
