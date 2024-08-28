@@ -84,9 +84,24 @@ Refer to
 [examples/e2e.eg.ts](https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts)
 to see executable end to end example.
 
-## Upgradeability
+## A Note on Upgradeability
 
-Both the token and admin contract have permissions set so that they cannot be upgraded, except in
-case of a non-backwards compatible hard fork of Mina (see
+By default, the token and admin contract have permissions set so that they cannot be upgraded,
+except in case of a non-backwards compatible hard fork of Mina (see
 [Mina documentation on upgradeability](https://docs.minaprotocol.com/zkapps/writing-a-zkapp/feature-overview/permissions#example-impossible-to-upgrade)).
 This is to ensure that the rules around the token are not changed after the token is deployed.
+
+Depending on the maturity of your project, that might or might not be what you want. Disallowing
+contract updates gives a strong guarantee to token holders that the rules around the token will not
+change. For example, if the admin contract ensures a limited supply of the token, or forbids minting
+new tokens after a certain date, then a change of that contract can undo those guarantees. This
+might be the right thing to do if you have figured out exactly how you want the token to behave, and
+are sure that you will not make any changes in the future.
+
+If you do want to reserve the possibility to make changes in the future, then you should alter the
+`deploy()` functions to set the account permissions for the token and admin contracts to allow
+changes to the verification key. If you do that, you will probably also want to allow future changes
+to the account permissions, to eventually disallow further changes to the verification key.
+
+If you are looking to acquire fungible tokens, you should consider that if the deployer used more
+permissive account permissions for the contracts, they might change the contracts in the future.
