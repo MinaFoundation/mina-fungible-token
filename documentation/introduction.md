@@ -1,13 +1,21 @@
 # Introduction
 
-Mina natively supports custom tokens
-([MIP-4](https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics)). Each
-account on Mina can correspond to a custom token.
+This document describes how to work with the fungible token standard on Mina. The corresponding code
+can be found on [github](https://github.com/MinaFoundation/mina-fungible-token), or installed as an
+[npm package](https://www.npmjs.com/package/mina-fungible-token).
+
+The fungible token standard uses Mina's native support for custom tokens (see
+[MIP-4](https://github.com/MinaProtocol/MIPs/blob/main/MIPS/mip-zkapps.md#token-mechanics)). An
+account on Mina can be created to hold either Mina, or a custom token.
 
 To create a new token, one creates a smart contract, which becomes the owner for the token, and uses
 that contract to set the rules around how the token can be minted, burned and transferred. The
 contract may also set a token symbol. Uniqueness is not enforced for token names. Instead the public
 key of the contract is used to derive the token's unique identifier.
+
+The token contract defines the behavior of the token -- how tokens can be minted, burned,
+transferred, etc. The fungible token standard consists of a smart contract that is suitable for
+fungible tokens.
 
 ## SHOW ME THE CODE
 
