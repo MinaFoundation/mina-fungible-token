@@ -13,7 +13,7 @@ import {
   State,
   state,
   Struct,
-  TokenContractV2,
+  TokenContract,
   Types,
   UInt64,
   UInt8,
@@ -43,7 +43,7 @@ export const FungibleTokenErrors = {
   unbalancedTransaction: "Transaction is unbalanced",
 }
 
-export class FungibleToken extends TokenContractV2 {
+export class FungibleToken extends TokenContract {
   @state(UInt8)
   decimals = State<UInt8>()
   @state(PublicKey)
@@ -157,7 +157,7 @@ export class FungibleToken extends TokenContractV2 {
     from.equals(this.address).assertFalse(
       FungibleTokenErrors.noTransferFromCirculation,
     )
-    circulationUpdate.balanceChange = Int64.fromUnsigned(amount).negV2()
+    circulationUpdate.balanceChange = Int64.fromUnsigned(amount).neg()
     this.emitEvent("Burn", new BurnEvent({ from, amount }))
     return accountUpdate
   }
@@ -208,7 +208,7 @@ export class FungibleToken extends TokenContractV2 {
 
   /** Approve `AccountUpdate`s that have been created outside of the token contract.
    *
-   * @argument {AccountUpdateForest} updates - The `AccountUpdate`s to approve. Note that the forest size is limited by the base token contract, @see TokenContractV2.MAX_ACCOUNT_UPDATES The current limit is 9.
+   * @argument {AccountUpdateForest} updates - The `AccountUpdate`s to approve. Note that the forest size is limited by the base token contract, @see TokenContract.MAX_ACCOUNT_UPDATES The current limit is 9.
    */
   @method
   async approveBase(updates: AccountUpdateForest): Promise<void> {
@@ -227,7 +227,7 @@ export class FungibleToken extends TokenContractV2 {
         FungibleTokenErrors.noTransferFromCirculation,
       )
       totalBalance = Provable.if(usesToken, totalBalance.add(update.balanceChange), totalBalance)
-      totalBalance.isPositiveV2().assertFalse(
+      totalBalance.isPositive().assertFalse(
         FungibleTokenErrors.flashMinting,
       )
     })

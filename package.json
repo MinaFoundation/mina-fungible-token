@@ -1,6 +1,6 @@
 {
   "name": "mina-fungible-token",
-  "version": "1.0.0",
+  "version": "2.0.0-local",
   "license": "Apache-2.0",
   "type": "module",
   "main": "target/index.js",
@@ -13,10 +13,13 @@
     "check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "o1js": "^1.6.0"
+    "o1js": "^2.0.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
     "typescript": "^5.4.3"
+  },
+  "engines": {
+    "node": ">=18.14.0"
   }
 }
