@@ -1,34 +1,24 @@
 {
   "compilerOptions": {
-    "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
-    "declaration": true,
-    "emitDecoratorMetadata": true,
-    "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "forceConsistentCasingInFileNames": true,
-    "importHelpers": true,
-    "incremental": true,
-    "lib": ["DOM", "ES2022"],
-    "module": "ES2022",
-    "moduleResolution": "Node",
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noUncheckedIndexedAccess": true,
-    "outDir": "target",
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "sourceMap": true,
-    "strict": true,
-    "strictBindCallApply": true,
-    "strictFunctionTypes": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": false,
-    "target": "ES2022",
-    "typeRoots": ["node_modules/@types"],
-    "useDefineForClassFields": false
+    "rootDir": ".",
+    "outDir": "dist",
+    "baseUrl": ".", // affects where output files end up
+    "target": "es2021", // goal: ship *the most modern syntax* that is supported by *all* browsers that support our Wasm
+    "module": "nodenext", // allow top-level await
+    "moduleResolution": "nodenext", // comply with node + "type": "module"
+    "esModuleInterop": true, // to silence jest
+
+    "experimentalDecorators": true, // needed for decorators
+    "emitDecoratorMetadata": true, // needed for decorators
+    "useDefineForClassFields": false, // ensure correct behaviour of class fields with decorators
+
+    "strict": true, // for the full TypeScript experience
+    "strictPropertyInitialization": false, // to enable generic constructors, e.g. on CircuitValue
+    "importHelpers": true, // reduces size
+    "declaration": true, // declaration files are how library consumers get our types
+    "noEmitOnError": false, // avoid accidentally shipping with type errors
+    "allowJs": true, // to use JSDoc in some places where TS would be too cumbersome
+    "sourceMap": true
   },
   "exclude": ["node_modules", "target"],
   "include": ["."]
