@@ -1,5 +1,4 @@
 import { AccountUpdate, Bool, Mina, PrivateKey, PublicKey, UInt64, UInt8 } from "o1js"
-import { setLightnetAccountManagerEndpoint } from "o1js/dist/node/lib/mina/fetch.js"
 import { FungibleToken, FungibleTokenAdmin } from "../index.js"
 
 const url = "https://proxy.devnet.minaexplorer.com/graphql"
