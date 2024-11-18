@@ -1,7 +1,23 @@
 {
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "lib": ["DOM", "ES2022"],
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUncheckedIndexedAccess": true,
+    "outDir": "target",
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "typeRoots": ["node_modules/@types"],
+
     "rootDir": ".",
-    "outDir": "dist",
     "baseUrl": ".", // affects where output files end up
     "target": "es2021", // goal: ship *the most modern syntax* that is supported by *all* browsers that support our Wasm
     "module": "nodenext", // allow top-level await
