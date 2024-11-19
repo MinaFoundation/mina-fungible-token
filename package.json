@@ -13,7 +13,7 @@
     "check": "tsc --noEmit"
   },
   "peerDependencies": {
-    "o1js": "^2.0.0"
+    "o1js": "^2.1.0"
   },
   "devDependencies": {
     "ts-node": "^10.9.2",
