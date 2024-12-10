@@ -111,6 +111,7 @@ const deployTokenTx = await Mina.transaction({
   await token.deploy({
     symbol: "abc",
     src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
+    allowUpdates: true,
   })
   await token.initialize(
     admin.publicKey,

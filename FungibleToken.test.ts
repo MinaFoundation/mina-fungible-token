@@ -15,6 +15,7 @@ import {
   state,
   UInt64,
   UInt8,
+  VerificationKey,
 } from "o1js"
 import {
   FungibleToken,
@@ -34,6 +35,10 @@ const localChain = await Mina.LocalBlockchain({
 Mina.setActiveInstance(localChain)
 
 describe("token integration", async () => {
+  const fungibleTokenVerificationKeyData = await FungibleToken.compile()
+  const fungibleTokenVerificationKey = VerificationKey.fromValue(
+    fungibleTokenVerificationKeyData.verificationKey,
+  )
   {
     await FungibleToken.compile()
     await ThirdParty.compile()
@@ -72,6 +77,7 @@ describe("token integration", async () => {
         await tokenAContract.deploy({
           symbol: "tokA",
           src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
+          allowUpdates: true,
         })
         await tokenAContract.initialize(
           tokenAdmin,
@@ -90,6 +96,41 @@ describe("token integration", async () => {
       await tx.send()
     })
 
+    it("should reject a change of the verification key without an admin signature", async () => {
+      const tx = await Mina.transaction({
+        sender: deployer,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.updateVerificationKey(fungibleTokenVerificationKey)
+      })
+
+      tx.sign([deployer.key])
+
+      await tx.prove()
+      await rejects(
+        async () => await tx.send(),
+        (err: Error) => {
+          if (err.message.includes("the required authorization was not provided or is invalid.")) {
+            return true
+          } else return false
+        },
+      )
+    })
+
+    it("should allow a change of the verification key", async () => {
+      const tx = await Mina.transaction({
+        sender: deployer,
+        fee: 1e8,
+      }, async () => {
+        await tokenAContract.updateVerificationKey(fungibleTokenVerificationKey)
+      })
+
+      tx.sign([deployer.key, tokenAdmin.key])
+
+      await tx.prove()
+      await tx.send()
+    })
+
     it("should deploy token contract B", async () => {
       const tx = await Mina.transaction({
         sender: deployer,
@@ -102,6 +143,7 @@ describe("token integration", async () => {
         await tokenBContract.deploy({
           symbol: "tokB",
           src: "https://github.com/MinaFoundation/mina-fungible-token/blob/main/FungibleToken.ts",
+          allowUpdates: false,
         })
         await tokenBContract.initialize(
           tokenBAdmin,
@@ -114,6 +156,31 @@ describe("token integration", async () => {
 
       await tx.prove()
       await tx.send()
+    })
+
+    it("should not allow a change of the verification key if allowUpdates is false", async () => {
+      const tx = await Mina.transaction({
+        sender: sender,
+        fee: 1e8,
+      }, async () => {
+        await tokenBContract.updateVerificationKey(await VerificationKey.dummy())
+      })
+
+      tx.sign([sender.key, tokenBAdmin.key])
+
+      await tx.prove()
+      await rejects(
+        async () => await tx.send(),
+        (err: Error) => {
+          if (
+            err.message.includes(
+              "Cannot update field 'verificationKey' because permission for this field is 'Impossible'",
+            )
+          ) {
+            return true
+          } else return false
+        },
+      )
     })
 
     it("should deploy a third party contract", async () => {
@@ -933,6 +1000,12 @@ class CustomTokenAdmin extends SmartContract implements FungibleTokenAdminBase {
 
   @method.returns(Bool)
   public async canResume(): Promise<Bool> {
+    this.ensureAdminSignature()
+    return Bool(true)
+  }
+
+  @method.returns(Bool)
+  public async canChangeVerificationKey(_vk: VerificationKey): Promise<Bool> {
     this.ensureAdminSignature()
     return Bool(true)
   }
