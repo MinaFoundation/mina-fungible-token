@@ -27,6 +27,9 @@ interface FungibleTokenDeployProps extends Exclude<DeployArgs, undefined> {
   /** A source code reference, which is placed within the `zkappUri` of the contract account.
    * Typically a link to a file on github. */
   src: string
+  /** Setting this to `true` will allow changing the verification key later with a signature from the deployer. This will allow updating the token contract at a later stage, for instance to react to an update of the o1js library.
+   * Setting it to `false` will make changes to the contract impossible, unless there is a backward incompatible change to the protocol. (see https://docs.minaprotocol.com/zkapps/writing-a-zkapp/feature-overview/permissions#example-impossible-to-upgrade and https://minafoundation.github.io/mina-fungible-token/deploy.html) */
+  allowUpdates: boolean
 }
 
 export const FungibleTokenErrors = {
@@ -72,17 +75,22 @@ export class FungibleToken extends TokenContract {
 
     this.account.permissions.set({
       ...Permissions.default(),
-      setVerificationKey: Permissions.VerificationKey.impossibleDuringCurrentVersion(),
+      setVerificationKey: props.allowUpdates
+        ? Permissions.VerificationKey.proofDuringCurrentVersion()
+        : Permissions.VerificationKey.impossibleDuringCurrentVersion(),
       setPermissions: Permissions.impossible(),
       access: Permissions.proof(),
     })
   }
 
   /** Update the verification key.
-   * Note that because we have set the permissions for setting the verification key to `impossibleDuringCurrentVersion()`, this will only be possible in case of a protocol update that requires an update.
+   * This will only work when `allowUpdates` has been set to `true` during deployment.
    */
   @method
   async updateVerificationKey(vk: VerificationKey) {
+    const adminContract = await this.getAdminContract()
+    const canChangeVerificationKey = await adminContract.canChangeVerificationKey(vk)
+    canChangeVerificationKey.assertTrue(FungibleTokenErrors.noPermissionToChangeAdmin)
     this.account.verificationKey.set(vk)
   }
 
