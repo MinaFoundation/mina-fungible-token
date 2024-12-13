@@ -413,22 +413,24 @@ initializing the token contract, you should start the token contract in paused m
 <a href="https://github.com/MinaFoundation/mina-fungible-token/blob/main/examples/e2e.eg.ts">examples/e2e.eg.ts</a>
 to see executable end to end example.</p>
 <h2 id="a-note-on-upgradeability"><a class="header" href="#a-note-on-upgradeability">A Note on Upgradeability</a></h2>
-<p>By default, the token and admin contract have permissions set so that they cannot be upgraded,
-except in case of a non-backwards compatible hard fork of Mina (see
+<p>Upgradeability of smart contracts is a double edged sword: on one hand, it allows you to fix errors,
+improve performance, and stay up to date with third party libraries (such as o1js). But on the other
+hand, the possibility of arbitrary code changes during a redeploy places an enormous amount of trust
+in the deployer.</p>
+<p>In Mina, upgradeability is determined via the permissions of the account that the contract is
+deployed to. One possibility is to only allow contract upgrades when there has been a breaking
+change in the protocol itself (see
 <a href="https://docs.minaprotocol.com/zkapps/writing-a-zkapp/feature-overview/permissions#example-impossible-to-upgrade">Mina documentation on upgradeability</a>).
-This is to ensure that the rules around the token are not changed after the token is deployed.</p>
-<p>Depending on the maturity of your project, that might or might not be what you want. Disallowing
-contract updates gives a strong guarantee to token holders that the rules around the token will not
-change. For example, if the admin contract ensures a limited supply of the token, or forbids minting
-new tokens after a certain date, then a change of that contract can undo those guarantees. This
-might be the right thing to do if you have figured out exactly how you want the token to behave, and
-are sure that you will not make any changes in the future.</p>
-<p>If you do want to reserve the possibility to make changes in the future, then you should alter the
-<code>deploy()</code> functions to set the account permissions for the token and admin contracts to allow
-changes to the verification key. If you do that, you will probably also want to allow future changes
-to the account permissions, to eventually disallow further changes to the verification key.</p>
-<p>If you are looking to acquire fungible tokens, you should consider that if the deployer used more
-permissive account permissions for the contracts, they might change the contracts in the future.</p>
+This was the default behaviour in the original release of the token contract (v1.0.0).</p>
+<p>However, this did not allow updating the contract in order to stay up to date with new versions of
+the o1js library -- which can be desirable, for example to include bug fixes or performance
+improvements.</p>
+<p>In order to allow updates, there is now an option to allow updates of the contract, by setting
+<code>allowUpdates</code> to <code>true</code> when calling <code>deploy()</code>. This is recommended, in order to allow updating
+the token contract when there is a new version of o1js. The downside is that this does require token
+holders to trust the token admin to not make arbitrary changes to the contract. In order to lower
+the amount of trust needed, we are planning to use a more refined access control (using multi-sig)
+in an upcoming version of the token standard.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="token-operations"><a class="header" href="#token-operations">Token Operations</a></h1>
 <p>In this section, we will explore the various token operations represented by the standard, which
 include:</p>
