@@ -385,10 +385,6 @@ and validate the token contract permissions as one should with any o1js applicat
 they should check that</p>
 <ul>
 <li>The verification keys of the admin and token contract are as expected</li>
-<li>Both admin and token contract have set the permission such that the verification key can only be
-set after a breaking update of the network</li>
-<li>Both the admin and token contract have set the permissions to change permissions set to
-<code>impossible</code></li>
 <li>The deployment transaction of the token contract has not been changed to skip the <code>isNew</code> check
 that has been introduced in <a href="https://github.com/o1-labs/o1js/issues/1439">Issue 1439</a>. If a
 malicious deployer were to skip this test, they could mint tokens for themselves before deployment
